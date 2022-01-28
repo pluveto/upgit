@@ -13,12 +13,13 @@ import (
 	"gopkg.in/validator.v2"
 )
 
+const kDefaultBranch = "master"
+const kMaxUploadSize = int64(5 * 1024 * 1024)
+
 type CliOptions struct {
 	Paths   []string `arg:"positional, required"`
 	Verbose bool     `arg:"--verbose" help:"verbosity level"`
 }
-
-const kDefaultBranch = "master"
 
 type Config struct {
 	PAT          string            `toml:"pat" validate:"nonzero"`
@@ -69,9 +70,8 @@ func main() {
 			abortErr(fmt.Errorf("invalid file to upload %s: file size is zero", path))
 		}
 		// max 5 MiB
-		limit := int64(5 * 1024 * 1024)
-		if fs.Size() > limit {
-			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, limit))
+		if fs.Size() > kMaxUploadSize {
+			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, kMaxUploadSize))
 		}
 	}
 

@@ -29,14 +29,6 @@ type GithubUploader struct {
 	OnUploaded func(result Result[UploadRet])
 }
 
-// func Upload(opt *UploadOptions) Result[UploadRet] {
-// 	if nil == opt {
-// 		return Result[UploadRet]{err: errors.New("invalid options")}
-// 	}
-// 	GVerbose.Trace("uploading %s ...\n", opt.LocalPath)
-// 	return Result[UploadRet]{value: UploadRet{}}
-// }
-
 const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}/{path}"
 const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
 
@@ -82,9 +74,10 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	if err != nil {
 		return err
 	}
+	req.Header.Set("User-Agent", "UPGIT/0.1")
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "token " + u.Options.PAT)
+	req.Header.Set("Authorization", "token "+u.Options.PAT)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -93,7 +86,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	GVerbose.Trace(string(body))
+	GVerbose.Trace("response body: " + string(body))
 	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
 		return fmt.Errorf("unexpected status code %d. response: %s", resp.StatusCode, string(body))
 	}

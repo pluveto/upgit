@@ -7,20 +7,23 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+// GVerbose is a global verbose
+var GVerbose Verbose
+
 type Verbose struct {
 	Enabled bool
 }
 
-// GVerbose is a global verbose
-var GVerbose Verbose
 
 func (v Verbose) Trace(fmt_ string, args ...interface{}) {
 	if !v.Enabled {
 		return
 	}
+	// better format multiple lines output
 	fmtMulLine_ := strings.TrimRight(strings.ReplaceAll(fmt_, "\n", "\n        "), " \n")
 	fmt.Printf("[TRACE] "+fmtMulLine_+"\n", args...)
 }
+
 func (v Verbose) TraceStruct(s interface{}) {
 	if !v.Enabled {
 		return
