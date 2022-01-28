@@ -1,0 +1,10 @@
+branch = "master"
+# Get token from https://github.com/settings/tokens
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+repo = "repo-name"
+username = "username"
+
+[replacements]
+  "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
+  "/master" = "@master"
