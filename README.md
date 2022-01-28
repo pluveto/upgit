@@ -34,7 +34,7 @@ To upload file `demo.png`, execute:
 
 Then you'll see a link to `demo.png`.
 
-
+---
 
 For help, type `-h` argument
 
@@ -83,27 +83,22 @@ Now enjoy it.
 | username              | Your Github username, like `pluveto`                         |
 | repo                  | Your Github repository name, like `upgit`                    |
 | branch                | The branch for saving files, like `master` or `main`         |
-| pat                   | Personal Access Token. Visit [Creating a personal access token - GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for more info. |
+| pat                   | Personal Access Token. Visit [GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for more info |
 | rename                | Renaming rule. Path separator `/` will create directories if not exists. Supporting: |
-| -- `{year}`           | Year like `2006`                                             |
-| -- `{month}`          | Month like `01`                                              |
-| -- `{day}`            | Day like `02`                                                |
-| -- `{unix_ts}`        | Unix timestamp in second. Like `1643373370`.                 |
-| --- `{ext}`           | Extension starting with `.` like `.png`, and empty when the original file has no extension. |
-| -- `{file_name}`      | Original file base name like `demo.png`                      |
-| -- `{file_name_hash}` | MD5 Hash in hex of `{file_name}`.                            |
+| -- `{year}`           | -- Year like `2006`                                          |
+| -- `{month}`          | -- Month like `01`                                           |
+| -- `{day}`            | -- Day like `02`                                             |
+| -- `{unix_ts}`        | -- Unix timestamp in second. Like `1643373370`.              |
+| --- `{ext}`           | -- Extension like `.png`, and empty when the original file has no extension |
+| -- `{file_name}`      | -- Original file base name like `demo` (without extension)   |
+| -- `{file_name_hash}` | -- MD5 Hash in hex of `{file_name}`                          |
 
-Here is a sample config file:
+Here is a simplist sample config file:
 
 ```toml
-branch = "master"
 pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 repo = "repo-name"
 username = "username"
-
-[replacements]
-  "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
-  "/master" = "@master"
 ```
 
