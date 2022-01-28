@@ -33,11 +33,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
           
-      - name: Setup Go environment
-        uses: actions/setup-go@v2.1.5
+      - name: Setup go
+        uses: actions/setup-go@v2
         with:
-          # The Go version to download (if necessary) and use. Supports semver spec and ranges.
-          go-version: 1.18
+          go-version: 1.18.0-beta1
+          stable: false
 
       - name: Go Test
         run: |
