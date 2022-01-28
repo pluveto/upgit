@@ -16,9 +16,15 @@ import (
 const kDefaultBranch = "master"
 const kMaxUploadSize = int64(5 * 1024 * 1024)
 
-type CliOptions struct {
-	Paths   []string `arg:"positional, required"`
-	Verbose bool     `arg:"--verbose" help:"verbosity level"`
+type CLIOptions struct {
+	Paths   []string `arg:"positional, required" placeholder:"FILE"`
+	Verbose bool     `arg:"-V,--verbose" help:"verbosity level"`
+}
+
+func (CLIOptions) Description() string {
+	return "\n" +
+		"Upload anything to git and then get its link.\n" +
+		"For more information: https://github.com/pluveto/upgit\n"
 }
 
 type Config struct {
@@ -33,7 +39,7 @@ type Config struct {
 func main() {
 
 	// parse cli args
-	var opt CliOptions
+	var opt CLIOptions
 	var cfg Config = Config{Branch: kDefaultBranch}
 	arg.MustParse(&opt)
 
@@ -69,7 +75,6 @@ func main() {
 		if fs.Size() == 0 {
 			abortErr(fmt.Errorf("invalid file to upload %s: file size is zero", path))
 		}
-		// max 5 MiB
 		if fs.Size() > kMaxUploadSize {
 			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, kMaxUploadSize))
 		}
