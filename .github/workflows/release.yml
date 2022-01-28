@@ -33,11 +33,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
           
-      - name: Setup Go environment
-        uses: actions/setup-go@v2.1.5
+      - name: Setup go
+        uses: actions/setup-go@v2
         with:
-          # The Go version to download (if necessary) and use. Supports semver spec and ranges.
-          go-version: 1.17
+          go-version: 1.18.0-beta1
+          stable: false
 
       - name: Go Test
         run: |
@@ -45,8 +45,7 @@ jobs:
           
       - name: Cross Build
         # You may pin to the exact commit or the version.
-        # uses: thatisuday/go-cross-build@542468fed9c6be3220a6cead66abff3943e41a5d
-        uses: thatisuday/go-cross-build@v1.1.0
+        uses: thatisuday/go-cross-build@master
         with:
           # Comma-separated list of "<kernel>/<arch>" combinations.
           platforms: linux/386,linux/amd64,linux/arm,linux/arm64,windows/386,windows/amd64,windows/arm,windows/arm64,darwin/386,darwin/amd64,darwin/arm,darwin/arm64,
