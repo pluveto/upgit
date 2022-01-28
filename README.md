@@ -17,7 +17,7 @@ Download it from [Release](https://github.com/pluveto/upgit/releases).
 
 Rename it to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like.
 
-**Warning: ** this program doesn't contain an auto-updater. If you need to keep updated, just give *upgit* a ⭐<u>star</u>.
+**Warning:** this program doesn't contain an auto-updater. If you need to keep updated, just give *upgit* a ⭐star.
 
 ### Config
 
@@ -40,13 +40,17 @@ For help, type `-h` argument
 
 ```
 ./upgit -h
-Usage: upgit.exe [--verbose] PATHS [PATHS ...]
+
+Upload anything to git and then get its link.
+For more information: https://github.com/pluveto/upgit
+
+Usage: upgit.exe [--verbose] FILE [FILE ...]
 
 Positional arguments:
-  PATHS
+  FILE
 
 Options:
-  --verbose              verbosity level
+  --verbose, -V          verbosity level
   --help, -h             display this help and exit
 ```
 
@@ -74,20 +78,20 @@ Now enjoy it.
 
 
 
-| Key                     | Desc                                                         |
-| ----------------------- | ------------------------------------------------------------ |
-| username                | Your Github username, like `pluveto`                         |
-| repo                    | Your Github repository name, like `upgit`                    |
-| branch                  | The branch for saving files, like `master` or `main`         |
-| pat                     | Personal Access Token. Visit [Creating a personal access token - GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for more info. |
-| rename                  | Renaming rule. Path separator `/` will create directories if not exists. Supporting: |
-| ---- `{year}`           | Year like `2006`                                             |
-| ---- `{month}`          | Month like `01`                                              |
-| ---- `{day}`            | Day like `02`                                                |
-| ---- `{unix_ts}`        | Unix timestamp in second. Like `1643373370`.                 |
-| ---- `{ext}`            | Extension starting with `.` like `.png`, and empty when the original file has no extension. |
-| ---- `{file_name}`      | Original file base name like `demo.png`                      |
-| ---- `{file_name_hash}` | MD5 Hash in hex of `{file_name}`.                            |
+| Key                   | Desc                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| username              | Your Github username, like `pluveto`                         |
+| repo                  | Your Github repository name, like `upgit`                    |
+| branch                | The branch for saving files, like `master` or `main`         |
+| pat                   | Personal Access Token. Visit [Creating a personal access token - GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for more info. |
+| rename                | Renaming rule. Path separator `/` will create directories if not exists. Supporting: |
+| -- `{year}`           | Year like `2006`                                             |
+| -- `{month}`          | Month like `01`                                              |
+| -- `{day}`            | Day like `02`                                                |
+| -- `{unix_ts}`        | Unix timestamp in second. Like `1643373370`.                 |
+| --- `{ext}`           | Extension starting with `.` like `.png`, and empty when the original file has no extension. |
+| -- `{file_name}`      | Original file base name like `demo.png`                      |
+| -- `{file_name_hash}` | MD5 Hash in hex of `{file_name}`.                            |
 
 Here is a sample config file:
 
