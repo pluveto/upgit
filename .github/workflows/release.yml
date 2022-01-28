@@ -1,0 +1,68 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version Tag (vX.X.X)"
+        type: string
+        required: true
+      prerelease:
+        type: boolean
+        required: false
+        default: yes
+      message:
+        type: string
+        description: 'Tag message'
+        required: false
+        default: "new release"
+        
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      # Fetch depth 0 is required for Changelog generation
+      - name: Checkout      
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
+      - name: "Generate release changelog"
+        id: gen-changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} 
+          
+      - name: Cross Build
+        # You may pin to the exact commit or the version.
+        # uses: thatisuday/go-cross-build@542468fed9c6be3220a6cead66abff3943e41a5d
+        uses: thatisuday/go-cross-build@v1.1.0
+        with:
+          # Comma-separated list of "<kernel>/<arch>" combinations.
+          platforms: linux/386,linux/amd64,linux/arm,linux/arm64,windows/386,windows/amd64,windows/arm,windows/arm64,darwin/386,darwin/amd64,darwin/arm,darwin/arm64,
+          compress: false
+          name: upgit
+          dest: dist
+
+      - name: Create Tag
+        uses: negz/create-tag@v1
+        with:
+          version: ${{ github.event.inputs.tag }}
+          message: ${{ github.event.inputs.message }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Release & Assets
+        uses: Hs1r1us/Release-AIO@v1.0
+        with:
+          # The name of the tag
+          tag_name:  ${{ github.event.inputs.tag }} 
+          # The name of the release
+          release_name: Upgit ${{ github.event.inputs.tag }} 
+          # Text describing the contents of the tag
+          body: ${{ steps.gen-changelog.changelog }}
+          # The path to the asset you want to upload
+          asset_files: dist/**
+          # `true` to create a draft (unpublished) release, `false` to create a published one. Default: `false`
+          draft: false
+          # `true` to identify the release as a prerelease. `false` to identify the release as a full release. Default: `false`
+          prerelease: ${{ github.event.inputs.prerelease }}
