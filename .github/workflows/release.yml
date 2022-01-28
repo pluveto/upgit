@@ -57,6 +57,8 @@ jobs:
           
       - name: Release & Assets
         uses: Hs1r1us/Release-AIO@v1.0
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           # The name of the tag
           tag_name:  ${{ github.event.inputs.tag }} 
@@ -69,4 +71,5 @@ jobs:
           # `true` to create a draft (unpublished) release, `false` to create a published one. Default: `false`
           draft: false
           # `true` to identify the release as a prerelease. `false` to identify the release as a full release. Default: `false`
-          prerelease: ${{ github.event.inputs.prerelease }}
+          prerelease: ${{ github.event.inputs.prerelease }}          
+          
