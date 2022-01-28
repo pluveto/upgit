@@ -1,2 +1,2 @@
 go build
-upgit.exe test.csv --verbose
+upgit.exe logo.png --verbose
