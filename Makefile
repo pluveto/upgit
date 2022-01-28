@@ -14,7 +14,6 @@ windows: create_dist_dir
 
 macos: create_dist_dir
 	GOOS=darwin  GOARCH=amd64   go build -o $(BINARY)_macos_amd64.exe $(LDFLAGS) $(SRC)
-	GOOS=darwin  GOARCH=arm     go build -o $(BINARY)_macos_arm.exe   $(LDFLAGS) $(SRC)
 	GOOS=darwin  GOARCH=arm64   go build -o $(BINARY)_macos_arm64.exe $(LDFLAGS) $(SRC)
 
 linux: create_dist_dir
