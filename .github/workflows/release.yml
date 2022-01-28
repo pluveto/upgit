@@ -10,11 +10,6 @@ on:
         type: boolean
         required: false
         default: yes
-      message:
-        type: string
-        description: 'Tag message'
-        required: false
-        default: "new release"
         
 jobs:
   build:
@@ -52,7 +47,7 @@ jobs:
         uses: negz/create-tag@v1
         with:
           version: ${{ github.event.inputs.tag }}
-          message: ${{ github.event.inputs.message }}
+          message: ${{ steps.gen-changelog.changelog }}
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Release & Assets
