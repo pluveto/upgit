@@ -29,6 +29,7 @@ type CLIOptions struct {
 	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
 	Wait       bool     `arg:"-w,--wait"       help:"when set, not exit after upload, util user press any key"`
 	Clean      bool     `arg:"-c,--clean"      help:"when set, remove local file after upload"`
+	Raw        bool     `arg:"-r,--raw"        help:"when set, output non-replaced raw url"`
 }
 
 func (CLIOptions) Description() string {
@@ -110,10 +111,14 @@ func OnUploaded(r Result[UploadRet]) {
 		fmt.Println("Failed: " + r.err.Error())
 		return
 	}
-	if opt.Clean {
+	if opt.Clean && r.value.Status != Ignored {
 		_ = os.Remove(r.value.LocalPath)
 	}
-	fmt.Println(r.value.Url)
+	if opt.Raw {
+		fmt.Println(r.value.RawUrl)
+	} else {
+		fmt.Println(r.value.Url)
+	}
 
 }
 
@@ -123,6 +128,9 @@ func validArgs(cfg Config, opt CLIOptions) {
 	}
 
 	for _, path := range opt.LocalPaths {
+		if strings.HasPrefix(path, "http") {
+			continue
+		}
 		fs, err := os.Stat(path)
 		if errors.Is(err, os.ErrNotExist) {
 			abortErr(fmt.Errorf("invalid file to upload %s: no such file", path))

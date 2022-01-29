@@ -60,7 +60,7 @@ For more help, type `-h` argument
 Upload anything to git and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
@@ -73,6 +73,7 @@ Options:
                          in bytes. overwrite default size limit (5MiB). 0 means no limit
   --wait, -w             when set, not exit after upload, util user press any key
   --clean, -c            when set, remove local file after upload
+  --raw, -r              when set, output non-replaced raw url
   --help, -h             display this help and exit
 ```
 
@@ -127,8 +128,8 @@ username = "username"
 ## Todo
 
 + [x] Upload to specific folder
-+ [ ] Upload and get raw URL that is not replaced.
++ [x] Upload and get raw URL that is not replaced.
 + [x] Upload clipboard image
 + [ ] Save uploaded image link to clipboard
 + [ ] Upload from link
-+ [ ] Ignore uploaded file (link input)
++ [x] Ignore uploaded file (link input)
