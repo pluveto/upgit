@@ -15,12 +15,14 @@ import (
 )
 
 const kDefaultBranch = "master"
-const kMaxUploadSize = int64(5 * 1024 * 1024)
+
+var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
 	LocalPaths []string `arg:"positional, required" placeholder:"FILE"`
-	RemoteDir  string   `arg:"-d, --remote-dir"`
-	Verbose    bool     `arg:"-V,--verbose" help:"verbosity level"`
+	TargetDir  *string  `arg:"-t --target-dir" help:"upload file with original name to given directory"`
+	Verbose    bool     `arg:"-V,--verbose"    help:"will output more details to help developers"`
+	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
 }
 
 func (CLIOptions) Description() string {
@@ -43,7 +45,9 @@ func main() {
 	// parse cli args
 	var opt CLIOptions
 	arg.MustParse(&opt)
-
+	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
+		maxUploadSize = *opt.SizeLimit
+	}
 	GVerbose.Enabled = opt.Verbose
 	GVerbose.TraceStruct(opt)
 
@@ -96,8 +100,8 @@ func validArgs(cfg Config, opt CLIOptions) {
 		if fs.Size() == 0 {
 			abortErr(fmt.Errorf("invalid file to upload %s: file size is zero", path))
 		}
-		if fs.Size() > kMaxUploadSize {
-			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, kMaxUploadSize))
+		if maxUploadSize != 0 && fs.Size() > maxUploadSize {
+			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, maxUploadSize))
 		}
 	}
 }
