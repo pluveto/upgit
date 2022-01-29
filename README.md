@@ -1,5 +1,15 @@
 # ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
+
+
+<img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" /> <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=F0F0F0" />
+
+
+
+**Languages**: English / [简体中文](docs/README.zh-CN.md)
+
+
+
 *Upgit* helps you simply upload any file to your Github repository and then get a raw URL for it.
 
 This is also useful with [Typora](https://typora.io/) as an image uploader.
