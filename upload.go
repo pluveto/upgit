@@ -17,11 +17,11 @@ type UploadOptions struct {
 }
 
 type UploadRet struct {
-	TaskId int
-	Path   string
-	RawUrl string
-	Url    string
-	Time   time.Time
+	TaskId    int
+	LocalPath string
+	RawUrl    string
+	Url       string
+	Time      time.Time
 }
 
 type GithubUploader struct {
@@ -93,27 +93,27 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	return nil
 }
 
-func (u GithubUploader) Upload(taskId int, path string) (ret Result[UploadRet]) {
+func (u GithubUploader) Upload(taskId int, localPath string) (ret Result[UploadRet]) {
 	now := time.Now()
-	base := filepath.Base(path)
+	base := filepath.Base(localPath)
 	renamed := u.Rename(base, now)
 	rawUrl := u.buildUrl(kRawUrlFmt, renamed)
 	url := u.ReplaceUrl(rawUrl)
-	GVerbose.Trace("uploading #TASK_%d %s\n", taskId, path)
-	err := u.PutFile("upload "+base+" via upgit client", path, renamed)
+	GVerbose.Trace("uploading #TASK_%d %s\n", taskId, localPath)
+	err := u.PutFile("upload "+base+" via upgit client", localPath, renamed)
 	if err == nil {
-		GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", taskId, path, url)
+		GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", taskId, localPath, url)
 	} else {
-		GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", taskId, path, err.Error())
+		GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", taskId, localPath, err.Error())
 	}
 	ret = Result[UploadRet]{
 		err: err,
 		value: UploadRet{
-			TaskId: taskId,
-			Path:   path,
-			RawUrl: rawUrl,
-			Url:    url,
-			Time:   now,
+			TaskId:    taskId,
+			LocalPath: localPath,
+			RawUrl:    rawUrl,
+			Url:       url,
+			Time:      now,
 		}}
 	return
 }
@@ -128,9 +128,9 @@ func (u GithubUploader) buildUrl(urlfmt, path string) string {
 	return r.Replace(urlfmt)
 }
 
-func (u GithubUploader) UploadAll(paths []string) {
-	for taskId, path := range paths {
-		ret := u.Upload(taskId, path)
+func (u GithubUploader) UploadAll(localPaths []string) {
+	for taskId, localPath := range localPaths {
+		ret := u.Upload(taskId, localPath)
 		if ret.err == nil {
 			GVerbose.TraceStruct(ret.value)
 		}
