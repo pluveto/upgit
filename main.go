@@ -17,19 +17,28 @@ import (
 	"gopkg.in/validator.v2"
 )
 
+type OutputType string
+
+const (
+	O_Stdout            OutputType = "stdout"
+	O_Clipboard                    = "clipboard"
+	O_ClipboardMarkdown            = "clipboard-markdown"
+)
+
 const kDefaultBranch = "master"
 const kRepoURL = "https://github.com/pluveto/upgit"
 
 var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
-	LocalPaths []string `arg:"positional, required" placeholder:"FILE" help:"local file path to upload. :clipboard for uploading clipboard image"`
-	TargetDir  string   `arg:"-t,--target-dir" help:"upload file with original name to given directory. if not set, will use renaming rules"`
-	Verbose    bool     `arg:"-V,--verbose"    help:"when set, output more details to help developers"`
-	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
-	Wait       bool     `arg:"-w,--wait"       help:"when set, not exit after upload, util user press any key"`
-	Clean      bool     `arg:"-c,--clean"      help:"when set, remove local file after upload"`
-	Raw        bool     `arg:"-r,--raw"        help:"when set, output non-replaced raw url"`
+	LocalPaths []string   `arg:"positional, required" placeholder:"FILE" help:"local file path to upload. :clipboard for uploading clipboard image"`
+	TargetDir  string     `arg:"-t,--target-dir"  help:"upload file with original name to given directory. if not set, will use renaming rules"`
+	Verbose    bool       `arg:"-V,--verbose"     help:"when set, output more details to help developers"`
+	SizeLimit  *int64     `arg:"-s,--size-limit"  help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
+	Wait       bool       `arg:"-w,--wait"        help:"when set, not exit after upload, util user press any key"`
+	Clean      bool       `arg:"-c,--clean"       help:"when set, remove local file after upload"`
+	Raw        bool       `arg:"-r,--raw"         help:"when set, output non-replaced raw url"`
+	OutputType OutputType `arg:"-o,--output-type" help:"output type, supports stdout, clipboard, clipboard-markdown" default:"stdout"`
 }
 
 func (CLIOptions) Description() string {
@@ -107,19 +116,34 @@ func main() {
 }
 
 func OnUploaded(r Result[UploadRet]) {
-	if !r.Ok() {
+	if !r.Ok() && opt.OutputType == O_Stdout {
 		fmt.Println("Failed: " + r.err.Error())
 		return
 	}
 	if opt.Clean && r.value.Status != Ignored {
 		_ = os.Remove(r.value.LocalPath)
 	}
-	if opt.Raw {
-		fmt.Println(r.value.RawUrl)
-	} else {
-		fmt.Println(r.value.Url)
-	}
 
+	output(r.value)
+}
+
+func output(r UploadRet) {
+	var outUrl string
+	if opt.Raw {
+		outUrl = r.RawUrl
+	} else {
+		outUrl = r.Url
+	}
+	switch opt.OutputType {
+	case O_Stdout:
+		fmt.Println(outUrl)
+	case O_Clipboard:
+		clipboard.Write(clipboard.FmtText, []byte(outUrl))
+	case O_ClipboardMarkdown:
+		clipboard.Write(clipboard.FmtText, []byte(
+			fmt.Sprint("![", filepath.Base(outUrl), "](", outUrl, ")"),
+		))
+	}
 }
 
 func validArgs(cfg Config, opt CLIOptions) {

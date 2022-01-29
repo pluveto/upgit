@@ -12,6 +12,7 @@ This is also useful with [Typora](https://typora.io/) as an image uploader.
 + Custom auto **renaming** rule
 + **CDN** via replace rules
 + Config via **Environment Variable**
++ Output URL to stdout/clipboard, supports markdown image format
 
 ## Get started
 
@@ -60,11 +61,10 @@ For more help, type `-h` argument
 Upload anything to git and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--output-type OUTPUT-TYPE] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
-
 Options:
   --target-dir TARGET-DIR, -t TARGET-DIR
                          upload file with original name to given directory. if not set, will use renaming rules
@@ -74,6 +74,8 @@ Options:
   --wait, -w             when set, not exit after upload, util user press any key
   --clean, -c            when set, remove local file after upload
   --raw, -r              when set, output non-replaced raw url
+  --output-type OUTPUT-TYPE, -o OUTPUT-TYPE
+                         output type, support stdout(default), clipboard, clipboard-markdown [default: stdout]
   --help, -h             display this help and exit
 ```
 
@@ -94,6 +96,20 @@ Now enjoy it.
 > You can click *Test Uploader* button to make sure it works.
 
 ![image-20220128204418723](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
+
+## Upload Clipboard
+
+Use `:clipboard` place holder for clipboard image. (Only supports **png** format)
+
+```shell
+./upgit :clipboard
+```
+
+Shortcuts for screenshot:
+
+- On macOS, use `Ctrl+Shift+Cmd+4`
+- On Linux/Ubuntu, use `Ctrl+Shift+PrintScreen`
+- On Windows, use `Shift+Win+s`
 
 
 
