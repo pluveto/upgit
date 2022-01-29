@@ -1,0 +1,24 @@
+name: Changelog
+on:
+  workflow_dispatch:
+        
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      # Fetch depth 0 is required for Changelog generation
+      - name: Checkout      
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          
+      - name: "Generate release changelog"
+        id: gen_changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} 
+          
+      - name: Print changelog
+        run: |
+          echo ${{ steps.gen_changelog.changelog }}
