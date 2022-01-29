@@ -16,7 +16,15 @@ type UploadOptions struct {
 	LocalPath string
 }
 
+type UploadStatus string
+
+const (
+	Ignored UploadStatus = "ignored"
+	OK                   = "ok"
+)
+
 type UploadRet struct {
+	Status    UploadStatus
 	TaskId    int
 	LocalPath string
 	RawUrl    string
@@ -116,6 +124,7 @@ func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Res
 	ret = Result[UploadRet]{
 		err: err,
 		value: UploadRet{
+			Status:    OK,
 			TaskId:    taskId,
 			LocalPath: localPath,
 			RawUrl:    rawUrl,
@@ -139,7 +148,24 @@ func (u GithubUploader) buildUrl(urlfmt, path string) string {
 // If targetDir is not set, it will upload using rename rules.
 func (u GithubUploader) UploadAll(localPaths []string, targetDir string) {
 	for taskId, localPath := range localPaths {
-		ret := u.Upload(taskId, localPath, targetDir)
+
+		var ret Result[UploadRet]
+		// ignore non-local path
+		if strings.HasPrefix(localPath, "http") {
+			ret = Result[UploadRet]{
+				value: UploadRet{
+					Status:    Ignored,
+					TaskId:    taskId,
+					LocalPath: localPath,
+					RawUrl:    localPath,
+					Url:       localPath,
+					Time:      time.Now(),
+				},
+			}
+		} else {
+			ret = u.Upload(taskId, localPath, targetDir)
+		}
+
 		if ret.err == nil {
 			GVerbose.TraceStruct(ret.value)
 		}
