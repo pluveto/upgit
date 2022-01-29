@@ -13,7 +13,7 @@ Download it from [Release](https://github.com/pluveto/upgit/releases).
 > If you have no idea which to download:
 >
 > + For most Windows users, choose `upgit_win_amd64.exe`
-> + For most macOS users, choose `upgit_macos_arm64.exe`
+> + For most macOS users, choose `upgit_macos_amd64`
 
 Rename it to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like.
 
