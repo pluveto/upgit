@@ -25,7 +25,7 @@ Create `config.toml` in the same directory of *upgit*, and fill it in following 
 
 ### Use it
 
-To upload file `logo.png`, execute:
+To upload file `logo.png` with rename rules, execute:
 
 ```shell
 ./upgit logo.png
@@ -34,9 +34,16 @@ To upload file `logo.png`, execute:
 
 Then you'll see a link to `logo.png`.
 
+To upload file `logo.png` to remote folder `/my_images/demo`, execute:
+
+```shell
+./upgit logo.png -t /my_images/demo
+# for Windows: .\upgit.exe logo.png -t /my_images/demo
+```
+
 ---
 
-For help, type `-h` argument
+For more help, type `-h` argument
 
 ```
 ./upgit -h
@@ -44,13 +51,17 @@ For help, type `-h` argument
 Upload anything to git and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--verbose] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] FILE [FILE ...]
 
 Positional arguments:
   FILE
 
 Options:
-  --verbose, -V          verbosity level
+  --target-dir TARGET-DIR, -t TARGET-DIR
+                         upload file with original name to given directory. if not set, will use renaming rules
+  --verbose, -V          will output more details to help developers
+  --size-limit SIZE-LIMIT, -s SIZE-LIMIT
+                         in bytes. overwrite default size limit (5MiB). 0 means no limit
   --help, -h             display this help and exit
 ```
 
@@ -102,3 +113,8 @@ repo = "repo-name"
 username = "username"
 ```
 
+## Todo
+
+[x] Upload to specific folder
+
+[ ] Upload and get raw URL
