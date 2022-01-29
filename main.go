@@ -20,7 +20,7 @@ var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
 	LocalPaths []string `arg:"positional, required" placeholder:"FILE"`
-	TargetDir  *string  `arg:"-t --target-dir" help:"upload file with original name to given directory"`
+	TargetDir  string   `arg:"-t,--target-dir" help:"upload file with original name to given directory. if not set, will use renaming rules"`
 	Verbose    bool     `arg:"-V,--verbose"    help:"will output more details to help developers"`
 	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
 }
@@ -45,6 +45,7 @@ func main() {
 	// parse cli args
 	var opt CLIOptions
 	arg.MustParse(&opt)
+	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
 		maxUploadSize = *opt.SizeLimit
 	}
@@ -64,15 +65,15 @@ func main() {
 	if err != nil {
 		abortErr(fmt.Errorf("invalid config: " + err.Error()))
 	}
-	cfg.Rename = strings.TrimLeft(cfg.Rename, "/")
+	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	GVerbose.TraceStruct(cfg)
 
 	// validating args
 	validArgs(cfg, opt)
 
 	// executing uploading
-	uploader := GithubUploader{Options: cfg, OnUploaded: OnUploaded}
-	uploader.UploadAll(opt.LocalPaths)
+	uploader := GithubUploader{Config: cfg, OnUploaded: OnUploaded}
+	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
 	return
 }
 
