@@ -26,6 +26,7 @@ const (
 )
 
 const kDefaultBranch = "master"
+const kClipboardPlaceholder = ":clipboard"
 const kRepoURL = "https://github.com/pluveto/upgit"
 
 var maxUploadSize = int64(5 * 1024 * 1024)
@@ -43,7 +44,7 @@ type CLIOptions struct {
 
 func (CLIOptions) Description() string {
 	return "\n" +
-		"Upload anything to git and then get its link.\n" +
+		"Upload anything to github repo and then get its link.\n" +
 		"For more information: " + kRepoURL + "\n"
 }
 
@@ -85,7 +86,7 @@ func main() {
 	GVerbose.TraceStruct(cfg)
 
 	// handle clipboard
-	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == ":clipboard" {
+	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == kClipboardPlaceholder {
 
 		err := clipboard.Init()
 		if err != nil {
@@ -99,13 +100,14 @@ func main() {
 		}
 		os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
 		opt.LocalPaths[0] = tmpFileName
+		opt.Clean = true
 	}
 
 	// validating args
 	validArgs(cfg, opt)
 
 	// executing uploading
-	uploader := GithubUploader{Config: cfg, OnUploaded: OnUploaded}
+	uploader := GithubUploader{Config: cfg, OnUploaded: onUploaded}
 	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
 
 	if opt.Wait {
@@ -115,7 +117,7 @@ func main() {
 	return
 }
 
-func OnUploaded(r Result[UploadRet]) {
+func onUploaded(r Result[UploadRet]) {
 	if !r.Ok() && opt.OutputType == O_Stdout {
 		fmt.Println("Failed: " + r.err.Error())
 		return
@@ -124,10 +126,10 @@ func OnUploaded(r Result[UploadRet]) {
 		_ = os.Remove(r.value.LocalPath)
 	}
 
-	output(r.value)
+	outputLink(r.value)
 }
 
-func output(r UploadRet) {
+func outputLink(r UploadRet) {
 	var outUrl string
 	if opt.Raw {
 		outUrl = r.RawUrl
