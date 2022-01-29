@@ -25,14 +25,14 @@ Create `config.toml` in the same directory of *upgit*, and fill it in following 
 
 ### Use it
 
-To upload file `demo.png`, execute:
+To upload file `logo.png`, execute:
 
 ```shell
-./upgit demo.png
-# for windows: .\upgit.exe demo.png
+./upgit logo.png
+# for windows: .\upgit.exe logo.png
 ```
 
-Then you'll see a link to `demo.png`.
+Then you'll see a link to `logo.png`.
 
 ---
 
