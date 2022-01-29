@@ -22,12 +22,6 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: "Generate release changelog"
-        id: gen_changelog
-        uses: heinrichreimer/github-changelog-generator-action@v2.3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
-          
       - name: Setup go
         uses: actions/setup-go@v2
         with:
@@ -47,9 +41,21 @@ jobs:
         uses: negz/create-tag@v1
         with:
           version: ${{ github.event.inputs.tag }}
-          message: ${{ steps.gen_changelog.changelog }}
+          message: "create tag"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create changelog text
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
           
+      - name: Print changelog
+        run: |
+          cat <<EOF
+          ${{ steps.changelog.outputs.changes }}
+          EOF
+
       - name: Release & Assets
         uses: Hs1r1us/Release-AIO@v1.0
         env: 
@@ -60,7 +66,7 @@ jobs:
           # The name of the release
           release_name: Upgit ${{ github.event.inputs.tag }} 
           # Text describing the contents of the tag
-          body: ${{ steps.gen_changelog.changelog }}
+          body: ${{ steps.changelog.outputs.changes }}
           # The path to the asset you want to upload
           asset_files: dist/
           # `true` to create a draft (unpublished) release, `false` to create a published one. Default: `false`
