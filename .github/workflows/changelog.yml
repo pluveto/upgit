@@ -13,13 +13,14 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: "Generate release changelog"
-        id: gen_changelog
-        uses: heinrichreimer/github-changelog-generator-action@v2.3
+      - name: Create changelog text
+        id: changelog
+        uses: loopwerk/tag-changelog@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
-          onlyLastTag: true
+          token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Print changelog
         run: |
-          echo ${{ steps.gen_changelog.outputs.changelog }}
+          cat <<EOF
+            ${{ steps.changelog.outputs.changes }}
+          EOF
