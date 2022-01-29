@@ -119,3 +119,5 @@ username = "username"
 + [ ] Upload and get raw URL that is not replaced.
 + [ ] Upload clipboard image
 + [ ] Save uploaded image to clipboard
++ [ ] Upload from link
++ [ ] Ignore uploaded file (link input)
