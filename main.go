@@ -71,17 +71,9 @@ func main() {
 	GVerbose.Enabled = opt.Verbose
 	GVerbose.TraceStruct(opt)
 
-	loadEnvConfig(&cfg)
 	// load config
-	dir, err := GetApplicationPath()
-	panicErr(err)
-	optRawBytes, err := ioutil.ReadFile(filepath.Join(dir, "config.toml"))
-	if err == nil {
-		err = toml.Unmarshal(optRawBytes, &cfg)
-	}
-	if err != nil {
-		abortErr(fmt.Errorf("invalid config: " + err.Error()))
-	}
+	loadEnvConfig(&cfg)
+	loadTomlConfig(&cfg)
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	GVerbose.TraceStruct(cfg)
 
@@ -171,6 +163,36 @@ func validArgs(cfg Config, opt CLIOptions) {
 			abortErr(fmt.Errorf("invalid file to upload %s: file size is larger than %d bytes", path, maxUploadSize))
 		}
 	}
+}
+
+func loadTomlConfig(cfg *Config) {
+
+	homeDir, err := os.UserHomeDir()
+	panicErr(err)
+
+	appDir, err := GetApplicationPath()
+	panicErr(err)
+
+	var configFiles = []string{
+		filepath.Join(homeDir, ".upgit.config.toml"),
+		filepath.Join(homeDir, ".upgit.toml"),
+		filepath.Join(appDir, "config.toml"),
+	}
+
+	for _, configFile := range configFiles {
+		if _, err := os.Stat(configFile); err != nil {
+			continue
+		}
+		optRawBytes, err := ioutil.ReadFile(configFile)
+		if err == nil {
+			err = toml.Unmarshal(optRawBytes, &cfg)
+		}
+		if err != nil {
+			abortErr(fmt.Errorf("invalid config: " + err.Error()))
+		}
+		return
+	}
+
 }
 
 func loadEnvConfig(cfg *Config) {
