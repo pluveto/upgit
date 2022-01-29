@@ -15,20 +15,23 @@ import (
 )
 
 const kDefaultBranch = "master"
+const kRepoURL = "https://github.com/pluveto/upgit"
 
 var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
 	LocalPaths []string `arg:"positional, required" placeholder:"FILE"`
 	TargetDir  string   `arg:"-t,--target-dir" help:"upload file with original name to given directory. if not set, will use renaming rules"`
-	Verbose    bool     `arg:"-V,--verbose"    help:"will output more details to help developers"`
+	Verbose    bool     `arg:"-V,--verbose"    help:"when set, output more details to help developers"`
 	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
+	Wait       bool     `arg:"-w,--wait"       help:"when set, not exit after upload, util user press any key"`
+	Clean      bool     `arg:"-c,--clean"      help:"when set, remove local file after upload"`
 }
 
 func (CLIOptions) Description() string {
 	return "\n" +
 		"Upload anything to git and then get its link.\n" +
-		"For more information: https://github.com/pluveto/upgit\n"
+		"For more information: " + kRepoURL + "\n"
 }
 
 type Config struct {
@@ -71,9 +74,19 @@ func main() {
 	// validating args
 	validArgs(cfg, opt)
 
+	// handle clipboard
+	if len(opt.LocalPaths) == 1 && opt.LocalPaths[0] == ":clipboard" {
+
+	}
+
 	// executing uploading
 	uploader := GithubUploader{Config: cfg, OnUploaded: OnUploaded}
 	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
+
+	if opt.Wait {
+		fmt.Scanln()
+	}
+
 	return
 }
 
