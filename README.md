@@ -1,4 +1,4 @@
-# ![upgit](https://github.com/pluveto/upgit/blob/main/logo.png?raw=true)
+# ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
 *Upgit* helps you simply upload any file to your Github repository and then get a raw URL for it.
 
@@ -91,13 +91,13 @@ Move to *Image*. Choose *Custom Command* as your *Image Uploader*.
 
 Input *upgit* program location into *Command* textbox.
 
-Now enjoy it.
-
 > You can click *Test Uploader* button to make sure it works.
 
 ![image-20220128204418723](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
 
-## Upload Clipboard
+Now enjoy it!
+
+### Upload Clipboard
 
 Use `:clipboard` place holder for clipboard image. (Only supports **png** format)
 
@@ -111,11 +111,41 @@ Shortcuts for screenshot:
 - On Linux/Ubuntu, use `Ctrl+Shift+PrintScreen`
 - On Windows, use `Shift+Win+s`
 
+### Save URL to Clipboard
 
+Use `--output-type clipboard-markdown`:
+
+```shell
+./upgit logo.png --output-type clipboard-markdown
+# or ./upgit :clipboard --o clipboard-markdown
+```
+
+Then you'll get a markdown image link in your clipboard like:
+
+```
+![logo.png](!https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
+```
+
+### Best practice with AHK
+
+For Windows user:
+
+1. Install AHK
+
+2. Create this script `upload_clipboard.ahk` and run:
+
+   ```ahk
+   # Ctrl+F9 As shortcut
+   ^F9::
+   RunWait, explorer ms-screenclip:
+   # use your own *upgit* program path
+   RunWait, "upgit.exe" :clipboard --output-type clipboard-markdown
+   return
+   ```
+
+3. Then press <kbd>Ctrl</kbd><kbd>F9</kbd> to automatically take screenshot, upload it and get its link to your clipboard!
 
 ## Config Instructions
-
-
 
 | Key                   | Desc                                                         |
 | --------------------- | ------------------------------------------------------------ |
