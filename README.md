@@ -13,9 +13,9 @@ Download it from [Release](https://github.com/pluveto/upgit/releases).
 > If you have no idea which to download:
 >
 > + For most Windows users, choose `upgit_win_amd64.exe`
-> + For most macOS users, choose `upgit_macos_arm64.exe`
+> + For most macOS users, choose `upgit_macos_arm64`
 
-Rename it to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like.
+Rename it to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like. To access it from anywhere, add its directory to the `PATH` environment variable.
 
 **Warning:** this program doesn't contain an auto-updater. If you need to keep updated, just give *upgit* a ⭐star.
 
@@ -115,6 +115,7 @@ username = "username"
 
 ## Todo
 
-[x] Upload to specific folder
-
-[ ] Upload and get raw URL
++ [x] Upload to specific folder
++ [ ] Upload and get raw URL that is not replaced.
++ [ ] Upload clipboard image
++ [ ] Save uploaded image to clipboard
