@@ -4,6 +4,15 @@
 
 This is also useful with [Typora](https://typora.io/) as an image uploader.
 
+## Feature
+
++ Support for Linux, Windows and macOS
++ Upload any file to given remote github repo folder
++ Upload from **clipboard**
++ Custom auto **renaming** rule
++ **CDN** via replace rules
++ Config via **Environment Variable**
+
 ## Get started
 
 ### Download
@@ -51,17 +60,19 @@ For more help, type `-h` argument
 Upload anything to git and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] FILE [FILE ...]
 
 Positional arguments:
-  FILE
+  FILE                   local file path to upload. :clipboard for uploading clipboard image
 
 Options:
   --target-dir TARGET-DIR, -t TARGET-DIR
                          upload file with original name to given directory. if not set, will use renaming rules
-  --verbose, -V          will output more details to help developers
+  --verbose, -V          when set, output more details to help developers
   --size-limit SIZE-LIMIT, -s SIZE-LIMIT
                          in bytes. overwrite default size limit (5MiB). 0 means no limit
+  --wait, -w             when set, not exit after upload, util user press any key
+  --clean, -c            when set, remove local file after upload
   --help, -h             display this help and exit
 ```
 
@@ -117,7 +128,7 @@ username = "username"
 
 + [x] Upload to specific folder
 + [ ] Upload and get raw URL that is not replaced.
-+ [ ] Upload clipboard image
-+ [ ] Save uploaded image to clipboard
++ [x] Upload clipboard image
++ [ ] Save uploaded image link to clipboard
 + [ ] Upload from link
 + [ ] Ignore uploaded file (link input)

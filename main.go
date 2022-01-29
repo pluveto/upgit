@@ -3,14 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/alexflint/go-arg"
 	"github.com/pelletier/go-toml/v2"
+	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
 
@@ -20,7 +23,7 @@ const kRepoURL = "https://github.com/pluveto/upgit"
 var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
-	LocalPaths []string `arg:"positional, required" placeholder:"FILE"`
+	LocalPaths []string `arg:"positional, required" placeholder:"FILE" help:"local file path to upload. :clipboard for uploading clipboard image"`
 	TargetDir  string   `arg:"-t,--target-dir" help:"upload file with original name to given directory. if not set, will use renaming rules"`
 	Verbose    bool     `arg:"-V,--verbose"    help:"when set, output more details to help developers"`
 	SizeLimit  *int64   `arg:"-s,--size-limit" help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
@@ -43,10 +46,12 @@ type Config struct {
 	Branch       string            `toml:"branch,omitempty"`
 }
 
+var opt CLIOptions
+var cfg Config = Config{Branch: kDefaultBranch}
+
 func main() {
 
 	// parse cli args
-	var opt CLIOptions
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
@@ -55,9 +60,7 @@ func main() {
 	GVerbose.Enabled = opt.Verbose
 	GVerbose.TraceStruct(opt)
 
-	var cfg Config = Config{Branch: kDefaultBranch}
 	loadEnvConfig(&cfg)
-
 	// load config
 	dir, err := GetApplicationPath()
 	panicErr(err)
@@ -71,13 +74,25 @@ func main() {
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	GVerbose.TraceStruct(cfg)
 
+	// handle clipboard
+	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == ":clipboard" {
+
+		err := clipboard.Init()
+		if err != nil {
+			abortErr(fmt.Errorf("failed to init clipboard: " + err.Error()))
+		}
+
+		tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
+		buf := clipboard.Read(clipboard.FmtImage)
+		if nil == buf {
+			abortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
+		}
+		os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
+		opt.LocalPaths[0] = tmpFileName
+	}
+
 	// validating args
 	validArgs(cfg, opt)
-
-	// handle clipboard
-	if len(opt.LocalPaths) == 1 && opt.LocalPaths[0] == ":clipboard" {
-
-	}
 
 	// executing uploading
 	uploader := GithubUploader{Config: cfg, OnUploaded: OnUploaded}
@@ -95,7 +110,11 @@ func OnUploaded(r Result[UploadRet]) {
 		fmt.Println("Failed: " + r.err.Error())
 		return
 	}
+	if opt.Clean {
+		_ = os.Remove(r.value.LocalPath)
+	}
 	fmt.Println(r.value.Url)
+
 }
 
 func validArgs(cfg Config, opt CLIOptions) {
