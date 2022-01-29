@@ -127,7 +127,7 @@ Options:
 
 ```shell
 ./upgit logo.png --output-type clipboard-markdown
-# or ./upgit :clipboard --o clipboard-markdown
+# or .\upgit.exe :clipboard -o clipboard-markdown
 ```
 
 然后会在剪贴板上得到一个 Markdown 图片链接，比如：

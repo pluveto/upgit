@@ -19,8 +19,8 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 + Support for Linux, Windows and macOS
 + Upload any file to given remote github repo folder
 + Upload from **clipboard**
-+ Custom auto **renaming** rule
-+ **CDN** via replace rules
++ Custom auto **renaming** rules
++ **CDN** via replacing rules
 + Config via **Environment Variable**
 + Output URL to stdout/clipboard, supports markdown image format
 
@@ -127,7 +127,7 @@ Use `--output-type clipboard-markdown`:
 
 ```shell
 ./upgit logo.png --output-type clipboard-markdown
-# or ./upgit :clipboard --o clipboard-markdown
+# or .\upgit.exe :clipboard -o clipboard-markdown
 ```
 
 Then you'll get a markdown image link in your clipboard like:
@@ -186,6 +186,7 @@ username = "username"
 + [x] Upload to specific folder
 + [x] Upload and get raw URL that is not replaced.
 + [x] Upload clipboard image
-+ [ ] Save uploaded image link to clipboard
++ [x] Save uploaded image link to clipboard
 + [ ] Upload from link
 + [x] Ignore uploaded file (link input)
++ [ ] Upload history
