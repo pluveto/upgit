@@ -21,4 +21,4 @@ jobs:
           
       - name: Print changelog
         run: |
-          echo ${{ steps.gen_changelog.changelog }}
+          echo ${{ steps.gen_changelog.outputs.changelog }}
