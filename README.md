@@ -12,7 +12,7 @@
 
 *Upgit* helps you simply upload any file to your Github repository and then get a raw URL for it.
 
-This is also useful with [Typora](https://typora.io/) as an image uploader.
+This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-uploaders) as an image uploader.
 
 ## Feature
 

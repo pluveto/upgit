@@ -4,7 +4,7 @@
 
 *Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。
 
-可作为 [Typora](https://typora.io/) 的自定义上传器使用。
+可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用。
 
 ## 特点
 
@@ -29,7 +29,7 @@
 
 下载后将其重命名为`upgit`（对于Windows用户，`upgit.exe`），保存到某处。若要从任何地方访问它，请将其目录添加到 `PATH` 环境变量中。
 
-**提醒：此程序不自动更新。如果你需要保持更新，可以点右上角的 ⭐star 收藏。
+**提醒：** 此程序不会自动检查更新。如果你关心本程序的新功能，可以点右上角的 ⭐star 收藏。
 
 ### 配置
 
