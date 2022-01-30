@@ -2,7 +2,6 @@ package xclipboard
 
 import (
 	"errors"
-	"runtime"
 )
 
 func ReadClipboardImage() (buf []byte, err error) {
