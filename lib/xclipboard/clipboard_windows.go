@@ -2,15 +2,13 @@
  * Modified based on
  * https://github.com/robinchenyu/clipboard_go
  */
-package main
+package xclipboard
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"image/jpeg"
 	"image/png"
-	"os"
 	"syscall"
 	"unsafe"
 
@@ -83,7 +81,7 @@ func readUint32(b []byte) uint32 {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
 
-func Win32_ReadClipboardImage() (buf []byte, err error) {
+func ReadClipboardImage() (buf []byte, err error) {
 	const (
 		fileHeaderLen = 14
 		infoHeaderLen = 40
@@ -131,18 +129,6 @@ func Win32_ReadClipboardImage() (buf []byte, err error) {
 		j++
 	}
 	return bmpToPng(bmpBuf)
-}
-
-// MustBmpToJpeg decode bmp and encode as jpeg
-func MustBmpToJpeg(bmpBuf *bytes.Buffer, saveName string, quality int) {
-	f, err := os.OpenFile(saveName, os.O_RDWR|os.O_CREATE, 0755)
-	panicErr(err)
-	original_image, err := bmp.Decode(bmpBuf)
-	panicErr(err)
-	err = jpeg.Encode(f, original_image, &jpeg.Options{Quality: quality})
-	panicErr(err)
-	err = f.Close()
-	panicErr(err)
 }
 
 func bmpToPng(bmpBuf *bytes.Buffer) (buf []byte, err error) {
