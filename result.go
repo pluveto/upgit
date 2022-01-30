@@ -35,6 +35,7 @@ func (r Result[T]) ValueOrExit() T {
 
 func abortErr(err error) {
 	if err != nil {
+		GVerbose.Error("abort: " + err.Error())
 		os.Stderr.WriteString(err.Error())
 		os.Exit(1)
 	}
@@ -42,6 +43,7 @@ func abortErr(err error) {
 
 func panicErr(err error) {
 	if err != nil {
+		GVerbose.Error("panic: " + err.Error())
 		panic(err)
 	}
 }

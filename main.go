@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -72,6 +73,7 @@ func main() {
 	if !opt.NoLog {
 		GVerbose.LogEnabled = true
 		GVerbose.LogFile = MustApplicationPath("upgit.log")
+		GVerbose.Info("Started")
 	}
 	GVerbose.VerboseEnabled = opt.Verbose
 	GVerbose.TraceStruct(opt)
@@ -124,6 +126,7 @@ func recordHistory(r UploadRet) {
 		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
 		os.ModeAppend,
 	)
+	GVerbose.Info(MustMarshall(r))
 }
 
 func outputLink(r UploadRet) {
@@ -209,6 +212,15 @@ func loadClipboard(opt *CLIOptions) {
 
 		tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
 		buf := clipboard.Read(clipboard.FmtImage)
+		if nil == buf {
+			// try second chance for Windows user. To adapt bitmap format (compatible with Snipaste)
+			if runtime.GOOS == "windows" {
+				buf, err = ReadClipboardImage()
+			}
+			if err != nil {
+				GVerbose.Error("failed to read clipboard image: " + err.Error())
+			}
+		}
 		if nil == buf {
 			abortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
 		}
