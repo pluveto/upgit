@@ -10,7 +10,7 @@
 
 
 
-*Upgit* helps you simply upload any file to your Github repository and then get a raw URL for it.
+*Upgit* is a native & lightweight tool to helps you upload any file to your Github repository and then get a raw URL for it.
 
 This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-uploaders) as an image uploader.
 
@@ -180,6 +180,14 @@ rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 repo = "repo-name"
 username = "username"
 ```
+
+### Config via Environment Variables
+
++ `UPGIT_TOKEN`
++ `UPGIT_RENAME`
++ `UPGIT_USERNAME`
++ `UPGIT_REPO`
++ `UPGIT_BRANCH`
 
 ## Todo
 
