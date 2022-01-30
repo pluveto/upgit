@@ -83,7 +83,7 @@ func readUint32(b []byte) uint32 {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
 
-func ReadClipboardImage() (buf []byte, err error) {
+func Win32_ReadClipboardImage() (buf []byte, err error) {
 	const (
 		fileHeaderLen = 14
 		infoHeaderLen = 40
