@@ -22,6 +22,12 @@ linux: create_dist_dir
 	GOOS=linux   GOARCH=arm     go build -o $(BINARY)_linux_arm     $(LDFLAGS) $(SRC)
 	GOOS=linux   GOARCH=arm64   go build -o $(BINARY)_linux_arm64   $(LDFLAGS) $(SRC)
 
+upx: all
+	for i in $(DIST_DIR)/*
+	do
+		upx -9 $i
+	done
+
 all: windows macos linux
 	@echo "done."
 
