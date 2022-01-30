@@ -1,4 +1,4 @@
-package main
+package xclipboard
 
 import (
 	"errors"
@@ -6,8 +6,5 @@ import (
 )
 
 func ReadClipboardImage() (buf []byte, err error) {
-	if runtime.GOOS == "windows" {
-		return Win32_ReadClipboardImage()
-	}
 	return nil, errors.New("unsupported for your operation system")
 }

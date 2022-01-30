@@ -3,7 +3,7 @@
  * https://github.com/robinchenyu/clipboard_go
  */
 
-package main
+package xclipboard
 
 import (
 	"io/fs"

@@ -14,6 +14,7 @@ import (
 
 	"github.com/alexflint/go-arg"
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pluveto/upgit/lib/xclipboard"
 	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
@@ -215,7 +216,7 @@ func loadClipboard(opt *CLIOptions) {
 		if nil == buf {
 			// try second chance for Windows user. To adapt bitmap format (compatible with Snipaste)
 			if runtime.GOOS == "windows" {
-				buf, err = ReadClipboardImage()
+				buf, err = xclipboard.ReadClipboardImage()
 			}
 			if err != nil {
 				GVerbose.Error("failed to read clipboard image: " + err.Error())
