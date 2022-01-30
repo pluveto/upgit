@@ -145,15 +145,13 @@ For Windows user:
 2. Create this script `upload_clipboard.ahk` and run:
 
    ```ahk
-   # Ctrl+F9 As shortcut
+   ; Press Ctrl + F9 to upload clipboard image
    ^F9::
-   RunWait, explorer ms-screenclip:
-   # use your own *upgit* program path
    RunWait, "upgit.exe" :clipboard --output-type clipboard-markdown
    return
    ```
 
-3. Then press <kbd>Ctrl</kbd><kbd>F9</kbd> to automatically take screenshot, upload it and get its link to your clipboard!
+3. Then press <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> to take screenshot. <kbd>Ctrl</kbd><kbd>F9</kbd> to upload it and get its link to your clipboard!
 
 ## Config Instructions
 

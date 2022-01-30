@@ -145,14 +145,12 @@ Options:
 1. 安装AHK
 2. 创建这个脚本 `upload_clipboard.ahk` 并运行：
    ```ahk
-   # Ctrl+F9 As shortcut
+   ; Press Ctrl + F9 to upload clipboard image
    ^F9::
-   RunWait, explorer ms-screenclip:
-   # use your own *upgit* program path
    RunWait, "upgit.exe" :clipboard --output-type clipboard-markdown
    return
    ```
-3. 然后按 <kbd>Ctrl</kbd><kbd>F9</kbd>自动截图、上传并将其链接复制到剪贴板！
+3. 然后按 <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> 截图，按 <kbd>Ctrl</kbd><kbd>F9</kbd>上传并将其链接复制到剪贴板
 
 
 ## 配置文件说明
