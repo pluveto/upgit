@@ -20,7 +20,7 @@ type Verbose struct {
 }
 
 func (v Verbose) Trace(fmt_ string, args ...interface{}) {
-	message := toMessage("[TRACE]", fmt_, args...)
+	message := toMessage("[TRACE] ", fmt_, args...)
 	if v.VerboseEnabled {
 		fmt.Printf(message)
 	}
@@ -34,7 +34,15 @@ func toMessage(level, fmt_ string, args ...interface{}) string {
 }
 
 func (v Verbose) Info(fmt_ string, args ...interface{}) {
-	message := toMessage("[INFO ]", fmt_, args...)
+	v.Log("[INFO ] ", fmt_, args...)
+}
+
+func (v Verbose) Error(fmt_ string, args ...interface{}) {
+	v.Log("[ERROR] ", fmt_, args...)
+}
+
+func (v Verbose) Log(level, fmt_ string, args ...interface{}) {
+	message := toMessage(level, fmt_, args...)
 	if v.VerboseEnabled {
 		fmt.Printf(message)
 	}

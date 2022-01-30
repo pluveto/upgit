@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func GetApplicationPath() (path string, err error) {
@@ -20,6 +22,14 @@ func MustApplicationPath(append string) string {
 		abortErr(err)
 	}
 	return filepath.Join(path, append)
+}
+
+func MustMarshall(s interface{}) string {
+	b, err := toml.Marshal(s)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
 
 // RemoveFmtUnderscore {abc_def_} => {abcdef}
