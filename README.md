@@ -1,6 +1,6 @@
 # ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
-
+<img align="right" src="https://img.shields.io/github/workflow/status/pluveto/upgit/Release?logo=go&style=flat-square" />
 
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" /> <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=F0F0F0" />
 
