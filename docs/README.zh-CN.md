@@ -6,6 +6,8 @@
 
 可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用。
 
+**太长不看**：简言之，对于 Windows 用户，本程序配合 AHK 可以帮助你一键完成截图、上传、复制链接的操作。
+
 ## 特点
 
 + 支持多平台，包括 Linux、Windows macOS
