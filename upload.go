@@ -41,16 +41,24 @@ const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}
 const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
 
 func (u GithubUploader) Rename(path string, time time.Time) (ret string) {
+
+	path = RemoveFmtUnderscore(path)
 	base := filepath.Base(path)
 	ext := filepath.Ext(path)
+	md5HashStr := fmt.Sprintf("%x", md5.Sum([]byte(base)))
 	r := strings.NewReplacer(
 		"{year}", time.Format("2006"),
 		"{month}", time.Format("01"),
 		"{day}", time.Format("02"),
-		"{unix_ts}", fmt.Sprint(time.Unix()),
+		"{unixts}", fmt.Sprint(time.Unix()),
+		"{unixtsms}", fmt.Sprint(time.UnixMicro()),
 		"{ext}", ext,
-		"{file_name}", base,
-		"{file_name_hash}", fmt.Sprintf("%x", md5.Sum([]byte(base))),
+		"{fullname}", base+ext,
+		"{filename}", base,
+		"{filenamehash}", md5HashStr,
+		"{fnamehash}", md5HashStr,
+		"{fnamehash4}", md5HashStr[:4],
+		"{fnamehash8}", md5HashStr[:8],
 	)
 	ret = r.Replace(u.Config.Rename)
 	return
