@@ -65,6 +65,7 @@ func main() {
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
+
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
 		maxUploadSize = *opt.SizeLimit
 	}
@@ -75,25 +76,11 @@ func main() {
 	loadEnvConfig(&cfg)
 	loadTomlConfig(&cfg)
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
+	cfg.Rename = RemoveFmtUnderscore(cfg.Rename)
 	GVerbose.TraceStruct(cfg)
 
 	// handle clipboard
-	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == kClipboardPlaceholder {
-
-		err := clipboard.Init()
-		if err != nil {
-			abortErr(fmt.Errorf("failed to init clipboard: " + err.Error()))
-		}
-
-		tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
-		buf := clipboard.Read(clipboard.FmtImage)
-		if nil == buf {
-			abortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
-		}
-		os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
-		opt.LocalPaths[0] = tmpFileName
-		opt.Clean = true
-	}
+	loadClipboard(&opt)
 
 	// validating args
 	validArgs(cfg, opt)
@@ -195,6 +182,23 @@ func loadTomlConfig(cfg *Config) {
 
 }
 
+func loadClipboard(opt *CLIOptions) {
+	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == kClipboardPlaceholder {
+		err := clipboard.Init()
+		if err != nil {
+			abortErr(fmt.Errorf("failed to init clipboard: " + err.Error()))
+		}
+
+		tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
+		buf := clipboard.Read(clipboard.FmtImage)
+		if nil == buf {
+			abortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
+		}
+		os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
+		opt.LocalPaths[0] = tmpFileName
+		opt.Clean = true
+	}
+}
 func loadEnvConfig(cfg *Config) {
 	if nil == cfg {
 		abortErr(fmt.Errorf("unable to load env config: nil config"))

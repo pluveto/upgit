@@ -42,7 +42,6 @@ const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
 
 func (u GithubUploader) Rename(path string, time time.Time) (ret string) {
 
-	path = RemoveFmtUnderscore(path)
 	base := filepath.Base(path)
 	ext := filepath.Ext(path)
 	md5HashStr := fmt.Sprintf("%x", md5.Sum([]byte(base)))
