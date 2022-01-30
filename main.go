@@ -39,6 +39,7 @@ type CLIOptions struct {
 	Wait       bool       `arg:"-w,--wait"        help:"when set, not exit after upload, util user press any key"`
 	Clean      bool       `arg:"-c,--clean"       help:"when set, remove local file after upload"`
 	Raw        bool       `arg:"-r,--raw"         help:"when set, output non-replaced raw url"`
+	NoLog      bool       `arg:"-n,--no-log"      help:"when set, disable logging"`
 	OutputType OutputType `arg:"-o,--output-type" help:"output type, supports stdout, clipboard, clipboard-markdown" default:"stdout"`
 }
 
@@ -65,11 +66,14 @@ func main() {
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
-
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
 		maxUploadSize = *opt.SizeLimit
 	}
-	GVerbose.Enabled = opt.Verbose
+	if !opt.NoLog {
+		GVerbose.LogEnabled = true
+		GVerbose.LogFile = MustApplicationPath("upgit.log")
+	}
+	GVerbose.VerboseEnabled = opt.Verbose
 	GVerbose.TraceStruct(opt)
 
 	// load config
@@ -99,13 +103,27 @@ func main() {
 func onUploaded(r Result[UploadRet]) {
 	if !r.Ok() && opt.OutputType == O_Stdout {
 		fmt.Println("Failed: " + r.err.Error())
+		GVerbose.Info("Failed to upload %s: %s", r.value.LocalPath, r.err.Error())
 		return
 	}
 	if opt.Clean && r.value.Status != Ignored {
-		_ = os.Remove(r.value.LocalPath)
-	}
+		err := os.Remove(r.value.LocalPath)
+		if err != nil {
+			GVerbose.Info("Failed to remove %s: %s", r.value.LocalPath, err.Error())
+		} else {
+			GVerbose.Info("Removed %s", r.value.LocalPath)
+		}
 
+	}
 	outputLink(r.value)
+	recordHistory(r.value)
+}
+
+func recordHistory(r UploadRet) {
+	os.WriteFile(MustApplicationPath("history.log"), []byte(
+		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
+		os.ModeAppend,
+	)
 }
 
 func outputLink(r UploadRet) {
@@ -199,6 +217,7 @@ func loadClipboard(opt *CLIOptions) {
 		opt.Clean = true
 	}
 }
+
 func loadEnvConfig(cfg *Config) {
 	if nil == cfg {
 		abortErr(fmt.Errorf("unable to load env config: nil config"))

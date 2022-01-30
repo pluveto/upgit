@@ -14,6 +14,14 @@ func GetApplicationPath() (path string, err error) {
 	return
 }
 
+func MustApplicationPath(append string) string {
+	path, err := GetApplicationPath()
+	if err != nil {
+		abortErr(err)
+	}
+	return filepath.Join(path, append)
+}
+
 // RemoveFmtUnderscore {abc_def_} => {abcdef}
 func RemoveFmtUnderscore(in string) (out string) {
 	out = ""
