@@ -88,6 +88,9 @@ func main() {
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	cfg.Rename = RemoveFmtUnderscore(cfg.Rename)
 	// -- integrated formats
+	if nil == cfg.OutputFormats {
+		cfg.OutputFormats = make(map[string]string)
+	}
 	cfg.OutputFormats["markdown"] = `![{url_fname}]({url})`
 	cfg.OutputFormats["url"] = `{url}`
 	GVerbose.TraceStruct(cfg)
