@@ -22,9 +22,8 @@ import (
 type OutputType string
 
 const (
-	O_Stdout            OutputType = "stdout"
-	O_Clipboard                    = "clipboard"
-	O_ClipboardMarkdown            = "clipboard-markdown"
+	O_Stdout    OutputType = "stdout"
+	O_Clipboard            = "clipboard"
 )
 
 const kDefaultBranch = "master"
@@ -34,15 +33,16 @@ const kRepoURL = "https://github.com/pluveto/upgit"
 var maxUploadSize = int64(5 * 1024 * 1024)
 
 type CLIOptions struct {
-	LocalPaths []string   `arg:"positional, required" placeholder:"FILE" help:"local file path to upload. :clipboard for uploading clipboard image"`
-	TargetDir  string     `arg:"-t,--target-dir"  help:"upload file with original name to given directory. if not set, will use renaming rules"`
-	Verbose    bool       `arg:"-V,--verbose"     help:"when set, output more details to help developers"`
-	SizeLimit  *int64     `arg:"-s,--size-limit"  help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
-	Wait       bool       `arg:"-w,--wait"        help:"when set, not exit after upload, util user press any key"`
-	Clean      bool       `arg:"-c,--clean"       help:"when set, remove local file after upload"`
-	Raw        bool       `arg:"-r,--raw"         help:"when set, output non-replaced raw url"`
-	NoLog      bool       `arg:"-n,--no-log"      help:"when set, disable logging"`
-	OutputType OutputType `arg:"-o,--output-type" help:"output type, supports stdout, clipboard, clipboard-markdown" default:"stdout"`
+	LocalPaths   []string   `arg:"positional, required" placeholder:"FILE" help:"local file path to upload. :clipboard for uploading clipboard image"`
+	TargetDir    string     `arg:"-t,--target-dir"    help:"upload file with original name to given directory. if not set, will use renaming rules"`
+	Verbose      bool       `arg:"-V,--verbose"       help:"when set, output more details to help developers"`
+	SizeLimit    *int64     `arg:"-s,--size-limit"    help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
+	Wait         bool       `arg:"-w,--wait"          help:"when set, not exit after upload, util user press any key"`
+	Clean        bool       `arg:"-c,--clean"         help:"when set, remove local file after upload"`
+	Raw          bool       `arg:"-r,--raw"           help:"when set, output non-replaced raw url"`
+	NoLog        bool       `arg:"-n,--no-log"        help:"when set, disable logging"`
+	OutputType   OutputType `arg:"-o,--output-type"   help:"output type, supports stdout, clipboard" default:"stdout"`
+	OutputFormat string     `arg:"-f,--output-format" help:"output format, supports url, markdown and your customs" default:"url"`
 }
 
 func (CLIOptions) Description() string {
@@ -52,12 +52,14 @@ func (CLIOptions) Description() string {
 }
 
 type Config struct {
-	PAT          string            `toml:"pat" validate:"nonzero"`
-	Rename       string            `toml:"rename,omitempty"`
-	Replacements map[string]string `toml:"replacements,omitempty"`
-	Username     string            `toml:"username" validate:"nonzero"`
-	Repo         string            `toml:"repo" validate:"nonzero"`
-	Branch       string            `toml:"branch,omitempty"`
+	PAT      string `toml:"pat" validate:"nonzero"`
+	Username string `toml:"username" validate:"nonzero"`
+	Repo     string `toml:"repo" validate:"nonzero"`
+	Branch   string `toml:"branch,omitempty"`
+
+	Rename        string            `toml:"rename,omitempty"`
+	Replacements  map[string]string `toml:"replacements,omitempty"`
+	OutputFormats map[string]string `toml:"output-formats,omitempty"`
 }
 
 var opt CLIOptions
@@ -82,11 +84,15 @@ func main() {
 	// load config
 	loadEnvConfig(&cfg)
 	loadTomlConfig(&cfg)
+	// fill config
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	cfg.Rename = RemoveFmtUnderscore(cfg.Rename)
+	// -- integrated formats
+	cfg.OutputFormats["markdown"] = `![{url_fname}]({url})`
+	cfg.OutputFormats["url"] = `{url}`
 	GVerbose.TraceStruct(cfg)
 
-	// handle clipboard
+	// handle clipboard if need
 	loadClipboard(&opt)
 
 	// validating args
@@ -131,22 +137,40 @@ func recordHistory(r UploadRet) {
 }
 
 func outputLink(r UploadRet) {
+	outContent, err := outputFormat(r)
+	abortErr(err)
+	switch opt.OutputType {
+	case O_Stdout:
+		fmt.Println(outContent)
+	case O_Clipboard:
+		clipboard.Write(clipboard.FmtText, []byte(outContent))
+	default:
+		abortErr(errors.New("unknown output type: " + string(opt.OutputType)))
+	}
+}
+
+func outputFormat(r UploadRet) (content string, err error) {
 	var outUrl string
 	if opt.Raw {
 		outUrl = r.RawUrl
 	} else {
 		outUrl = r.Url
 	}
-	switch opt.OutputType {
-	case O_Stdout:
-		fmt.Println(outUrl)
-	case O_Clipboard:
-		clipboard.Write(clipboard.FmtText, []byte(outUrl))
-	case O_ClipboardMarkdown:
-		clipboard.Write(clipboard.FmtText, []byte(
-			fmt.Sprint("![", filepath.Base(outUrl), "](", outUrl, ")"),
-		))
+	fmt := opt.OutputFormat
+	if fmt == "" {
+		return outUrl, nil
 	}
+	val, ok := cfg.OutputFormats[fmt]
+	if !ok {
+		return "", errors.New("unknown output format: " + fmt)
+	}
+	content = strings.NewReplacer(
+		"{url}", outUrl,
+		"{urlfname}", filepath.Base(outUrl),
+		"{fname}", filepath.Base(r.LocalPath),
+	).Replace(RemoveFmtUnderscore(val))
+
+	return
 }
 
 func validArgs(cfg Config, opt CLIOptions) {

@@ -61,15 +61,15 @@
 
 
 ```shell
-./upgit -h
 
-Upload anything to git and then get its link.
+Upload anything to github repo and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--output-type OUTPUT-TYPE] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
+
 Options:
   --target-dir TARGET-DIR, -t TARGET-DIR
                          upload file with original name to given directory. if not set, will use renaming rules
@@ -79,8 +79,11 @@ Options:
   --wait, -w             when set, not exit after upload, util user press any key
   --clean, -c            when set, remove local file after upload
   --raw, -r              when set, output non-replaced raw url
+  --no-log, -n           when set, disable logging
   --output-type OUTPUT-TYPE, -o OUTPUT-TYPE
-                         output type, support stdout(default), clipboard, clipboard-markdown [default: stdout]
+                         output type, supports stdout, clipboard [default: stdout]
+  --output-format OUTPUT-FORMAT, -f OUTPUT-FORMAT
+                         output format, supports url, markdown and your customs [default: url]
   --help, -h             display this help and exit
 ```
 
@@ -124,12 +127,21 @@ Options:
 
 ### 将 URL 保存到剪贴板
 
-使用参数 `--output-type clipboard-markdown`:
+使用参数 `--output-type clipboard`:
 
 
 ```shell
-./upgit logo.png --output-type clipboard-markdown
-# or .\upgit.exe :clipboard -o clipboard-markdown
+./upgit logo.png --output-type clipboard
+# or .\upgit.exe :clipboard -o clipboard
+```
+
+#### 复制为 Markdown 格式
+
+增加参数 `--output-format markdown`:
+
+```shell
+./upgit logo.png --output-type clipboard --output-format markdown
+# or .\upgit.exe :clipboard -o clipboard -f markdown
 ```
 
 然后会在剪贴板上得到一个 Markdown 图片链接，比如：
@@ -147,7 +159,7 @@ Options:
    ```ahk
    ; Press Ctrl + F9 to upload clipboard image
    ^F9::
-   RunWait, "upgit.exe" :clipboard --output-type clipboard-markdown
+   RunWait, "upgit.exe" :clipboard --output-type clipboard --output-format markdown
    return
    ```
 3. 然后按 <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> 截图，按 <kbd>Ctrl</kbd><kbd>F9</kbd>上传并将其链接复制到剪贴板
@@ -177,4 +189,21 @@ pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 repo = "repo-name"
 username = "username"
+```
+
+### 自定义输出格式
+
+可以通过如下方式自定义输出格式：
+
+```toml
+[output-formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
+```
+
+使用方法示例：
+
+```
+upgit :clipboard -o clipboard -f bbcode
 ```
