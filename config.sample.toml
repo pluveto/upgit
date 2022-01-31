@@ -1,10 +1,20 @@
 # branch = "master"
+
+# "pat" enter the Github token that has the "repo" permission
 # Get token from https://github.com/settings/tokens
 pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# The file name formatting template was uploaded
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+
+# The name of your public Github repository
+# Because we use the "raw.githubusercontent.com", so Gtihub warehouse has to be public.
 repo = "repo-name"
+
+# "username" enter your Github username  
 username = "username"
 
+# If your network access to Github is abnormal or sluggish, you can try the following CDN acceleration.
 # [replacements]
 # "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
 # "/master" = "@master"
