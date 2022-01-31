@@ -135,7 +135,7 @@ Options:
 然后会在剪贴板上得到一个 Markdown 图片链接，比如：
 
 ```md
-![logo.png]（！https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
+![logo.png]（!https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 ```
 
 ### AHK 的最佳实践
