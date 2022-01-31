@@ -66,15 +66,15 @@ To upload file `logo.png` to remote folder `/my_images/demo`, execute:
 For more help, type `-h` argument
 
 ```
-./upgit -h
 
-Upload anything to git and then get its link.
+Upload anything to github repo and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--output-type OUTPUT-TYPE] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
+
 Options:
   --target-dir TARGET-DIR, -t TARGET-DIR
                          upload file with original name to given directory. if not set, will use renaming rules
@@ -84,8 +84,11 @@ Options:
   --wait, -w             when set, not exit after upload, util user press any key
   --clean, -c            when set, remove local file after upload
   --raw, -r              when set, output non-replaced raw url
+  --no-log, -n           when set, disable logging
   --output-type OUTPUT-TYPE, -o OUTPUT-TYPE
-                         output type, support stdout(default), clipboard, clipboard-markdown [default: stdout]
+                         output type, supports stdout, clipboard [default: stdout]
+  --output-format OUTPUT-FORMAT, -f OUTPUT-FORMAT
+                         output format, supports url, markdown and your customs [default: url]
   --help, -h             display this help and exit
 ```
 
@@ -123,11 +126,20 @@ Shortcuts for screenshot:
 
 ### Save URL to Clipboard
 
-Use `--output-type clipboard-markdown`:
+Use `--output-type clipboard`:
 
 ```shell
-./upgit logo.png --output-type clipboard-markdown
-# or .\upgit.exe :clipboard -o clipboard-markdown
+./upgit logo.png --output-type clipboard
+# or .\upgit.exe :clipboard -o clipboard
+```
+
+#### Copy as Markdown format
+
+Add argument `--output-format markdown`:
+
+```shell
+./upgit logo.png --output-type clipboard --output-format markdown
+# or .\upgit.exe :clipboard -o clipboard -f markdown
 ```
 
 Then you'll get a markdown image link in your clipboard like:
@@ -147,7 +159,7 @@ For Windows user:
    ```ahk
    ; Press Ctrl + F9 to upload clipboard image
    ^F9::
-   RunWait, "upgit.exe" :clipboard --output-type clipboard-markdown
+   RunWait, "upgit.exe" :clipboard --output-type clipboard --output-format markdown
    return
    ```
 
@@ -186,6 +198,30 @@ username = "username"
 + `UPGIT_USERNAME`
 + `UPGIT_REPO`
 + `UPGIT_BRANCH`
+
+### Custome output format
+
+In follwing way:
+
+```toml
+[output-formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
+```
+
+Placeholder:
+
++ `{url}`: URL to image
++ `{fname}`: Original file basename
++ `{url_fname}`: File basename from url
+
+Example usage:
+
+```
+# Upload clipboard and save link to clipboard as bbcode format
+upgit :clipboard -o clipboard -f bbcode
+```
 
 ## Todo
 
