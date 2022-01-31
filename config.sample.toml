@@ -9,7 +9,7 @@ pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # The name of your public Github repository
-# Attention: Because we use the "raw.githubusercontent.com", so Gtihub warehouse has to be public.
+# Attention: Because we use the "raw.githubusercontent.com", so Gtihub repository has to be public.
 repo = "repo-name"
 
 # "username" enter your Github username  
