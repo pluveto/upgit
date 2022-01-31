@@ -35,7 +35,7 @@
 
 ### 配置
 
-在程序的同一目录创建 `config.toml` 文件，内容按照[此示例配置文件](https://github.com/pluveto/upgit/blob/main/config.sample.toml) 填写即可.
+在程序的同一目录创建 `config.toml` 文件，内容按照[此示例配置文件](https://github.com/pluveto/upgit/blob/main/config.sample.zh-CN.toml) 填写即可.
 
 ### 使用
 
