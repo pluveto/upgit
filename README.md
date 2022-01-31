@@ -165,6 +165,11 @@ For Windows user:
 
 3. Then press <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> to take screenshot. <kbd>Ctrl</kbd><kbd>F9</kbd> to upload it and get its link to your clipboard!
 
+**Compatible with Snipaste**
+
+(Windows Only, from v0.1.5) We recently added support for Snipaste bitmap format. Just copy screenshot and upload!
+```
+
 ## Config Instructions
 
 | Key                   | Desc                                                         |
