@@ -5,10 +5,11 @@
 pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # The file name formatting template was uploaded
+# The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # The name of your public Github repository
-# Because we use the "raw.githubusercontent.com", so Gtihub warehouse has to be public.
+# Attention: Because we use the "raw.githubusercontent.com", so Gtihub repository has to be public.
 repo = "repo-name"
 
 # "username" enter your Github username  
