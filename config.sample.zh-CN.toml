@@ -25,3 +25,10 @@ username = "username"
 # [replacements]
 # "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
 # "/master" = "@master"
+
+# 自定义输出格式
+# {url} 图片文件的网络URL地址
+[output-formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
