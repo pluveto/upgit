@@ -1,0 +1,27 @@
+# branch = "master"
+
+# 您的拥有"repo"权限的Github令牌
+# 获取Github Token连接: https://github.com/settings/tokens
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# 上传文件名的格式模板
+# {year} 年份, 例如: 2022
+# / 目录分隔符, 作用: 是区分目录
+# {month} 月份, 例如: 2
+# {day} 天, 例如: 1
+# {unix_ts} 时间戳, 例如: 1643617626
+# {ext} 文件后缀名, 例如.png
+# 下面的例子生成的文件名预览: 2022/01/upgit_20220131_1643617626.png
+rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+
+# 您的公共Github存储库的名称
+# 注意: 因为我们使用了 "raw.githubusercontent.com", 所有Github仓库一定要是公开的.
+repo = "repo-name"
+
+# 请输入您的Gtihub用户名 
+username = "username"
+
+# 如果您的网络访问Github异常或者缓慢，您可以尝试下面的配置以开启CDN加速
+# [replacements]
+# "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
+# "/master" = "@master"
