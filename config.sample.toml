@@ -19,3 +19,9 @@ username = "username"
 # [replacements]
 # "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
 # "/master" = "@master"
+
+# Custom extra output formats
+[output-formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"

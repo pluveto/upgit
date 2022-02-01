@@ -168,7 +168,7 @@ For Windows user:
 **Compatible with Snipaste**
 
 (Windows Only, from v0.1.5) We recently added support for Snipaste bitmap format. Just copy screenshot and upload!
-```
+
 
 ## Config Instructions
 
