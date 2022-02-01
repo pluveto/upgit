@@ -1,3 +1,4 @@
+# 保存文件的分支，例如 master 或 main
 # branch = "master"
 
 # 您的拥有"repo"权限的Github令牌
@@ -10,12 +11,15 @@ pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 # {month} 月份, 例如: 2
 # {day} 天, 例如: 1
 # {unix_ts} 时间戳, 例如: 1643617626
+# {file_name} 原始文件名，如 logo (不含后缀名)
+# {file_name_hash} {file_name}的 MD5 散列值
 # {ext} 文件后缀名, 例如.png
 # 下面的例子生成的文件名预览: 2022/01/upgit_20220131_1643617626.png
+# 如果目录不存在将会被程序自动创建
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # 您的公共Github存储库的名称
-# 注意: 因为我们使用了 "raw.githubusercontent.com", 所有Github仓库一定要是公开的.
+# 注意: 为了让您和他人可以访问到图片资源, 您的Github仓库一定要是公开的, 在私有仓库中Github会拦截未授权的请求,你将会得到一个404.
 repo = "repo-name"
 
 # 请输入您的Gtihub用户名 
@@ -30,5 +34,5 @@ username = "username"
 # {url} 图片文件的网络URL地址
 [output-formats]
 "bbcode" = "[img]{url}[/img]"
-"html" = '<img src="{url}" />'
+"html" = '<img src="{url}"/>'
 "markdown-simple" = "![]({url})"
