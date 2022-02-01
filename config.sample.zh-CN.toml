@@ -6,10 +6,10 @@
 pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # 上传文件名的格式模板
-# {year} 年份, 例如: 2022
 # / 目录分隔符, 作用: 是区分目录
-# {month} 月份, 例如: 2
-# {day} 天, 例如: 1
+# {year} 年份, 例如: 2022
+# {month} 月份, 例如: 02
+# {day} 天, 例如: 01
 # {unix_ts} 时间戳, 例如: 1643617626
 # {file_name} 原始文件名，如 logo (不含后缀名)
 # {file_name_hash} {file_name}的 MD5 散列值
@@ -19,7 +19,8 @@ pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # 您的公共Github存储库的名称
-# 注意: 为了让您和他人可以访问到图片资源, 您的Github仓库一定要是公开的, 在私有仓库中Github会拦截未授权的请求,你将会得到一个404.
+# 注意: 为了让您和他人可以访问到图片资源, 您的Github仓库一定要是公开的, 
+#       在私有仓库中Github会拦截未授权的请求,你将会得到一个404.
 repo = "repo-name"
 
 # 请输入您的Gtihub用户名 
