@@ -1,3 +1,4 @@
+# Save the target branch of the file
 # branch = "master"
 
 # "pat" enter the Github token that has the "repo" permission
@@ -5,11 +6,20 @@
 pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # The file name formatting template was uploaded
+# / The directory separator is used to distinguish directories
+# {year} Year, for example: 2022
+# {month} Month, for example: 02
+# {day} Day, for example: 01
+# {unix_ts} Time stamp, for example: 1643617626
+# {file_name} Original file name, such as logo (without suffix)
+# {file_name_hash} MD5 hash value of {file_name}
+# {ext} File name suffix, for example: .png
 # The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # The name of your public Github repository
-# Attention: Because we use the "raw.githubusercontent.com", so Gtihub repository has to be public.
+# Attention: In order for you and others to access image resources, your Github repository must be public.
+#            In private repositories Github blocks unauthorized requests and you will get a 404.
 repo = "repo-name"
 
 # "username" enter your Github username  
