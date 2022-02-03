@@ -15,6 +15,7 @@ import (
 	"github.com/alexflint/go-arg"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pluveto/upgit/lib/xclipboard"
+	"github.com/mitchellh/mapstructure"
 	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
@@ -41,29 +42,35 @@ type CLIOptions struct {
 	Clean        bool       `arg:"-c,--clean"         help:"when set, remove local file after upload"`
 	Raw          bool       `arg:"-r,--raw"           help:"when set, output non-replaced raw url"`
 	NoLog        bool       `arg:"-n,--no-log"        help:"when set, disable logging"`
+	Uploader     string     `arg:"-u,--uploader"      help:"uploader to use. if not set, will follow config"`
 	OutputType   OutputType `arg:"-o,--output-type"   help:"output type, supports stdout, clipboard" default:"stdout"`
 	OutputFormat string     `arg:"-f,--output-format" help:"output format, supports url, markdown and your customs" default:"url"`
 }
 
 func (CLIOptions) Description() string {
 	return "\n" +
-		"Upload anything to github repo and then get its link.\n" +
+		"Upload anything to github repo or other remote storages and then get its link.\n" +
 		"For more information: " + kRepoURL + "\n"
 }
 
 type Config struct {
+	DefaultUploader string            `toml:"default_uploader,omitempty"`
+	Rename          string            `toml:"rename,omitempty"`
+	Replacements    map[string]string `toml:"replacements,omitempty"`
+	OutputFormats   map[string]string `toml:"output_formats,omitempty"`
+}
+
+type GithubUploaderConfig struct {
 	PAT      string `toml:"pat" validate:"nonzero"`
 	Username string `toml:"username" validate:"nonzero"`
 	Repo     string `toml:"repo" validate:"nonzero"`
 	Branch   string `toml:"branch,omitempty"`
-
-	Rename        string            `toml:"rename,omitempty"`
-	Replacements  map[string]string `toml:"replacements,omitempty"`
-	OutputFormats map[string]string `toml:"output-formats,omitempty"`
 }
 
 var opt CLIOptions
-var cfg Config = Config{Branch: kDefaultBranch}
+var cfg Config
+
+var configFilePath string
 
 func main() {
 
@@ -84,9 +91,11 @@ func main() {
 	// load config
 	loadEnvConfig(&cfg)
 	loadTomlConfig(&cfg)
+
 	// fill config
 	cfg.Rename = strings.Trim(cfg.Rename, "/")
 	cfg.Rename = RemoveFmtUnderscore(cfg.Rename)
+
 	// -- integrated formats
 	if nil == cfg.OutputFormats {
 		cfg.OutputFormats = make(map[string]string)
@@ -96,14 +105,13 @@ func main() {
 	GVerbose.TraceStruct(cfg)
 
 	// handle clipboard if need
-	loadClipboard(&opt)
+	loadClipboard()
 
 	// validating args
-	validArgs(cfg, opt)
+	validArgs()
 
 	// executing uploading
-	uploader := GithubUploader{Config: cfg, OnUploaded: onUploaded}
-	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
+	upload()
 
 	if opt.Wait {
 		fmt.Scanln()
@@ -176,7 +184,7 @@ func outputFormat(r UploadRet) (content string, err error) {
 	return
 }
 
-func validArgs(cfg Config, opt CLIOptions) {
+func validArgs() {
 	if errs := validator.Validate(cfg); errs != nil {
 		abortErr(fmt.Errorf("incorrect config: " + errs.Error()))
 	}
@@ -226,12 +234,40 @@ func loadTomlConfig(cfg *Config) {
 		if err != nil {
 			abortErr(fmt.Errorf("invalid config: " + err.Error()))
 		}
+		configFilePath = configFile
 		return
 	}
 
 }
 
-func loadClipboard(opt *CLIOptions) {
+func upload() {
+	if opt.Uploader == "" {
+		opt.Uploader = cfg.DefaultUploader
+	}
+	if opt.Uploader == "github" {
+		// load GithubUploader config
+		var mCfg map[string]interface{}
+		bytes, err := ioutil.ReadFile(configFilePath)
+		abortErr(err)
+		abortErr(toml.Unmarshal(bytes, &mCfg))
+		gCfgMap := mCfg["uploaders"].(map[string]interface{})["github"]
+		var gCfg GithubUploaderConfig
+		mapstructure.Decode(gCfgMap, &gCfg)
+		if len(gCfg.Branch) == 0 {
+			gCfg.Branch = kDefaultBranch
+		}
+
+		uploader := GithubUploader{Config: gCfg, OnUploaded: onUploaded}
+		uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
+		goto final
+	}
+	
+	abortErr(errors.New("unknown uploader: " + opt.Uploader))
+final:
+	return
+}
+
+func loadClipboard() {
 	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == kClipboardPlaceholder {
 		err := clipboard.Init()
 		if err != nil {
@@ -263,22 +299,25 @@ func loadEnvConfig(cfg *Config) {
 		abortErr(fmt.Errorf("unable to load env config: nil config"))
 	}
 
-	if pat, found := syscall.Getenv("GITHUB_TOKEN"); found {
-		cfg.PAT = pat
-	}
-	if pat, found := syscall.Getenv("UPGIT_TOKEN"); found {
-		cfg.PAT = pat
-	}
 	if rename, found := syscall.Getenv("UPGIT_RENAME"); found {
 		cfg.Rename = rename
 	}
+}
+
+func loadGithubUploaderEnvConfig(gCfg *GithubUploaderConfig) {
+	if pat, found := syscall.Getenv("GITHUB_TOKEN"); found {
+		gCfg.PAT = pat
+	}
+	if pat, found := syscall.Getenv("UPGIT_TOKEN"); found {
+		gCfg.PAT = pat
+	}
 	if username, found := syscall.Getenv("UPGIT_USERNAME"); found {
-		cfg.Username = username
+		gCfg.Username = username
 	}
 	if repo, found := syscall.Getenv("UPGIT_REPO"); found {
-		cfg.Repo = repo
+		gCfg.Repo = repo
 	}
 	if branch, found := syscall.Getenv("UPGIT_BRANCH"); found {
-		cfg.Branch = branch
+		gCfg.Branch = branch
 	}
 }

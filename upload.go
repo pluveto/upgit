@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/md5"
+
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -33,44 +33,12 @@ type UploadRet struct {
 }
 
 type GithubUploader struct {
-	Config     Config
+	Config     GithubUploaderConfig
 	OnUploaded func(result Result[UploadRet])
 }
 
 const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}/{path}"
 const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
-
-func (u GithubUploader) Rename(path string, time time.Time) (ret string) {
-
-	base := filepath.Base(path)
-	ext := filepath.Ext(path)
-	md5HashStr := fmt.Sprintf("%x", md5.Sum([]byte(base)))
-	r := strings.NewReplacer(
-		"{year}", time.Format("2006"),
-		"{month}", time.Format("01"),
-		"{day}", time.Format("02"),
-		"{unixts}", fmt.Sprint(time.Unix()),
-		"{unixtsms}", fmt.Sprint(time.UnixMicro()),
-		"{ext}", ext,
-		"{fullname}", base+ext,
-		"{filename}", base,
-		"{filenamehash}", md5HashStr,
-		"{fnamehash}", md5HashStr,
-		"{fnamehash4}", md5HashStr[:4],
-		"{fnamehash8}", md5HashStr[:8],
-	)
-	ret = r.Replace(u.Config.Rename)
-	return
-}
-func (u GithubUploader) ReplaceUrl(path string) (ret string) {
-	var rules []string
-	for k, v := range u.Config.Replacements {
-		rules = append(rules, k, v)
-	}
-	r := strings.NewReplacer(rules...)
-	ret = r.Replace(path)
-	return
-}
 
 func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	dat, err := ioutil.ReadFile(path)
@@ -116,10 +84,10 @@ func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Res
 	if len(targetDir) > 0 {
 		targetPath = targetDir + "/" + base
 	} else {
-		targetPath = u.Rename(base, now)
+		targetPath = Rename(base, now)
 	}
 	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)
-	url := u.ReplaceUrl(rawUrl)
+	url := ReplaceUrl(rawUrl)
 	GVerbose.Trace("uploading #TASK_%d %s\n", taskId, localPath)
 	// var err error
 	err := u.PutFile("upload "+base+" via upgit client", localPath, targetPath)
