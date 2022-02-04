@@ -16,7 +16,7 @@ func GetApplicationPath() (path string, err error) {
 	return
 }
 
-func MustApplicationPath(append string) string {
+func MustGetApplicationPath(append string) string {
 	path, err := GetApplicationPath()
 	if err != nil {
 		abortErr(err)

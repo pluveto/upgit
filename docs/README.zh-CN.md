@@ -196,7 +196,7 @@ username = "username"
 可以通过如下方式自定义输出格式：
 
 ```toml
-[output-formats]
+[output_formats]
 "bbcode" = "[img]{url}[/img]"
 "html" = '<img src="{url}" />'
 "markdown-simple" = "![]({url})"

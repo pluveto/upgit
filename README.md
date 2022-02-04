@@ -209,7 +209,7 @@ username = "username"
 In follwing way:
 
 ```toml
-[output-formats]
+[output_formats]
 "bbcode" = "[img]{url}[/img]"
 "html" = '<img src="{url}" />'
 "markdown-simple" = "![]({url})"

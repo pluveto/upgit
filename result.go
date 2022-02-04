@@ -11,6 +11,17 @@ func (r Result[T]) Ok() bool {
 	return r.err == nil
 }
 
+func FromGoRet[T any](in ...interface{}) Result[T] {
+	if nil != in[1] {
+		return Result[T]{
+			err: in[1].(error),
+		}
+	}
+	return Result[T]{
+		value: in[0].(T),
+	}
+}
+
 func (r Result[T]) ValueOrDefault(default_ T) T {
 	if r.err == nil {
 		return r.value
@@ -44,6 +55,12 @@ func abortErr(err error) {
 func panicErr(err error) {
 	if err != nil {
 		GVerbose.Error("panic: " + err.Error())
+		panic(err)
+	}
+}
+
+func panicErrWithoutLog(err error) {
+	if err != nil {
 		panic(err)
 	}
 }
