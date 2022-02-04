@@ -16,25 +16,9 @@ type UploadOptions struct {
 	LocalPath string
 }
 
-type UploadStatus string
-
-const (
-	Ignored UploadStatus = "ignored"
-	OK                   = "ok"
-)
-
-type UploadRet struct {
-	Status    UploadStatus
-	TaskId    int
-	LocalPath string
-	RawUrl    string
-	Url       string
-	Time      time.Time
-}
-
 type GithubUploader struct {
 	Config     GithubUploaderConfig
-	OnUploaded func(result Result[UploadRet])
+	OnUploaded func(result Result[*Task])
 }
 
 const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}/{path}"
@@ -76,10 +60,10 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	return nil
 }
 
-func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Result[UploadRet]) {
+func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Result[*Task]) {
 	now := time.Now()
 	base := filepath.Base(localPath)
-
+	// TODO: USE reference
 	var targetPath string
 	if len(targetDir) > 0 {
 		targetPath = targetDir + "/" + base
@@ -96,15 +80,15 @@ func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Res
 	} else {
 		GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", taskId, localPath, err.Error())
 	}
-	ret = Result[UploadRet]{
+	ret = Result[*Task]{
 		err: err,
-		value: UploadRet{
-			Status:    OK,
-			TaskId:    taskId,
-			LocalPath: localPath,
-			RawUrl:    rawUrl,
-			Url:       url,
-			Time:      now,
+		value: &Task{
+			Status:     TASK_FINISHED,
+			TaskId:     taskId,
+			LocalPath:  localPath,
+			RawUrl:     rawUrl,
+			Url:        url,
+			FinishTime: now,
 		}}
 	return
 }
@@ -124,17 +108,18 @@ func (u GithubUploader) buildUrl(urlfmt, path string) string {
 func (u GithubUploader) UploadAll(localPaths []string, targetDir string) {
 	for taskId, localPath := range localPaths {
 
-		var ret Result[UploadRet]
+		var ret Result[*Task]
 		// ignore non-local path
 		if strings.HasPrefix(localPath, "http") {
-			ret = Result[UploadRet]{
-				value: UploadRet{
-					Status:    Ignored,
-					TaskId:    taskId,
-					LocalPath: localPath,
-					RawUrl:    localPath,
-					Url:       localPath,
-					Time:      time.Now(),
+			ret = Result[*Task]{
+				value: &Task{
+					Ignored:    true,
+					Status:     TASK_FINISHED,
+					TaskId:     taskId,
+					LocalPath:  localPath,
+					RawUrl:     localPath,
+					Url:        localPath,
+					FinishTime: time.Now(),
 				},
 			}
 		} else {

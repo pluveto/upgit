@@ -12,6 +12,7 @@ func GetDeep[T any](m map[string]interface{}, path string) (ret T, err error) {
 	}
 
 	if path == "" {
+		ret = interface{}(m).(T)
 		return
 	}
 
@@ -35,9 +36,9 @@ func GetDeep[T any](m map[string]interface{}, path string) (ret T, err error) {
 				return v.(T), nil
 			}
 		} else {
-			err = errors.New("key not found")
+			err = errors.New("for path " + path + ", key " + key + " not found")
 			return
 		}
 	}
-	return
+	return interface{}(m).(T), nil
 }

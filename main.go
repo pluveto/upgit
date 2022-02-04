@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -13,9 +15,10 @@ import (
 	"time"
 
 	"github.com/alexflint/go-arg"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pluveto/upgit/lib/xclipboard"
-	"github.com/mitchellh/mapstructure"
+	"github.com/pluveto/upgit/lib/xmap"
 	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
@@ -80,9 +83,9 @@ func main() {
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
 		maxUploadSize = *opt.SizeLimit
 	}
-	if !opt.NoLog {
+	if false == opt.NoLog {
 		GVerbose.LogEnabled = true
-		GVerbose.LogFile = MustApplicationPath("upgit.log")
+		GVerbose.LogFile = MustGetApplicationPath("upgit.log")
 		GVerbose.Info("Started")
 	}
 	GVerbose.VerboseEnabled = opt.Verbose
@@ -120,13 +123,13 @@ func main() {
 	return
 }
 
-func onUploaded(r Result[UploadRet]) {
+func onUploaded(r Result[*Task]) {
 	if !r.Ok() && opt.OutputType == O_Stdout {
 		fmt.Println("Failed: " + r.err.Error())
 		GVerbose.Info("Failed to upload %s: %s", r.value.LocalPath, r.err.Error())
 		return
 	}
-	if opt.Clean && r.value.Status != Ignored {
+	if opt.Clean && !r.value.Ignored {
 		err := os.Remove(r.value.LocalPath)
 		if err != nil {
 			GVerbose.Info("Failed to remove %s: %s", r.value.LocalPath, err.Error())
@@ -135,19 +138,19 @@ func onUploaded(r Result[UploadRet]) {
 		}
 
 	}
-	outputLink(r.value)
-	recordHistory(r.value)
+	outputLink(*r.value)
+	recordHistory(*r.value)
 }
 
-func recordHistory(r UploadRet) {
-	os.WriteFile(MustApplicationPath("history.log"), []byte(
+func recordHistory(r Task) {
+	os.WriteFile(MustGetApplicationPath("history.log"), []byte(
 		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
 		os.ModeAppend,
 	)
 	GVerbose.Info(MustMarshall(r))
 }
 
-func outputLink(r UploadRet) {
+func outputLink(r Task) {
 	outContent, err := outputFormat(r)
 	abortErr(err)
 	switch opt.OutputType {
@@ -160,7 +163,7 @@ func outputLink(r UploadRet) {
 	}
 }
 
-func outputFormat(r UploadRet) (content string, err error) {
+func outputFormat(r Task) (content string, err error) {
 	var outUrl string
 	if opt.Raw {
 		outUrl = r.RawUrl
@@ -240,31 +243,120 @@ func loadTomlConfig(cfg *Config) {
 
 }
 
+type Nullable[T any] struct {
+	Value *T
+}
+
+func loadUploaderConfig[T any](name string) (ret T, err error) {
+	var mCfg map[string]interface{}
+	bytes, err := ioutil.ReadFile(configFilePath)
+	if err != nil {
+		return
+	}
+	err = toml.Unmarshal(bytes, &mCfg)
+	if err != nil {
+		return
+	}
+	cfgMap := mCfg["uploaders"].(map[string]interface{})[name]
+	var cfg_ T
+	mapstructure.Decode(cfgMap, &cfg_)
+	ret = cfg_
+	return
+}
+
 func upload() {
 	if opt.Uploader == "" {
 		opt.Uploader = cfg.DefaultUploader
 	}
 	if opt.Uploader == "github" {
 		// load GithubUploader config
-		var mCfg map[string]interface{}
-		bytes, err := ioutil.ReadFile(configFilePath)
+		gCfg, err := loadUploaderConfig[GithubUploaderConfig](opt.Uploader)
 		abortErr(err)
-		abortErr(toml.Unmarshal(bytes, &mCfg))
-		gCfgMap := mCfg["uploaders"].(map[string]interface{})["github"]
-		var gCfg GithubUploaderConfig
-		mapstructure.Decode(gCfgMap, &gCfg)
 		if len(gCfg.Branch) == 0 {
 			gCfg.Branch = kDefaultBranch
 		}
 
 		uploader := GithubUploader{Config: gCfg, OnUploaded: onUploaded}
 		uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
-		goto final
+		return
 	}
-	
-	abortErr(errors.New("unknown uploader: " + opt.Uploader))
-final:
+	// try http simple uploader
+	// list file in ./extensions
+	extDir := MustGetApplicationPath("extensions")
+	info, err := ioutil.ReadDir(extDir)
+	abortErr(err)
+	var uploader *SimpleHttpUploader
+	for _, f := range info {
+		fname := f.Name()
+		GVerbose.Trace("found file %s", fname)
+		if !strings.HasSuffix(fname, ".json") && !strings.HasSuffix(fname, ".jsonc") {
+			GVerbose.Trace("ignored file %s", fname)
+			continue
+		}
+		// load file to json
+		jsonBytes, err := ioutil.ReadFile(filepath.Join(extDir, fname))
+		abortErr(err)
+		jsonBytes = removeJsoncComments(jsonBytes)
+		GVerbose.Trace("file content: %s", string(jsonBytes))
+		var uploaderDef map[string]interface{}
+		err = json.Unmarshal(jsonBytes, &uploaderDef)
+
+		abortErr(err)
+		if FromGoRet[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != opt.Uploader {
+			continue
+		}
+		if FromGoRet[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
+			continue
+		}
+		uploader = &SimpleHttpUploader{OnUploaded: onUploaded, Definition: uploaderDef}
+		extConfig, err := loadUploaderConfig[map[string]interface{}](opt.Uploader)
+		if err == nil {
+			uploader.Config = extConfig
+			GVerbose.Trace("uploader config:")
+			GVerbose.TraceStruct(uploader.Config)
+		}else{
+			GVerbose.Trace("no uploader config found")
+		}
+		break
+	}
+	if nil == uploader {
+		abortErr(errors.New("unknown uploader: " + opt.Uploader))
+	}
+	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
 	return
+
+}
+
+func removeJsoncComments(data []byte) []byte {
+	var buf bytes.Buffer
+	var inBlockComment bool
+	var inLineComment bool
+	for _, b := range data {
+		if inBlockComment {
+			if b == '*' && data[len(data)-1] == '/' {
+				inBlockComment = false
+			}
+			continue
+		}
+		if inLineComment {
+			if b == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+		if b == '/' {
+			if data[len(data)-1] == '/' {
+				inLineComment = true
+				continue
+			}
+			if data[len(data)-1] == '*' {
+				inBlockComment = true
+				continue
+			}
+		}
+		buf.WriteByte(b)
+	}
+	return buf.Bytes()
 }
 
 func loadClipboard() {
