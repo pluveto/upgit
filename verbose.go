@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -47,8 +49,18 @@ func (v Verbose) Log(level, fmt_ string, args ...interface{}) {
 		fmt.Printf(message)
 	}
 	if v.LogEnabled && len(v.LogFile) > 0 {
-		os.WriteFile(v.LogFile, []byte(message), os.ModeAppend)
+		appendToFile(v.LogFile, []byte(message))
+		appendToFile(v.LogFile, []byte(debug.Stack()))
 	}
+}
+
+func appendToFile(filePath string, data []byte) {
+	err := os.MkdirAll(filepath.Dir(filePath), 0755)
+	panicErrWithoutLog(err)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	defer file.Close()
+	panicErrWithoutLog(err)
+	file.Write(data)
 }
 
 func (v Verbose) TruncatLog() {
