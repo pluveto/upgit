@@ -11,6 +11,7 @@
 ## 特点
 
 + 支持多平台，包括 Linux、Windows macOS
++ 支持**多种上传器**，目前包括 Github 和 SMMS
 + 不限制文件类型
 + 支持从**剪贴板上传**
 + 自定义**自动重命名**规则（包括路径）
@@ -62,10 +63,10 @@
 
 ```shell
 
-Upload anything to github repo and then get its link.
+Upload anything to github repo or other remote storages and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] FILE [FILE ...]
+Usage: upgit [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--uploader UPLOADER] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
@@ -80,11 +81,21 @@ Options:
   --clean, -c            when set, remove local file after upload
   --raw, -r              when set, output non-replaced raw url
   --no-log, -n           when set, disable logging
+  --uploader UPLOADER, -u UPLOADER
+                         uploader to use. if not set, will follow config
   --output-type OUTPUT-TYPE, -o OUTPUT-TYPE
                          output type, supports stdout, clipboard [default: stdout]
   --output-format OUTPUT-FORMAT, -f OUTPUT-FORMAT
                          output format, supports url, markdown and your customs [default: url]
   --help, -h             display this help and exit
+
+Manage extensions:
+./ upgit ext ACTION
+
+Actions:
+  ls                     list all downloadable extensions:
+  add smms.jsonc         install SMMS uploader
+  remove smms.jsonc      remove SMMS uploader
 ```
 
 
