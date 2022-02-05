@@ -164,7 +164,7 @@ func outputLink(r Task) {
 
 func outputFormat(r Task) (content string, err error) {
 	var outUrl string
-	if opt.Raw {
+	if opt.Raw || r.Url == "" {
 		outUrl = r.RawUrl
 	} else {
 		outUrl = r.Url
@@ -325,7 +325,6 @@ func upload() {
 	return
 
 }
-
 
 func loadClipboard() {
 	if len(opt.LocalPaths) == 1 && strings.ToLower(opt.LocalPaths[0]) == kClipboardPlaceholder {
