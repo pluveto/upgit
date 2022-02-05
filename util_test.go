@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -23,6 +24,44 @@ func TestRemoveFmtUnderscore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotOut := RemoveFmtUnderscore(tt.args.in); gotOut != tt.wantOut {
 				t.Errorf("RemoveFmtUnderscore() = %v, want %v", gotOut, tt.wantOut)
+			}
+		})
+	}
+}
+
+func TestRemoveJsoncComments(t *testing.T) {
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{"1", args{
+			[]byte(
+				`
+a//bcde//
+//c
+//
+a
+`,
+			),
+		},
+			[]byte(
+				`
+a
+
+
+a
+`,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RemoveJsoncComments(tt.args.data); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RemoveJsoncComments() = %v, want %v", got, tt.want)
 			}
 		})
 	}

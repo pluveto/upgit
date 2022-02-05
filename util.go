@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 
@@ -52,4 +53,22 @@ func RemoveFmtUnderscore(in string) (out string) {
 		offset++
 	}
 	return
+}
+
+func RemoveJsoncComments(data []byte) []byte {
+	var buf bytes.Buffer
+	var inLineComment bool = false
+	for i, b := range data {
+		if b == '/' && i+1 < len(data) && data[i+1] == '/' {
+			inLineComment = true
+		}
+		if b == '\n' {
+			inLineComment = false
+		}
+		if inLineComment {
+			continue
+		}
+		buf.WriteByte(b)
+	}
+	return buf.Bytes()
 }
