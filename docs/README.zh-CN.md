@@ -196,8 +196,9 @@ Actions:
 这是一个简单的示例配置文件：
 
 ```toml
-pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+[uploaders.github]
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 repo = "repo-name"
 username = "username"
 ```

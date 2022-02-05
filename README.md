@@ -201,8 +201,9 @@ For Windows user:
 Here is a simplist sample config file:
 
 ```toml
-pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+[uploaders.github]
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 repo = "repo-name"
 username = "username"
 ```
