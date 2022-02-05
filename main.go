@@ -75,7 +75,7 @@ var cfg Config
 var configFilePath string
 
 func main() {
-
+	TryExtCmd()
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
@@ -216,8 +216,7 @@ func loadTomlConfig(cfg *Config) {
 	homeDir, err := os.UserHomeDir()
 	panicErr(err)
 
-	appDir, err := GetApplicationPath()
-	panicErr(err)
+	appDir := MustGetApplicationPath("")
 
 	var configFiles = []string{
 		filepath.Join(homeDir, ".upgit.config.toml"),
