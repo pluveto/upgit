@@ -1,37 +1,63 @@
-# Save the target branch of the file
-# branch = "master"
+# =============================================================================
+# UPGIT Config
+# =============================================================================
 
-# "pat" enter the Github token that has the "repo" permission
-# Get token from https://github.com/settings/tokens
-pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+# default uploader id
+default_uploader = "github"
 
 # The file name formatting template was uploaded
-# / The directory separator is used to distinguish directories
-# {year} Year, for example: 2022
-# {month} Month, for example: 02
-# {day} Day, for example: 01
-# {unix_ts} Time stamp, for example: 1643617626
-# {file_name} Original file name, such as logo (without suffix)
-# {file_name_hash} MD5 hash value of {file_name}
-# {ext} File name suffix, for example: .png
-# The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
+#   / The directory separator is used to distinguish directories
+#   {year} Year, for example: 2022
+#   {month} Month, for example: 02
+#   {day} Day, for example: 01
+#   {unix_ts} Time stamp, for example: 1643617626
+#   {file_name} Original file name, such as logo (without suffix)
+#   {file_name_hash} MD5 hash value of {file_name}
+#   {ext} File name suffix, for example: .png
+#   The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
-# The name of your public Github repository
-# Attention: In order for you and others to access image resources, your Github repository must be public.
-#            In private repositories Github blocks unauthorized requests and you will get a 404.
-repo = "repo-name"
+# -----------------------------------------------------------------------------
+# Custom extra output formats
+# -----------------------------------------------------------------------------
+#   {url} direct URL of the file
+[output_formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
 
-# "username" enter your Github username  
-username = "username"
+# -----------------------------------------------------------------------------
+# URL replacing rules. RawUrl -[replace]-> Url
+# -----------------------------------------------------------------------------
 
 # If your network access to Github is abnormal or sluggish, you can try the following CDN acceleration.
 # [replacements]
 # "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
 # "/master" = "@master"
 
-# Custom extra output formats
-[output-formats]
-"bbcode" = "[img]{url}[/img]"
-"html" = '<img src="{url}" />'
-"markdown-simple" = "![]({url})"
+# =============================================================================
+# Configurations for each uploader, leave blank if not used
+# =============================================================================
+
+# Github uploader
+[uploaders.github]
+# Branch to save files, for example master or main
+branch = "master"
+
+# "pat" enter the Github token that has the "repo" permission
+# Get token from https://github.com/settings/tokens
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# The name of your public Github repository
+# Attention: In order for you and others to access image resources, your Github repository must be public.
+#            In private repositories Github blocks unauthorized requests and you will get a 404.
+repo = "repo-name"
+
+# your Github username  
+username = "username"
+
+# SMMS Uploader
+[uploaders.smms]
+# Get token from https://sm.ms/home/apitoken
+token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
