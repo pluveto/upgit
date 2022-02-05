@@ -50,7 +50,9 @@ func (v Verbose) Log(level, fmt_ string, args ...interface{}) {
 	}
 	if v.LogEnabled && len(v.LogFile) > 0 {
 		appendToFile(v.LogFile, []byte(message))
-		appendToFile(v.LogFile, []byte(debug.Stack()))
+		if strings.Contains(level, "[ERROR]") {
+			appendToFile(v.LogFile, []byte(debug.Stack()))
+		}
 	}
 }
 
@@ -74,7 +76,13 @@ func (v Verbose) TruncatLog() {
 	if !doTrunc {
 		return
 	}
-	// TODO: Truncat Log
+	var truncSize = v.LogFileMaxSize / 2
+	file, err := os.OpenFile(v.LogFile, os.O_RDWR, 0755)
+	panicErrWithoutLog(err)
+	defer file.Close()
+	file.Seek(truncSize, 0)
+	file.Truncate(truncSize)
+
 }
 
 func (v Verbose) TraceStruct(s interface{}) {

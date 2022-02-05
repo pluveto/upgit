@@ -54,42 +54,43 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 		return err
 	}
 	GVerbose.Trace("response body: " + string(body))
+	if (strings.Contains(string(body), "\\\"sha\\\" wasn't supplied.")) {
+		return nil
+	}
 	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
 		return fmt.Errorf("unexpected status code %d. response: %s", resp.StatusCode, string(body))
 	}
 	return nil
 }
 
-func (u GithubUploader) Upload(taskId int, localPath, targetDir string) (ret Result[*Task]) {
+func (u GithubUploader) Upload(t *Task) (ret Result[*Task]) {
 	now := time.Now()
-	base := filepath.Base(localPath)
+	base := filepath.Base(t.LocalPath)	
 	// TODO: USE reference
 	var targetPath string
-	if len(targetDir) > 0 {
-		targetPath = targetDir + "/" + base
+	if len(t.TargetDir) > 0 {
+		targetPath = t.TargetDir + "/" + base
 	} else {
 		targetPath = Rename(base, now)
 	}
-	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)
+	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)	
 	url := ReplaceUrl(rawUrl)
-	GVerbose.Trace("uploading #TASK_%d %s\n", taskId, localPath)
+	GVerbose.Info("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
 	// var err error
-	err := u.PutFile("upload "+base+" via upgit client", localPath, targetPath)
+	err := u.PutFile("upload "+base+" via upgit client", t.LocalPath, targetPath)
 	if err == nil {
-		GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", taskId, localPath, url)
+		GVerbose.Info("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
 	} else {
-		GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", taskId, localPath, err.Error())
+		GVerbose.Info("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
 	}
+	t.Status = TASK_FINISHED
+	t.Url = url
+	t.FinishTime = time.Now()
+	t.RawUrl = rawUrl
 	ret = Result[*Task]{
-		err: err,
-		value: &Task{
-			Status:     TASK_FINISHED,
-			TaskId:     taskId,
-			LocalPath:  localPath,
-			RawUrl:     rawUrl,
-			Url:        url,
-			FinishTime: now,
-		}}
+		value: t,
+		err:   err,
+	}
 	return
 }
 
@@ -109,21 +110,24 @@ func (u GithubUploader) UploadAll(localPaths []string, targetDir string) {
 	for taskId, localPath := range localPaths {
 
 		var ret Result[*Task]
+		task := Task{
+			Status:     TASK_CREATED,
+			TaskId:     taskId,
+			LocalPath:  localPath,
+			TargetDir:  targetDir,
+			RawUrl:     localPath,
+			Url:        localPath,
+			FinishTime: time.Now(),
+		}
 		// ignore non-local path
 		if strings.HasPrefix(localPath, "http") {
+			task.Ignored = true
+			task.Status = TASK_FINISHED
 			ret = Result[*Task]{
-				value: &Task{
-					Ignored:    true,
-					Status:     TASK_FINISHED,
-					TaskId:     taskId,
-					LocalPath:  localPath,
-					RawUrl:     localPath,
-					Url:        localPath,
-					FinishTime: time.Now(),
-				},
+				value: &task,
 			}
 		} else {
-			ret = u.Upload(taskId, localPath, targetDir)
+			ret = u.Upload(&task)
 		}
 
 		if ret.err == nil {
