@@ -57,15 +57,23 @@ func RemoveFmtUnderscore(in string) (out string) {
 
 func RemoveJsoncComments(data []byte) []byte {
 	var buf bytes.Buffer
-	var inLineComment bool = false
-	for i, b := range data {
-		if b == '/' && i+1 < len(data) && data[i+1] == '/' {
-			inLineComment = true
+	var inQuote bool
+	var inComment bool
+	for _, b := range data {
+		if b == '"' {
+			inQuote = !inQuote
+		}
+		if inQuote {
+			buf.WriteByte(b)
+			continue
+		}
+		if b == '/' {
+			inComment = true
 		}
 		if b == '\n' {
-			inLineComment = false
+			inComment = false
 		}
-		if inLineComment {
+		if inComment {
 			continue
 		}
 		buf.WriteByte(b)
