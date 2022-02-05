@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pluveto/upgit/lib/xmap"
+	"github.com/pluveto/upgit/lib/xpath"
 )
 
 type SimpleHttpUploader struct {
@@ -139,7 +140,7 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	// upload file according to content-type
 	contentType := headerCache.Get("Content-Type")
 
-	// == Prepare body ==	
+	// == Prepare body ==
 	var body io.ReadCloser
 	if contentType == "application/octet-stream" {
 		body = ioutil.NopCloser(bytes.NewReader(FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit()))
@@ -205,7 +206,7 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 
 func (u SimpleHttpUploader) Upload(t *Task) (ret Result[*Task]) {
 	now := time.Now()
-	base := filepath.Base(t.LocalPath)
+	base := xpath.Basename(t.LocalPath)
 
 	if len(t.TargetDir) > 0 {
 		t.TargetPath = t.TargetDir + "/" + base

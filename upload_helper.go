@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pluveto/upgit/lib/xpath"
 )
 
 type UploadStatus string
@@ -31,7 +33,7 @@ type Task struct {
 
 func Rename(path string, time time.Time) (ret string) {
 
-	base := filepath.Base(path)
+	base := xpath.Basename(path)
 	ext := filepath.Ext(path)
 	md5HashStr := fmt.Sprintf("%x", md5.Sum([]byte(base)))
 	r := strings.NewReplacer(

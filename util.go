@@ -2,23 +2,14 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pluveto/upgit/lib/xpath"
 )
 
-func GetApplicationPath() (path string, err error) {
-	exec, err := os.Executable()
-	if err != nil {
-		return
-	}
-	path = filepath.Dir(exec)
-	return
-}
-
 func MustGetApplicationPath(append string) string {
-	path, err := GetApplicationPath()
+	path, err := xpath.GetApplicationPath()
 	if err != nil {
 		abortErr(err)
 	}

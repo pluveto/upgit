@@ -41,7 +41,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "UPGIT/0.1")
+	req.Header.Set("User-Agent", "UPGIT/0.2")
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "token "+u.Config.PAT)
@@ -54,7 +54,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 		return err
 	}
 	GVerbose.Trace("response body: " + string(body))
-	if (strings.Contains(string(body), "\\\"sha\\\" wasn't supplied.")) {
+	if strings.Contains(string(body), "\\\"sha\\\" wasn't supplied.") {
 		return nil
 	}
 	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
@@ -65,7 +65,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 
 func (u GithubUploader) Upload(t *Task) (ret Result[*Task]) {
 	now := time.Now()
-	base := filepath.Base(t.LocalPath)	
+	base := filepath.Base(t.LocalPath)
 	// TODO: USE reference
 	var targetPath string
 	if len(t.TargetDir) > 0 {
@@ -73,7 +73,7 @@ func (u GithubUploader) Upload(t *Task) (ret Result[*Task]) {
 	} else {
 		targetPath = Rename(base, now)
 	}
-	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)	
+	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)
 	url := ReplaceUrl(rawUrl)
 	GVerbose.Info("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
 	// var err error
