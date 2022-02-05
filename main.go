@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,7 +164,7 @@ func outputLink(r Task) {
 
 func outputFormat(r Task) (content string, err error) {
 	var outUrl string
-	if opt.Raw {
+	if opt.Raw || r.Url == "" {
 		outUrl = r.RawUrl
 	} else {
 		outUrl = r.Url
@@ -296,7 +295,7 @@ func upload() {
 		// load file to json
 		jsonBytes, err := ioutil.ReadFile(filepath.Join(extDir, fname))
 		abortErr(err)
-		jsonBytes = removeJsoncComments(jsonBytes)
+		jsonBytes = RemoveJsoncComments(jsonBytes)
 		GVerbose.Trace("file content: %s", string(jsonBytes))
 		var uploaderDef map[string]interface{}
 		err = json.Unmarshal(jsonBytes, &uploaderDef)
@@ -314,7 +313,7 @@ func upload() {
 			uploader.Config = extConfig
 			GVerbose.Trace("uploader config:")
 			GVerbose.TraceStruct(uploader.Config)
-		}else{
+		} else {
 			GVerbose.Trace("no uploader config found")
 		}
 		break
@@ -325,38 +324,6 @@ func upload() {
 	uploader.UploadAll(opt.LocalPaths, opt.TargetDir)
 	return
 
-}
-
-func removeJsoncComments(data []byte) []byte {
-	var buf bytes.Buffer
-	var inBlockComment bool
-	var inLineComment bool
-	for _, b := range data {
-		if inBlockComment {
-			if b == '*' && data[len(data)-1] == '/' {
-				inBlockComment = false
-			}
-			continue
-		}
-		if inLineComment {
-			if b == '\n' {
-				inLineComment = false
-			}
-			continue
-		}
-		if b == '/' {
-			if data[len(data)-1] == '/' {
-				inLineComment = true
-				continue
-			}
-			if data[len(data)-1] == '*' {
-				inBlockComment = true
-				continue
-			}
-		}
-		buf.WriteByte(b)
-	}
-	return buf.Bytes()
 }
 
 func loadClipboard() {
