@@ -95,10 +95,10 @@ Options:
   --help, -h             display this help and exit
 
 Manage extensions:
-./ upgit ext ACTION
+upgit ext ACTION
 
 Actions:
-  ls                     list all downloadable extensions:
+  ls                     list all downloadable extensions
   add smms.jsonc         install SMMS uploader
   remove smms.jsonc      remove SMMS uploader
 ```
