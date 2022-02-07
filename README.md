@@ -24,6 +24,14 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 + Config via **Environment Variable**
 + Output URL to stdout/clipboard, supports markdown image format
 
+### Supported Upload Extensions
+
++ Github
++ SM.MS
++ Imgur
+
+More: `./upgit ext ls`
+
 ## Get started
 
 ### Download
@@ -248,4 +256,4 @@ upgit :clipboard -o clipboard -f bbcode
 + [x] Save uploaded image link to clipboard
 + [ ] Upload from link
 + [x] Ignore uploaded file (link input)
-+ [ ] Upload history
++ [x] Upload history

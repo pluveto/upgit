@@ -2,15 +2,15 @@
 
 
 
-*Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。
+*Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。简洁跨平台，不常驻内存。
 
 可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用。
 
-**太长不看**：简言之，对于 Windows 用户，本程序配合 AHK 可以帮助你一键完成截图、上传、复制链接的操作。
+**太长不看**：本程序用于快速上传。配合 AHK 可以帮助你一键完成截图、上传、复制链接的操作。
 
 ## 特点
 
-+ 支持多平台，包括 Linux、Windows macOS
++ 支持多平台，包括 Linux、Windows 和 macOS
 + 支持**多种上传器**，目前包括 Github 和 SMMS
 + 不限制文件类型
 + 支持从**剪贴板上传**
@@ -18,6 +18,14 @@
 + 可通过替换规则实现**CDN**加速
 + 可通过**环境变量**配置
 + 将 URL 输出到标准输出/**剪贴板**，支持 Markdown 格式
+
+### 上传扩展
+
++ Github
++ SM.MS
++ Imgur
+
+查看更多: `./upgit ext ls`
 
 ## 开始使用
 
