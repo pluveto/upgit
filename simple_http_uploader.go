@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -80,13 +82,23 @@ func panicOnNilOrValue[T any](i interface{}, msg string) T {
 	return i.(T)
 }
 
-func (u SimpleHttpUploader) replaceConfigPlaceholder(data map[string]interface{}, task *Task) {
+var ConfigDelimiters = []string{"$(", ")"}
+
+func (u SimpleHttpUploader) replaceStringPlaceholder(s string, task *Task) string {
+	dict := make(map[string]interface{}, 1)
+	dict["_"] = s
+	u.replaceDictPlaceholder(dict, task)
+	GVerbose.Trace("replaceStringPlaceholder: %s => %s", s, dict["_"])
+	return dict["_"].(string)
+}
+
+func (u SimpleHttpUploader) replaceDictPlaceholder(data map[string]interface{}, task *Task) {
 	for k, v_ := range data {
 		if reflect.TypeOf(v_).Kind() != reflect.String {
+			// GVerbose.Trace("skip non-string value: " + k)
 			continue
 		}
 		v := v_.(string)
-		delim := []string{"$(", ")"}
 
 		replacer := func(key string) *string {
 			var ret string
@@ -102,16 +114,19 @@ func (u SimpleHttpUploader) replaceConfigPlaceholder(data map[string]interface{}
 			} else if parentKey == "config" {
 				ret = GetValueByConfigTag(&cfg, subKey).(string)
 				return &ret
+
 			} else if parentKey == "option" {
 				ret = GetValueByConfigTag(&opt, subKey).(string)
 				return &ret
+
 			} else if parentKey == "task" {
 				ret = GetValueByConfigTag(task, subKey).(string)
 				return &ret
 			}
 			return nil
 		}
-		ret := xstrings.VariableReplaceFunc(v, delim[0], delim[1], replacer)
+
+		ret := xstrings.VariableReplaceFunc(v, ConfigDelimiters[0], ConfigDelimiters[1], replacer)
 		if nil != ret {
 			data[k] = *ret
 		}
@@ -131,16 +146,25 @@ func GetValueByConfigTag(data interface{}, key string) (ret interface{}) {
 }
 
 func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
+	// TODO: Do not use tplData, use stantard $(task.remote_path)
 	tplData := map[string]string{
 		"remote_path": task.TargetPath,
 	}
+	// == prepare method and url ==
 	method := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
-	url := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
-	GVerbose.Info("Method: %s, URL: %s", method, url)
+	urlRaw := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
+	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.headers")).ValueOrExit()
+	u.replaceDictPlaceholder(params, task)
+	url := FromGoRet[*url.URL](url.Parse(u.replaceStringPlaceholder(urlRaw, task))).ValueOrExit()
+	for paramName, paramValue := range params {
+		url.Query().Add(paramName, paramValue.(string))
+	}
+	GVerbose.Info("Method: %s, URL: %s", method, url.String())
 
 	//  == Prepare header ==
 	headers := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.headers")).ValueOrExit()
-	u.replaceConfigPlaceholder(headers, task)
+	u.replaceDictPlaceholder(headers, task)
+
 	GVerbose.Trace("unformatted headers:")
 	GVerbose.TraceStruct(headers)
 	headerCache := make(http.Header)
@@ -167,16 +191,26 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 			GVerbose.Trace("processing field: " + fieldName)
 			fieldMeta := fieldMeta_.(map[string]interface{})
 			fieldType := fieldMeta["type"]
+
 			if fieldType == "string" {
 				fieldValue := u.replaceRequest(fieldMeta["value"].(string), tplData)
 				mulWriter.WriteField(fieldName, fieldValue)
 				GVerbose.Trace("field value: " + fieldValue)
+
 			} else if fieldType == "file" {
 				fileName := filepath.Base(task.LocalPath)
 				part := FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
 				n, err := part.Write(FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
 				abortErr(err)
 				GVerbose.Trace("field value: "+"[file (len=%d, name=%s)]", n, fileName)
+
+			} else if fieldType == "file_base64" {
+				dat, err := ioutil.ReadFile(task.LocalPath)
+				if err != nil {
+					return "", err
+				}
+				encoded := base64.StdEncoding.EncodeToString(dat)
+				mulWriter.WriteField(fieldName, encoded)
 			}
 		}
 		headerCache.Set("Content-Type", mulWriter.FormDataContentType())
@@ -185,7 +219,7 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	}
 
 	// == Create Request ==
-	req := FromGoRet[*http.Request](http.NewRequest(method, u.replaceRequest(url, tplData), body)).ValueOrExit()
+	req := FromGoRet[*http.Request](http.NewRequest(method, u.replaceRequest(url.String(), tplData), body)).ValueOrExit()
 	req.Header = headerCache
 	GVerbose.Trace("do headers:")
 	GVerbose.TraceStruct(map[string][]string(req.Header))
