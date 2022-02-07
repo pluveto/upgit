@@ -27,20 +27,22 @@ type ExtCmd struct {
 	Remove *ExtRemoveCmd `arg:"subcommand:remove"`
 }
 
-type Ext struct {
+type ExtArgs struct {
 	Ext *ExtCmd `arg:"subcommand:ext"`
 }
 
-var args Ext
+var extArgs ExtArgs
 
-func TryExtCmd() {
-	err := arg.Parse(&args)
-	if err != nil || args.Ext == nil {
+func extSubcommand() {
+	err := arg.Parse(&extArgs)
+	if err != nil || extArgs.Ext == nil {
+		os.Stderr.WriteString("Error: " + err.Error() + "\n")
+		printExtHelp()
 		return
 	}
 
 	switch {
-	case args.Ext.List != nil:
+	case extArgs.Ext.List != nil:
 		ls, err := xgithub.ListFolder("pluveto/upgit", "/extensions")
 		if err != nil {
 			abortErr(err)
@@ -51,8 +53,8 @@ func TryExtCmd() {
 		}
 		os.Exit(0)
 
-	case args.Ext.Add != nil:
-		extName := args.Ext.Add.Name
+	case extArgs.Ext.Add != nil:
+		extName := extArgs.Ext.Add.Name
 		if len(extName) == 0 {
 			abortErr(errors.New("extension name is required"))
 		}
@@ -73,8 +75,8 @@ func TryExtCmd() {
 		fmt.Println("Extension installed:", extName)
 		os.Exit(0)
 
-	case args.Ext.Remove != nil:
-		extName := args.Ext.Remove.Name
+	case extArgs.Ext.Remove != nil:
+		extName := extArgs.Ext.Remove.Name
 		if len(extName) == 0 {
 			abortErr(errors.New("extension name is required"))
 		}
@@ -86,7 +88,10 @@ func TryExtCmd() {
 		os.Exit(0)
 	}
 	os.Stderr.WriteString("Unknown subcommand\n")
-	p, _ := arg.NewParser(arg.Config{}, &args)
-	p.WriteUsage(os.Stderr)
+	printExtHelp()
 	os.Exit(0)
+}
+
+func printExtHelp() {
+	os.Stdout.WriteString("Usage: upgit ext [list|add|remove]\n")
 }

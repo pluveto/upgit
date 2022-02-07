@@ -75,7 +75,14 @@ var cfg Config
 var configFilePath string
 
 func main() {
-	TryExtCmd()
+	if len(os.Args) >= 2 && os.Args[1] == "ext" {
+		extSubcommand()
+		return
+	}
+	mainCommand()
+}
+
+func mainCommand(){
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
