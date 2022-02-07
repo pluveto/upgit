@@ -1,0 +1,43 @@
+{
+    "meta": {
+        "id": "imgbb",
+        "name": "Imgbb Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            // Get key https://api.imgbb.com/
+            "url": "https://api.imgbb.com/1/upload",
+            "method": "POST",
+            "params": {
+                "key": "$(ext_config.key)"
+            },
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "key": {
+                    "type": "string",
+                    "value": "$(ext_config.key)"
+                },
+                "image": {
+                    "type": "file_base64",
+                    "value": "$(task.local_path)"
+                },
+                "format": {
+                    "type": "string",
+                    "value": "json"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "data.url"
+        }
+    }
+}
