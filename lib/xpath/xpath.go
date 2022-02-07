@@ -14,7 +14,12 @@ func Basename(path string) string {
 
 }
 
+var ApplicationPath string
+
 func GetApplicationPath() (path string, err error) {
+	if ApplicationPath != "" {
+		return ApplicationPath, nil
+	}
 	exec, err := os.Executable()
 	if err != nil {
 		return

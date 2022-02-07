@@ -18,6 +18,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pluveto/upgit/lib/xclipboard"
 	"github.com/pluveto/upgit/lib/xmap"
+	"github.com/pluveto/upgit/lib/xpath"
 	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
@@ -47,6 +48,8 @@ type CLIOptions struct {
 	Uploader     string     `arg:"-u,--uploader"      help:"uploader to use. if not set, will follow config"`
 	OutputType   OutputType `arg:"-o,--output-type"   help:"output type, supports stdout, clipboard" default:"stdout"`
 	OutputFormat string     `arg:"-f,--output-format" help:"output format, supports url, markdown and your customs" default:"url"`
+
+	ApplicationPath string `arg:"--application-path" help:"custom application path, which determines config file path and extensions dir path. current binary dir by default"`
 }
 
 func (CLIOptions) Description() string {
@@ -86,6 +89,10 @@ func mainCommand() {
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
+	opt.ApplicationPath = strings.Trim(opt.ApplicationPath, "/")
+	if len(opt.ApplicationPath) > 0 {
+		xpath.ApplicationPath = opt.ApplicationPath
+	}
 	if opt.SizeLimit != nil && *opt.SizeLimit >= 0 {
 		maxUploadSize = *opt.SizeLimit
 	}
