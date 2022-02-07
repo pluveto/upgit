@@ -30,6 +30,7 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 + SM.MS
 + Imgur
 + Chevereto
++ ImgBB
 
 More: `./upgit ext ls`
 

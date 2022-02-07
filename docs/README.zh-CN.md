@@ -25,6 +25,7 @@
 + SM.MS
 + Imgur
 + Chevereto
++ ImgBB
 
 查看更多: `./upgit ext ls`
 
