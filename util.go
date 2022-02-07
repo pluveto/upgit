@@ -5,13 +5,14 @@ import (
 	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xpath"
 )
 
 func MustGetApplicationPath(append string) string {
 	path, err := xpath.GetApplicationPath()
 	if err != nil {
-		abortErr(err)
+		xlog.AbortErr(err)
 	}
 	return filepath.Join(path, append)
 }

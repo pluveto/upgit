@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/pluveto/upgit/lib/xapp"
 )
 
 type List []struct {
@@ -44,7 +46,7 @@ func ListFolder(repo string, path string) (List, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "UPGIT/0.2")
+	req.Header.Set("User-Agent", xapp.UserAgent)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 	// req.Header.Set("Authorization", "token "+PAT)
@@ -75,7 +77,7 @@ func GetFile(repo string, branch string, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "UPGIT/0.2")
+	req.Header.Set("User-Agent", xapp.UserAgent)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 	// req.Header.Set("Authorization", "token "+PAT)

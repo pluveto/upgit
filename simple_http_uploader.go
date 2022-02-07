@@ -16,49 +16,61 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pluveto/upgit/lib/model"
+	"github.com/pluveto/upgit/lib/result"
+	"github.com/pluveto/upgit/lib/xapp"
+	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xmap"
 	"github.com/pluveto/upgit/lib/xpath"
 	"github.com/pluveto/upgit/lib/xstrings"
 )
 
 type SimpleHttpUploader struct {
-	Config     map[string]interface{}
-	Definition map[string]interface{}
-	OnUploaded func(Result[*Task])
+	Config              map[string]interface{}
+	Definition          map[string]interface{}
+	OnTaskStatusChanged func(result.Result[*model.Task])
 }
 
-func (u SimpleHttpUploader) UploadAll(localPaths []string, targetDir string) {
-	for taskId, localPath := range localPaths {
-
-		var ret Result[*Task]
-		task := Task{
-			Status:     TASK_CREATED,
-			TaskId:     taskId,
-			LocalPath:  localPath,
-			TargetDir:  targetDir,
-			RawUrl:     localPath,
-			Url:        localPath,
-			FinishTime: time.Now(),
-		}
-		// ignore non-local path
-		if strings.HasPrefix(localPath, "http") {
-			task.Ignored = true
-			task.Status = TASK_FINISHED
-			ret = Result[*Task]{
-				value: &task,
-			}
-		} else {
-			ret = u.Upload(&task)
-		}
-
-		if ret.err == nil {
-			GVerbose.TraceStruct(ret.value)
-		}
-		if nil != u.OnUploaded {
-			u.OnUploaded(ret)
-		}
-	}
+func (u SimpleHttpUploader) SetCallback(f func(result.Result[*model.Task])) {
+	u.OnTaskStatusChanged = f
 }
+
+func (u SimpleHttpUploader) GetCallback() func(result.Result[*model.Task]) {
+	return u.OnTaskStatusChanged
+}
+
+// func (u SimpleHttpUploader) UploadAll(localPaths []string, targetDir string) {
+// 	for taskId, localPath := range localPaths {
+
+// 		var ret Result[*model.Task]
+// 		task := model.Task{
+// 			Status:     TASK_CREATED,
+// 			TaskId:     taskId,
+// 			LocalPath:  localPath,
+// 			TargetDir:  targetDir,
+// 			RawUrl:     localPath,
+// 			Url:        localPath,
+// 			FinishTime: time.Now(),
+// 		}
+// 		// ignore non-local path
+// 		if strings.HasPrefix(localPath, "http") {
+// 			task.Ignored = true
+// 			task.Status = TASK_FINISHED
+// 			ret = Result[*model.Task]{
+// 				value: &task,
+// 			}
+// 		} else {
+// 			ret = u.Upload(&task)
+// 		}
+
+// 		if ret.Err == nil {
+// 			xlog.GVerbose.TraceStruct(ret.Value)
+// 		}
+// 		if nil != u.OnTaskStatusChanged {
+// 			u.OnTaskStatusChanged(ret)
+// 		}
+// 	}
+// }
 
 func MapGetOrDefault(m map[string]string, key, def string) string {
 	if v, ok := m[key]; ok {
@@ -84,18 +96,18 @@ func panicOnNilOrValue[T any](i interface{}, msg string) T {
 
 var ConfigDelimiters = []string{"$(", ")"}
 
-func (u SimpleHttpUploader) replaceStringPlaceholder(s string, task *Task) string {
+func (u SimpleHttpUploader) replaceStringPlaceholder(s string, task *model.Task) string {
 	dict := make(map[string]interface{}, 1)
 	dict["_"] = s
 	u.replaceDictPlaceholder(dict, task)
-	GVerbose.Trace("replaceStringPlaceholder: %s => %s", s, dict["_"])
+	xlog.GVerbose.Trace("replaceStringPlaceholder: %s => %s", s, dict["_"])
 	return dict["_"].(string)
 }
 
-func (u SimpleHttpUploader) replaceDictPlaceholder(data map[string]interface{}, task *Task) {
+func (u SimpleHttpUploader) replaceDictPlaceholder(data map[string]interface{}, task *model.Task) {
 	for k, v_ := range data {
 		if reflect.TypeOf(v_).Kind() != reflect.String {
-			// GVerbose.Trace("skip non-string value: " + k)
+			// xlog.GVerbose.Trace("skip non-string value: " + k)
 			continue
 		}
 		v := v_.(string)
@@ -112,11 +124,11 @@ func (u SimpleHttpUploader) replaceDictPlaceholder(data map[string]interface{}, 
 					return &ret
 				}
 			} else if parentKey == "config" {
-				ret = GetValueByConfigTag(&cfg, subKey).(string)
+				ret = GetValueByConfigTag(&xapp.AppCfg, subKey).(string)
 				return &ret
 
 			} else if parentKey == "option" {
-				ret = GetValueByConfigTag(&opt, subKey).(string)
+				ret = GetValueByConfigTag(&xapp.AppOpt, subKey).(string)
 				return &ret
 
 			} else if parentKey == "task" {
@@ -145,30 +157,30 @@ func GetValueByConfigTag(data interface{}, key string) (ret interface{}) {
 	return nil
 }
 
-func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
+func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err error) {
 	// TODO: Do not use tplData, use stantard $(task.remote_path)
 	tplData := map[string]string{
 		"remote_path": task.TargetPath,
 	}
 	// == prepare method and url ==
-	method := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
-	urlRaw := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
-	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.params")).ValueOrDefault(map[string]interface{}{})
+	method := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
+	urlRaw := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
+	params := result.FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.params")).ValueOrDefault(map[string]interface{}{})
 	u.replaceDictPlaceholder(params, task)
-	url := FromGoRet[*url.URL](url.Parse(u.replaceStringPlaceholder(urlRaw, task))).ValueOrExit()
+	url := result.FromGoRet[*url.URL](url.Parse(u.replaceStringPlaceholder(urlRaw, task))).ValueOrExit()
 	query := url.Query()
 	for paramName, paramValue := range params {
 		query.Add(paramName, paramValue.(string))
 	}
 	url.RawQuery = query.Encode()
-	GVerbose.Info("Method: %s, URL: %s", method, url.String())
+	xlog.GVerbose.Info("Method: %s, URL: %s", method, url.String())
 
 	//  == Prepare header ==
-	headers := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.headers")).ValueOrExit()
+	headers := result.FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.headers")).ValueOrExit()
 	u.replaceDictPlaceholder(headers, task)
 
-	GVerbose.Trace("unformatted headers:")
-	GVerbose.TraceStruct(headers)
+	xlog.GVerbose.Trace("unformatted headers:")
+	xlog.GVerbose.TraceStruct(headers)
 	headerCache := make(http.Header)
 	for k, v := range headers {
 		headerCache.Set(k, u.replaceRequest(v.(string), tplData))
@@ -176,21 +188,21 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	if headerCache.Get("Content-Type") == "" {
 		headerCache.Set("Content-Type", "application/octet-stream")
 	}
-	GVerbose.Trace("formatted headers:")
-	GVerbose.TraceStruct(map[string][]string(headerCache))
+	xlog.GVerbose.Trace("formatted headers:")
+	xlog.GVerbose.TraceStruct(map[string][]string(headerCache))
 	// upload file according to content-type
 	contentType := headerCache.Get("Content-Type")
 
 	// == Prepare body ==
 	var body io.ReadCloser
 	if contentType == "application/octet-stream" {
-		body = ioutil.NopCloser(bytes.NewReader(FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit()))
+		body = ioutil.NopCloser(bytes.NewReader(result.FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit()))
 	} else if contentType == "multipart/form-data" {
 		var bodyBuff bytes.Buffer
 		mulWriter := multipart.NewWriter(&bodyBuff)
-		bodyTpl := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.body")).ValueOrExit()
+		bodyTpl := result.FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.body")).ValueOrExit()
 		for fieldName, fieldMeta_ := range bodyTpl {
-			GVerbose.Trace("processing field: " + fieldName)
+			xlog.GVerbose.Trace("processing field: " + fieldName)
 			fieldMeta := fieldMeta_.(map[string]interface{})
 			fieldType := fieldMeta["type"]
 
@@ -198,14 +210,14 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 				fieldValue := u.replaceRequest(fieldMeta["value"].(string), tplData)
 				fieldValue = u.replaceStringPlaceholder(fieldValue, task)
 				mulWriter.WriteField(fieldName, fieldValue)
-				GVerbose.Trace("field(string) value: " + fieldValue)
+				xlog.GVerbose.Trace("field(string) value: " + fieldValue)
 
 			} else if fieldType == "file" {
 				fileName := filepath.Base(task.LocalPath)
-				part := FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
-				n, err := part.Write(FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
-				abortErr(err)
-				GVerbose.Trace("field(file) value: "+"[file (len=%d, name=%s)]", n, fileName)
+				part := result.FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
+				n, err := part.Write(result.FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
+				xlog.AbortErr(err)
+				xlog.GVerbose.Trace("field(file) value: "+"[file (len=%d, name=%s)]", n, fileName)
 
 			} else if fieldType == "file_base64" {
 				dat, err := ioutil.ReadFile(task.LocalPath)
@@ -222,17 +234,17 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	}
 
 	// == Create Request ==
-	req := FromGoRet[*http.Request](http.NewRequest(method, u.replaceRequest(url.String(), tplData), body)).ValueOrExit()
+	req := result.FromGoRet[*http.Request](http.NewRequest(method, u.replaceRequest(url.String(), tplData), body)).ValueOrExit()
 	req.Header = headerCache
-	GVerbose.Trace("do headers:")
-	GVerbose.TraceStruct(map[string][]string(req.Header))
+	xlog.GVerbose.Trace("do headers:")
+	xlog.GVerbose.TraceStruct(map[string][]string(req.Header))
 
 	// == Do Request ==
-	resp := FromGoRet[*http.Response](http.DefaultClient.Do(req)).ValueOrExit()
-	bodyBytes := FromGoRet[[]byte](ioutil.ReadAll(resp.Body)).ValueOrExit()
-	GVerbose.Info("response body:" + string(bodyBytes))
+	resp := result.FromGoRet[*http.Response](http.DefaultClient.Do(req)).ValueOrExit()
+	bodyBytes := result.FromGoRet[[]byte](ioutil.ReadAll(resp.Body)).ValueOrExit()
+	xlog.GVerbose.Info("response body:" + string(bodyBytes))
 	// == Construct rawUrl from Response ==
-	urlFrom := FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.from")).ValueOrExit()
+	urlFrom := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.from")).ValueOrExit()
 	if urlFrom == "json_response" {
 		// read response body json
 
@@ -244,45 +256,41 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 		if !(resp.StatusCode <= 200 && resp.StatusCode < 300) {
 			return "", fmt.Errorf("response status code %d is not expected. resp: %s", resp.StatusCode, string(bodyBytes))
 		}
-		rawUrlPath := FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.path")).ValueOrExit()
+		rawUrlPath := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.path")).ValueOrExit()
 		rawUrl, err = xmap.GetDeep[string](respJson, rawUrlPath)
 		if len(rawUrl) == 0 {
 			return "", fmt.Errorf("unable to get url. resp: %s", string(bodyBytes))
 		}
-		GVerbose.Trace("got rawUrl from resp: " + rawUrl)
+		xlog.GVerbose.Trace("got rawUrl from resp: " + rawUrl)
 	} else {
 		return "", errors.New("unsupported rawUrl from type")
 	}
 	return
 }
 
-func (u SimpleHttpUploader) Upload(t *Task) (ret Result[*Task]) {
+func (u SimpleHttpUploader) Upload(t *model.Task) (err error) {
 	now := time.Now()
 	base := xpath.Basename(t.LocalPath)
 
 	if len(t.TargetDir) > 0 {
 		t.TargetPath = t.TargetDir + "/" + base
 	} else {
-		t.TargetPath = Rename(base, now)
+		t.TargetPath = xapp.Rename(base, now)
 	}
-	GVerbose.Trace("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
+	xlog.GVerbose.Trace("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
 	// var err error
 	rawUrl, err := u.UploadFile(t)
 	var url string
 	if err == nil {
-		url := ReplaceUrl(rawUrl)
-		GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
-		t.Status = TASK_FINISHED
+		url := xapp.ReplaceUrl(rawUrl)
+		xlog.GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
+		t.Status = model.TASK_FINISHED
 	} else {
-		GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
-		t.Status = TASK_FAILED
+		xlog.GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
+		t.Status = model.TASK_FAILED
 	}
 	t.RawUrl = rawUrl
 	t.Url = url
 	t.FinishTime = now
-	ret = Result[*Task]{
-		err:   err,
-		value: t,
-	}
 	return
 }

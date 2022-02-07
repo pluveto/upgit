@@ -1,35 +1,24 @@
-package main
+package xapp
 
 import (
 	"crypto/md5"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/pluveto/upgit/lib/xpath"
 )
 
-type UploadStatus string
+const UserAgent = "UPGIT/0.2"
+const DefaultBranch = "master"
+const ClipboardPlaceholder = ":clipboard"
 
-const (
-	TASK_CREATED  UploadStatus = "created"
-	TASK_FINISHED              = "ok"
-	TASK_PAUSED                = "paused"
-	TASK_FAILED                = "failed"
-)
-
-type Task struct {
-	Status     UploadStatus
-	TaskId     int
-	LocalPath  string
-	TargetDir  string
-	TargetPath string
-	Ignored    bool
-	RawUrl     string
-	Url        string
-	FinishTime time.Time
-}
+var MaxUploadSize = int64(5 * 1024 * 1024)
+var ConfigFilePath string
 
 func Rename(path string, time time.Time) (ret string) {
 
@@ -50,15 +39,32 @@ func Rename(path string, time time.Time) (ret string) {
 		"{fnamehash4}", md5HashStr[:4],
 		"{fnamehash8}", md5HashStr[:8],
 	)
-	ret = r.Replace(cfg.Rename)
+	ret = r.Replace(AppCfg.Rename)
 	return
 }
 func ReplaceUrl(path string) (ret string) {
 	var rules []string
-	for k, v := range cfg.Replacements {
+	for k, v := range AppCfg.Replacements {
 		rules = append(rules, k, v)
 	}
 	r := strings.NewReplacer(rules...)
 	ret = r.Replace(path)
+	return
+}
+
+func LoadUploaderConfig[T any](uploaderId string) (ret T, err error) {
+	var mCfg map[string]interface{}
+	bytes, err := ioutil.ReadFile(ConfigFilePath)
+	if err != nil {
+		return
+	}
+	err = toml.Unmarshal(bytes, &mCfg)
+	if err != nil {
+		return
+	}
+	cfgMap := mCfg["uploaders"].(map[string]interface{})[uploaderId]
+	var cfg_ T
+	mapstructure.Decode(cfgMap, &cfg_)
+	ret = cfg_
 	return
 }

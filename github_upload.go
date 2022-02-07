@@ -10,19 +10,38 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pluveto/upgit/lib/model"
+	"github.com/pluveto/upgit/lib/result"
+	"github.com/pluveto/upgit/lib/xapp"
+	"github.com/pluveto/upgit/lib/xlog"
 )
 
 type UploadOptions struct {
 	LocalPath string
 }
 
+type GithubUploaderConfig struct {
+	PAT      string `toml:"pat" validate:"nonzero"`
+	Username string `toml:"username" validate:"nonzero"`
+	Repo     string `toml:"repo" validate:"nonzero"`
+	Branch   string `toml:"branch,omitempty"`
+}
 type GithubUploader struct {
-	Config     GithubUploaderConfig
-	OnUploaded func(result Result[*Task])
+	Config              GithubUploaderConfig
+	OnTaskStatusChanged func(result result.Result[*model.Task])
 }
 
 const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}/{path}"
 const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
+
+func (u GithubUploader) SetCallback(f func(result.Result[*model.Task])) {
+	u.OnTaskStatusChanged = f
+}
+
+func (u GithubUploader) GetCallback() func(result.Result[*model.Task]) {
+	return u.OnTaskStatusChanged
+}
 
 func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	dat, err := ioutil.ReadFile(path)
@@ -31,7 +50,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	}
 	encoded := base64.StdEncoding.EncodeToString(dat)
 	url := u.buildUrl(kApiFmt, name)
-	GVerbose.Trace("PUT " + url)
+	xlog.GVerbose.Trace("PUT " + url)
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBufferString(
 		`{
 			"branch": "`+u.Config.Branch+`",
@@ -41,7 +60,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "UPGIT/0.2")
+	req.Header.Set("User-Agent", xapp.UserAgent)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "token "+u.Config.PAT)
@@ -53,7 +72,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	GVerbose.Trace("response body: " + string(body))
+	xlog.GVerbose.Trace("response body: " + string(body))
 	if strings.Contains(string(body), "\\\"sha\\\" wasn't supplied.") {
 		return nil
 	}
@@ -63,7 +82,7 @@ func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	return nil
 }
 
-func (u GithubUploader) Upload(t *Task) (ret Result[*Task]) {
+func (u GithubUploader) Upload(t *model.Task) error {
 	now := time.Now()
 	base := filepath.Base(t.LocalPath)
 	// TODO: USE reference
@@ -71,27 +90,23 @@ func (u GithubUploader) Upload(t *Task) (ret Result[*Task]) {
 	if len(t.TargetDir) > 0 {
 		targetPath = t.TargetDir + "/" + base
 	} else {
-		targetPath = Rename(base, now)
+		targetPath = xapp.Rename(base, now)
 	}
 	rawUrl := u.buildUrl(kRawUrlFmt, targetPath)
-	url := ReplaceUrl(rawUrl)
-	GVerbose.Info("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
+	url := xapp.ReplaceUrl(rawUrl)
+	xlog.GVerbose.Info("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
 	// var err error
 	err := u.PutFile("upload "+base+" via upgit client", t.LocalPath, targetPath)
 	if err == nil {
-		GVerbose.Info("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
+		xlog.GVerbose.Info("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
 	} else {
-		GVerbose.Info("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
+		xlog.GVerbose.Info("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
 	}
-	t.Status = TASK_FINISHED
+	t.Status = model.TASK_FINISHED
 	t.Url = url
 	t.FinishTime = time.Now()
 	t.RawUrl = rawUrl
-	ret = Result[*Task]{
-		value: t,
-		err:   err,
-	}
-	return
+	return err
 }
 
 func (u GithubUploader) buildUrl(urlfmt, path string) string {
@@ -102,39 +117,4 @@ func (u GithubUploader) buildUrl(urlfmt, path string) string {
 		"{path}", path,
 	)
 	return r.Replace(urlfmt)
-}
-
-// UploadAll will upload all given file to targetDir.
-// If targetDir is not set, it will upload using rename rules.
-func (u GithubUploader) UploadAll(localPaths []string, targetDir string) {
-	for taskId, localPath := range localPaths {
-
-		var ret Result[*Task]
-		task := Task{
-			Status:     TASK_CREATED,
-			TaskId:     taskId,
-			LocalPath:  localPath,
-			TargetDir:  targetDir,
-			RawUrl:     localPath,
-			Url:        localPath,
-			FinishTime: time.Now(),
-		}
-		// ignore non-local path
-		if strings.HasPrefix(localPath, "http") {
-			task.Ignored = true
-			task.Status = TASK_FINISHED
-			ret = Result[*Task]{
-				value: &task,
-			}
-		} else {
-			ret = u.Upload(&task)
-		}
-
-		if ret.err == nil {
-			GVerbose.TraceStruct(ret.value)
-		}
-		if nil != u.OnUploaded {
-			u.OnUploaded(ret)
-		}
-	}
 }

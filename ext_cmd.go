@@ -8,6 +8,7 @@ import (
 
 	"github.com/alexflint/go-arg"
 	"github.com/pluveto/upgit/lib/xgithub"
+	"github.com/pluveto/upgit/lib/xlog"
 )
 
 type ExtListCmd struct {
@@ -45,7 +46,7 @@ func extSubcommand() {
 	case extArgs.Ext.List != nil:
 		ls, err := xgithub.ListFolder("pluveto/upgit", "/extensions")
 		if err != nil {
-			abortErr(err)
+			xlog.AbortErr(err)
 		}
 		fmt.Println("Extensions (install with FULL name):")
 		for i, v := range ls {
@@ -56,21 +57,21 @@ func extSubcommand() {
 	case extArgs.Ext.Add != nil:
 		extName := extArgs.Ext.Add.Name
 		if len(extName) == 0 {
-			abortErr(errors.New("extension name is required"))
+			xlog.AbortErr(errors.New("extension name is required"))
 		}
 		buf, err := xgithub.GetFile("pluveto/upgit", "master", "/extensions/"+extName)
 		if err != nil {
-			abortErr(errors.New("extension not found or network error: " + err.Error()))
+			xlog.AbortErr(errors.New("extension not found or network error: " + err.Error()))
 		}
 		// save buf
 		file, err := os.Create(path.Join(MustGetApplicationPath("extensions"), extName))
 		defer file.Close()
 		if err != nil {
-			abortErr(err)
+			xlog.AbortErr(err)
 		}
 		_, err = file.Write(buf)
 		if err != nil {
-			abortErr(err)
+			xlog.AbortErr(err)
 		}
 		fmt.Println("Extension installed:", extName)
 		os.Exit(0)
@@ -78,11 +79,11 @@ func extSubcommand() {
 	case extArgs.Ext.Remove != nil:
 		extName := extArgs.Ext.Remove.Name
 		if len(extName) == 0 {
-			abortErr(errors.New("extension name is required"))
+			xlog.AbortErr(errors.New("extension name is required"))
 		}
 		err := os.Remove(path.Join(MustGetApplicationPath("extensions"), extName))
 		if err != nil {
-			abortErr(err)
+			xlog.AbortErr(err)
 		}
 		fmt.Println("Extension removed:", extName)
 		os.Exit(0)
