@@ -22,9 +22,9 @@ type ExtRemoveCmd struct {
 }
 
 type ExtCmd struct {
-	List   *ExtListCmd   `arg:"subcommand:list"`
-	Add    *ExtAddCmd    `arg:"subcommand:add"`
-	Remove *ExtRemoveCmd `arg:"subcommand:remove"`
+	List   *ExtListCmd   `arg:"subcommand:list,subcommand:ls"`
+	Add    *ExtAddCmd    `arg:"subcommand:add,subcommand:install"`
+	Remove *ExtRemoveCmd `arg:"subcommand:remove,subcommand:rm"`
 }
 
 type ExtArgs struct {
