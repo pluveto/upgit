@@ -16,6 +16,7 @@ import (
 
 	"github.com/pluveto/upgit/lib/xmap"
 	"github.com/pluveto/upgit/lib/xpath"
+	"github.com/pluveto/upgit/lib/xstrings"
 )
 
 type SimpleHttpUploader struct {
@@ -85,24 +86,38 @@ func (u SimpleHttpUploader) replaceConfigPlaceholder(data map[string]interface{}
 			continue
 		}
 		v := v_.(string)
-		if strings.HasPrefix(v, "#") && strings.HasSuffix(v, "#") {
-			v_ := v[1 : len(v)-1]
-			subK, subV, found := strings.Cut(v_, ".")
+		delim := []string{"$(", ")"}
+
+		replacer := func(key string) *string {
+			var ret string
+			parentKey, subKey, found := strings.Cut(key, ".")
 			if !found {
-				continue
+				return nil
 			}
-			if subK == "ext_config" {
-				data[k] = panicOnNilOrValue[string](u.Config[subV], "please check key: "+subV)
-			} else if subK == "config" {
-				data[k] = panicOnNilOrValue[string](GetValueByConfigTag(&cfg, subV), "please check key: "+subV)
-			} else if subK == "option" {
-				data[k] = panicOnNilOrValue[string](GetValueByConfigTag(&opt, subV), "please check key: "+subV)
-			} else if subK == "task" {
-				data[k] = panicOnNilOrValue[string](GetValueByConfigTag(task, subV), "please check key: "+subV)
+			if parentKey == "ext_config" {
+				if v, ok := u.Config[subKey]; ok {
+					ret = v.(string)
+					return &ret
+				}
+			} else if parentKey == "config" {
+				ret = GetValueByConfigTag(&cfg, subKey).(string)
+				return &ret
+			} else if parentKey == "option" {
+				ret = GetValueByConfigTag(&opt, subKey).(string)
+				return &ret
+			} else if parentKey == "task" {
+				ret = GetValueByConfigTag(task, subKey).(string)
+				return &ret
 			}
+			return nil
+		}
+		ret := xstrings.VariableReplaceFunc(v, delim[0], delim[1], replacer)
+		if nil != ret {
+			data[k] = *ret
 		}
 	}
 }
+
 func GetValueByConfigTag(data interface{}, key string) (ret interface{}) {
 	t := reflect.TypeOf(data)
 	n := t.NumField()
