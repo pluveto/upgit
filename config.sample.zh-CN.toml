@@ -73,3 +73,9 @@ client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 [uploaders.chevereto]
 upload_url = "https://chevereto.com/api/v1/upload"
 key = "c8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8"
+
+# 腾讯云 COS
+[uploaders.qcloudcos]
+host = "xxx.cos.ap-chengdu.myqcloud.com"
+secret_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+secret_key= "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

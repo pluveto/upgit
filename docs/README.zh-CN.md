@@ -26,6 +26,7 @@
 + Imgur
 + Chevereto
 + ImgBB
++ 腾讯云 COS
 
 查看更多: `./upgit ext ls`
 
