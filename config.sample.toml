@@ -36,7 +36,7 @@ rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 # "/master" = "@master"
 
 # =============================================================================
-# Configurations for each uploader, leave blank if not used
+# Configurations examples for some uploaders, leave them blank if not used
 # =============================================================================
 
 # Github uploader
@@ -66,3 +66,8 @@ token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 # Get token from https://api.imgur.com/oauth2/addclient
 # See your apps in https://imgur.com/account/settings/apps
 client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Chevereto Uploader
+[uploaders.chevereto]
+upload_url = "https://chevereto.com/api/v1/upload"
+key = "c8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8"

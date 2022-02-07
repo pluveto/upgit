@@ -38,7 +38,7 @@ rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 # "/master" = "@master"
 
 # =============================================================================
-# 以下为各个上传器的配置. 用不到的留空即可
+# 以下为各个上传器的配置示例. 用不到的留空即可
 # =============================================================================
 
 # Github 上传器
@@ -68,3 +68,8 @@ token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 # Get token from https://api.imgur.com/oauth2/addclient
 # See your apps in https://imgur.com/account/settings/apps
 client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Chevereto Uploader
+[uploaders.chevereto]
+upload_url = "https://chevereto.com/api/v1/upload"
+key = "c8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8"

@@ -1,0 +1,43 @@
+{
+    "meta": {
+        "id": "chevereto",
+        "name": "Chevereto Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            // See https://apidocs.imgur.com/#c85c9dfc-7487-4de2-9ecd-66f727cf3139
+            "url": "$(ext_config.upload_url)",
+            "method": "POST",
+            "params": {
+                "key": "$(ext_config.key)"
+            },
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "key": {
+                    "type": "string",
+                    "value": "$(ext_config.key)"
+                },
+                "source": {
+                    "type": "file_base64",
+                    "value": "$(task.local_path)"
+                },
+                "format": {
+                    "type": "string",
+                    "value": "json"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "image.url"
+        }
+    }
+}
