@@ -82,7 +82,7 @@ func main() {
 	mainCommand()
 }
 
-func mainCommand(){
+func mainCommand() {
 	// parse cli args
 	arg.MustParse(&opt)
 	opt.TargetDir = strings.Trim(opt.TargetDir, "/")
@@ -149,9 +149,8 @@ func onUploaded(r Result[*Task]) {
 }
 
 func recordHistory(r Task) {
-	os.WriteFile(MustGetApplicationPath("history.log"), []byte(
+	appendToFile(MustGetApplicationPath("history.log"), []byte(
 		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
-		os.ModeAppend,
 	)
 	GVerbose.Info(MustMarshall(r))
 }
