@@ -153,7 +153,7 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	// == prepare method and url ==
 	method := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
 	urlRaw := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
-	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.params")).ValueOrExit()
+	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.params")).ValueOrDefault(map[string]interface{}{})
 	u.replaceDictPlaceholder(params, task)
 	url := FromGoRet[*url.URL](url.Parse(u.replaceStringPlaceholder(urlRaw, task))).ValueOrExit()
 	query := url.Query()
@@ -196,15 +196,16 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 
 			if fieldType == "string" {
 				fieldValue := u.replaceRequest(fieldMeta["value"].(string), tplData)
+				fieldValue = u.replaceStringPlaceholder(fieldValue, task)
 				mulWriter.WriteField(fieldName, fieldValue)
-				GVerbose.Trace("field value: " + fieldValue)
+				GVerbose.Trace("field(string) value: " + fieldValue)
 
 			} else if fieldType == "file" {
 				fileName := filepath.Base(task.LocalPath)
 				part := FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
 				n, err := part.Write(FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
 				abortErr(err)
-				GVerbose.Trace("field value: "+"[file (len=%d, name=%s)]", n, fileName)
+				GVerbose.Trace("field(file) value: "+"[file (len=%d, name=%s)]", n, fileName)
 
 			} else if fieldType == "file_base64" {
 				dat, err := ioutil.ReadFile(task.LocalPath)
@@ -228,13 +229,13 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 
 	// == Do Request ==
 	resp := FromGoRet[*http.Response](http.DefaultClient.Do(req)).ValueOrExit()
-
+	bodyBytes := FromGoRet[[]byte](ioutil.ReadAll(resp.Body)).ValueOrExit()
+	GVerbose.Info("response body:" + string(bodyBytes))
 	// == Construct rawUrl from Response ==
 	urlFrom := FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.from")).ValueOrExit()
 	if urlFrom == "json_response" {
 		// read response body json
-		bodyBytes := FromGoRet[[]byte](ioutil.ReadAll(resp.Body)).ValueOrExit()
-		GVerbose.Info("response body:" + string(bodyBytes))
+
 		var respJson map[string]interface{}
 		err := json.Unmarshal(bodyBytes, &respJson)
 		if err != nil {
