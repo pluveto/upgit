@@ -11,8 +11,8 @@ default_uploader = "github"
 #   {month} 月份, 例如: 02
 #   {day} 天, 例如: 01
 #   {unix_ts} 时间戳, 例如: 1643617626
-#   {file_name} 原始文件名，如 logo (不含后缀名)
-#   {file_name_hash} {file_name}的 MD5 散列值
+#   {fname} 原始文件名，如 logo (不含后缀名)
+#   {fname_hash} {fname}的 MD5 散列值
 #   {ext} 文件后缀名, 例如.png
 #   下面的例子生成的文件名预览: 2022/01/upgit_20220131_1643617626.png
 #   如果目录不存在将会被程序自动创建

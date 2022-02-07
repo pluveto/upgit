@@ -11,8 +11,8 @@ default_uploader = "github"
 #   {month} Month, for example: 02
 #   {day} Day, for example: 01
 #   {unix_ts} Time stamp, for example: 1643617626
-#   {file_name} Original file name, such as logo (without suffix)
-#   {file_name_hash} MD5 hash value of {file_name}
+#   {fname} Original file name, such as logo (without suffix)
+#   {fname_hash} MD5 hash value of {fname}
 #   {ext} File name suffix, for example: .png
 #   The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"

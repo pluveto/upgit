@@ -202,9 +202,12 @@ For Windows user:
 | -- `{month}`          | -- Month like `01`                                           |
 | -- `{day}`            | -- Day like `02`                                             |
 | -- `{unix_ts}`        | -- Unix timestamp in second. Like `1643373370`.              |
+| -- `{unix_tsms}`        | -- Unix timestamp in microsecond. Like `1644212979622`.              |
 | --- `{ext}`           | -- Extension like `.png`, and empty when the original file has no extension |
-| -- `{file_name}`      | -- Original file base name like `demo` (without extension)   |
-| -- `{file_name_hash}` | -- MD5 Hash in hex of `{file_name}`                          |
+| -- `{fname}`      | -- Original file base name like `demo` (without extension)   |
+| -- `{fname_hash}` | -- MD5 Hash in hex of `{fname}`                          |
+| -- `{fname_hash4}` | -- MD5 Hash in hex of `{fname}`, first 4 digits                          |
+| -- `{fname_hash8}` | -- MD5 Hash in hex of `{fname}`, first 8 digits                          |
 
 Here is a simplist sample config file:
 
