@@ -1,27 +1,23 @@
 {
     "meta": {
-        "id": "imgurl",
-        "name": "ImgUrl Uploader",
+        "id": "imgur",
+        "name": "Imgur Uploader",
         "type": "simple-http-uploader",
         "version": "0.0.1",
         "repository": ""
     },
     "http": {
         "request": {
-            // See https://api.imgur.com/
-            "url": "https://sm.ms/api/v2/upload",
+            // See https://apidocs.imgur.com/#c85c9dfc-7487-4de2-9ecd-66f727cf3139
+            "url": "https://api.imgur.com/3/upload",
             "method": "POST",
             "headers": {
-                "Authorization": "Client-ID #ext_config.client_id#",
+                "Authorization": "Client-ID $(ext_config.client_id)",
                 "Content-Type": "multipart/form-data",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
             },
             "body": {
-                "format": {
-                    "type": "string",
-                    "value": "json"
-                },
-                "smfile": {
+                "image": {
                     "type": "file",
                     "value": "#task.local_path#"
                 }
@@ -31,7 +27,7 @@
     "upload": {
         "rawUrl": {
             "from": "json_response",
-            "path": "data.url"
+            "path": "data.link"
         }
     }
 }
