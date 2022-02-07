@@ -61,3 +61,8 @@ username = "username"
 # Get token from https://sm.ms/home/apitoken
 token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
+# Imgur Uploader
+[uploaders.imgur]
+# Get token from https://api.imgur.com/oauth2/addclient
+# See your apps in https://imgur.com/account/settings/apps
+client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
