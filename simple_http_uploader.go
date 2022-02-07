@@ -153,12 +153,14 @@ func (u SimpleHttpUploader) UploadFile(task *Task) (rawUrl string, err error) {
 	// == prepare method and url ==
 	method := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
 	urlRaw := FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
-	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.headers")).ValueOrExit()
+	params := FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.params")).ValueOrExit()
 	u.replaceDictPlaceholder(params, task)
 	url := FromGoRet[*url.URL](url.Parse(u.replaceStringPlaceholder(urlRaw, task))).ValueOrExit()
+	query := url.Query()
 	for paramName, paramValue := range params {
-		url.Query().Add(paramName, paramValue.(string))
+		query.Add(paramName, paramValue.(string))
 	}
+	url.RawQuery = query.Encode()
 	GVerbose.Info("Method: %s, URL: %s", method, url.String())
 
 	//  == Prepare header ==
