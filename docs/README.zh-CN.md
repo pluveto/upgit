@@ -85,7 +85,7 @@
 Upload anything to github repo or other remote storages and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--uploader UPLOADER] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] FILE [FILE ...]
+Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--uploader UPLOADER] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] [--application-path APPLICATION-PATH] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
@@ -106,6 +106,8 @@ Options:
                          output type, supports stdout, clipboard [default: stdout]
   --output-format OUTPUT-FORMAT, -f OUTPUT-FORMAT
                          output format, supports url, markdown and your customs [default: url]
+  --application-path APPLICATION-PATH
+                         custom application path, which determines config file path and extensions dir path. current binary dir by default
   --help, -h             display this help and exit
 
 Manage extensions:
@@ -113,6 +115,7 @@ upgit ext ACTION
 
 Actions:
   ls                     list all downloadable extensions
+  my                     list all local extensions
   add smms.jsonc         install SMMS uploader
   remove smms.jsonc      remove SMMS uploader
 ```
