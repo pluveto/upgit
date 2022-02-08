@@ -53,7 +53,9 @@ func mainCommand() {
 	if false == xapp.AppOpt.NoLog {
 		xlog.GVerbose.LogEnabled = true
 		xlog.GVerbose.LogFile = xpath.MustGetApplicationPath("upgit.log")
+		xlog.GVerbose.LogFileMaxSize = 2 * 1024 * 1024 // 2MiB
 		xlog.GVerbose.Info("Started")
+		xlog.GVerbose.TruncatLog()
 	}
 	xlog.GVerbose.VerboseEnabled = xapp.AppOpt.Verbose
 	xlog.GVerbose.TraceStruct(xapp.AppOpt)
@@ -111,7 +113,7 @@ func onUploaded(r result.Result[*model.Task]) {
 
 func recordHistory(r model.Task) {
 	xio.AppendToFile(xpath.MustGetApplicationPath("history.log"), []byte(
-		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
+		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}\n`),
 	)
 	xlog.GVerbose.Info(MustMarshall(r))
 }

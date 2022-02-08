@@ -74,7 +74,6 @@ func (v Verbose) TruncatLog() {
 	defer file.Close()
 	file.Seek(truncSize, 0)
 	file.Truncate(truncSize)
-
 }
 
 func (v Verbose) TraceStruct(s interface{}) {
