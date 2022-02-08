@@ -1,0 +1,31 @@
+{
+    "meta": {
+        "id": "sougou",
+        "name": "sougou Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            "url": "http://pic.sogou.com/pic/upload_pic.jsp",
+            "method": "POST",
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36",
+                "Content-Type": "multipart/form-data"
+            },
+            "body": {
+                "pic_path": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "success_image[0].url"
+        }
+    }
+}

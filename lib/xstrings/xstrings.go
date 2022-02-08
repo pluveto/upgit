@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// VariableReplace Replace vairable placeholder like $(a.b.c) to value using map
 func VariableReplace(s, delimiterLeft, delimiterRight string, dict map[string]string) string {
 	ret := s
 	for k, v := range dict {
@@ -14,9 +15,11 @@ func VariableReplace(s, delimiterLeft, delimiterRight string, dict map[string]st
 	return ret
 }
 
+// VariableReplaceFunc Replace vairable placeholder like $(a.b.c) to value using map function
 func VariableReplaceFunc(s, delimiterLeft, delimiterRight string, dictFunc func(string) *string) *string {
 	ret := s
-	r := regexp.MustCompile(regexp.QuoteMeta(delimiterLeft) + "(.*?)" + regexp.QuoteMeta(delimiterRight))
+	regex := regexp.QuoteMeta(delimiterLeft) + "(.*?)" + regexp.QuoteMeta(delimiterRight)
+	r := regexp.MustCompile(regex)
 	for _, v := range r.FindAllStringSubmatch(ret, -1) {
 		val := dictFunc(v[1])
 		if nil == val {
@@ -27,6 +30,7 @@ func VariableReplaceFunc(s, delimiterLeft, delimiterRight string, dictFunc func(
 	return &ret
 }
 
+// ValueOrDefault returns the value if it is not empty, otherwise the default value
 func ValueOrDefault(try, default_ string) string {
 	if try == "" {
 		return default_
@@ -34,7 +38,7 @@ func ValueOrDefault(try, default_ string) string {
 	return try
 }
 
-// RemoveFmtUnderscore {abc_def_} => {abcdef}
+// RemoveFmtUnderscore remove underscore in format placeholder {abc_def_} => {abcdef}
 func RemoveFmtUnderscore(in string) (out string) {
 	out = ""
 	offset := 0
@@ -56,6 +60,7 @@ func RemoveFmtUnderscore(in string) (out string) {
 	return
 }
 
+// RemoveJsoncComments remove json comments
 func RemoveJsoncComments(data []byte) []byte {
 	var buf bytes.Buffer
 	var inQuote bool

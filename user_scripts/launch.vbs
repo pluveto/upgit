@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").run WScript.Arguments.Item(0),vbhide 

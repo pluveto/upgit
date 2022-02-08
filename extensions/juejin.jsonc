@@ -1,0 +1,31 @@
+{
+    "meta": {
+        "id": "juejin",
+        "name": "Juejin Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            "url": "https://cdn-ms.juejin.im/v1/upload?bucket=gold-user-assets",
+            "method": "POST",
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36",
+                "Content-Type": "multipart/form-data"
+            },
+            "body": {
+                "file": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "success_image[0].url"
+        }
+    }
+}
