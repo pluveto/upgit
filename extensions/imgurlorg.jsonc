@@ -1,29 +1,21 @@
 {
     "meta": {
-        "id": "hello",
-        "name": "Hello Uploader",
+        "id": "imgurlorg",
+        "name": "Imgurl.org Uploader",
         "type": "simple-http-uploader",
         "version": "0.0.1",
         "repository": ""
     },
     "http": {
         "request": {
-            "url": "https://www.helloimg.com/newapi/2/upload/?format=json",
+            "url": "https://imgurl.org/upload/ftp",
             "method": "POST",
             "headers": {
                 "Content-Type": "multipart/form-data",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
             },
             "body": {
-                "login-subject": {
-                    "type": "string",
-                    "value": "$(ext_config.username)"
-                },
-                "password": {
-                    "type": "string",
-                    "value": "$(ext_config.password)"
-                },
-                "source": {
+                "file": {
                     "type": "file",
                     "value": "$(task.local_path)"
                 }
@@ -33,7 +25,7 @@
     "upload": {
         "rawUrl": {
             "from": "json_response",
-            "path": "image"
+            "path": "url"
         }
     }
 }
