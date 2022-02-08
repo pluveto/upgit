@@ -18,6 +18,7 @@ import (
 	"github.com/pluveto/upgit/lib/model"
 	"github.com/pluveto/upgit/lib/qcloudcos"
 	"github.com/pluveto/upgit/lib/result"
+	"github.com/pluveto/upgit/lib/upyun"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xclipboard"
 	"github.com/pluveto/upgit/lib/xio"
@@ -271,6 +272,17 @@ func upload() {
 		xlog.GVerbose.Trace("qcloudcos config: ")
 		xlog.GVerbose.TraceStruct(&qCfg)
 		uploader := qcloudcos.COSUploader{Config: qCfg, OnTaskStatusChanged: onUploaded}
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
+		return
+	}
+	if uploaderId == "upyun" {
+		ucfg, err := xapp.LoadUploaderConfig[upyun.UpyunConfig](uploaderId)
+		xlog.AbortErr(err)
+		err = validator.Validate(&ucfg)
+		xlog.AbortErr(err)
+		xlog.GVerbose.Trace("qcloudcos config: ")
+		xlog.GVerbose.TraceStruct(&ucfg)
+		uploader := upyun.UpyunUploader{Config: ucfg, OnTaskStatusChanged: onUploaded}
 		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
 		return
 	}
