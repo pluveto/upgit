@@ -79,14 +79,6 @@ func MapGetOrDefault(m map[string]string, key, def string) string {
 	return def
 }
 
-func (u SimpleHttpUploader) replaceRequest(s string, data map[string]string) (ret string) {
-	s = RemoveFmtUnderscore(s)
-	r := strings.NewReplacer(
-		"{remotepath}", MapGetOrDefault(data, "remote_path", ""),
-	)
-	return r.Replace(s)
-}
-
 func panicOnNilOrValue[T any](i interface{}, msg string) T {
 	if nil == i {
 		panic("value is nil: " + msg)
@@ -158,10 +150,6 @@ func GetValueByConfigTag(data interface{}, key string) (ret interface{}) {
 }
 
 func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err error) {
-	// TODO: Do not use tplData, use stantard $(task.remote_path)
-	tplData := map[string]string{
-		"remote_path": task.TargetPath,
-	}
 	// == prepare method and url ==
 	method := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.method")).ValueOrExit()
 	urlRaw := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "http.request.url")).ValueOrExit()
@@ -183,7 +171,7 @@ func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err err
 	xlog.GVerbose.TraceStruct(headers)
 	headerCache := make(http.Header)
 	for k, v := range headers {
-		headerCache.Set(k, u.replaceRequest(v.(string), tplData))
+		headerCache.Set(k, u.replaceStringPlaceholder(v.(string), task))
 	}
 	if headerCache.Get("Content-Type") == "" {
 		headerCache.Set("Content-Type", "application/octet-stream")
@@ -198,43 +186,11 @@ func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err err
 	if contentType == "application/octet-stream" {
 		body = ioutil.NopCloser(bytes.NewReader(result.FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit()))
 	} else if contentType == "multipart/form-data" {
-		var bodyBuff bytes.Buffer
-		mulWriter := multipart.NewWriter(&bodyBuff)
-		bodyTpl := result.FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.body")).ValueOrExit()
-		for fieldName, fieldMeta_ := range bodyTpl {
-			xlog.GVerbose.Trace("processing field: " + fieldName)
-			fieldMeta := fieldMeta_.(map[string]interface{})
-			fieldType := fieldMeta["type"]
-
-			if fieldType == "string" {
-				fieldValue := u.replaceRequest(fieldMeta["value"].(string), tplData)
-				fieldValue = u.replaceStringPlaceholder(fieldValue, task)
-				mulWriter.WriteField(fieldName, fieldValue)
-				xlog.GVerbose.Trace("field(string) value: " + fieldValue)
-
-			} else if fieldType == "file" {
-				fileName := filepath.Base(task.LocalPath)
-				part := result.FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
-				n, err := part.Write(result.FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
-				xlog.AbortErr(err)
-				xlog.GVerbose.Trace("field(file) value: "+"[file (len=%d, name=%s)]", n, fileName)
-
-			} else if fieldType == "file_base64" {
-				dat, err := ioutil.ReadFile(task.LocalPath)
-				if err != nil {
-					return "", err
-				}
-				encoded := base64.StdEncoding.EncodeToString(dat)
-				mulWriter.WriteField(fieldName, encoded)
-			}
-		}
-		headerCache.Set("Content-Type", mulWriter.FormDataContentType())
-		mulWriter.Close()
-		body = ioutil.NopCloser(bytes.NewReader(bodyBuff.Bytes()))
+		body = u.buildMultipartFormData(task, &headerCache)
 	}
 
 	// == Create Request ==
-	req := result.FromGoRet[*http.Request](http.NewRequest(method, u.replaceRequest(url.String(), tplData), body)).ValueOrExit()
+	req := result.FromGoRet[*http.Request](http.NewRequest(method, u.replaceStringPlaceholder(url.String(), task), body)).ValueOrExit()
 	req.Header = headerCache
 	xlog.GVerbose.Trace("do headers:")
 	xlog.GVerbose.TraceStruct(map[string][]string(req.Header))
@@ -262,9 +218,47 @@ func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err err
 			return "", fmt.Errorf("unable to get url. resp: %s", string(bodyBytes))
 		}
 		xlog.GVerbose.Trace("got rawUrl from resp: " + rawUrl)
+	} else if urlFrom == "template" {
+		template := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.template")).ValueOrExit()
+		rawUrl = u.replaceStringPlaceholder(template, task)
 	} else {
 		return "", errors.New("unsupported rawUrl from type")
 	}
+	return
+}
+
+func (u SimpleHttpUploader) buildMultipartFormData(task *model.Task, headerCache *http.Header) (body io.ReadCloser) {
+	var bodyBuff bytes.Buffer
+	mulWriter := multipart.NewWriter(&bodyBuff)
+	bodyTpl := result.FromGoRet[map[string]interface{}](xmap.GetDeep[map[string]interface{}](u.Definition, "http.request.body")).ValueOrExit()
+	for fieldName, fieldMeta_ := range bodyTpl {
+		xlog.GVerbose.Trace("processing field: " + fieldName)
+		fieldMeta := fieldMeta_.(map[string]interface{})
+		fieldType := fieldMeta["type"]
+
+		if fieldType == "string" {
+			fieldValue := u.replaceStringPlaceholder(fieldMeta["value"].(string), task)
+			fieldValue = u.replaceStringPlaceholder(fieldValue, task)
+			mulWriter.WriteField(fieldName, fieldValue)
+			xlog.GVerbose.Trace("field(string) value: " + fieldValue)
+
+		} else if fieldType == "file" {
+			fileName := filepath.Base(task.LocalPath)
+			part := result.FromGoRet[io.Writer](mulWriter.CreateFormFile(fieldName, fileName)).ValueOrExit()
+			n, err := part.Write(result.FromGoRet[[]byte](ioutil.ReadFile(task.LocalPath)).ValueOrExit())
+			xlog.AbortErr(err)
+			xlog.GVerbose.Trace("field(file) value: "+"[file (len=%d, name=%s)]", n, fileName)
+
+		} else if fieldType == "file_base64" {
+			dat, err := ioutil.ReadFile(task.LocalPath)
+			xlog.AbortErr(err)
+			encoded := base64.StdEncoding.EncodeToString(dat)
+			mulWriter.WriteField(fieldName, encoded)
+		}
+	}
+	headerCache.Set("Content-Type", mulWriter.FormDataContentType())
+	mulWriter.Close()
+	body = ioutil.NopCloser(bytes.NewReader(bodyBuff.Bytes()))
 	return
 }
 
