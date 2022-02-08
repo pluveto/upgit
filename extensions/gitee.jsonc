@@ -32,8 +32,7 @@
     },
     "upload": {
         "rawUrl": {
-            "from": "json_response",
-            "path": "data"
+            "from": "text_response"
         }
     }
 }
