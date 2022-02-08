@@ -18,7 +18,7 @@
             "body": {
                 "format": {
                     "type": "string",
-                    "value": "$(task.targetPath)"
+                    "value": "json"
                 },
                 "smfile": {
                     "type": "file",
