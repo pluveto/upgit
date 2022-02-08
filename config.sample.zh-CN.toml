@@ -85,3 +85,10 @@ secret_key= "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 # Generate Token: http://jsfiddle.net/gh/get/extjs/4.2/icattlecoder/jsfiddle/tree/master/uptoken
 token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=="
 prefix = "https://cdn.mydomain.com/"
+
+# Gitee
+[uploaders.gitee]
+username = "username"
+repo = "repo-name"
+# https://gitee.com/profile/personal_access_tokens/new
+access_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
