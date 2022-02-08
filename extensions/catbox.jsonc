@@ -1,0 +1,38 @@
+{
+    "meta": {
+        "id": "catbox",
+        "name": "Catbox Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            "url": "https://catbox.moe/user/api.php",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "fileToUpload": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                },
+                "reqtype": {
+                    "type": "string",
+                    "value": "fileupload"
+                },
+                "userhash": {
+                    "type": "string",
+                    "value": "$(ext_config.userhash)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "text_response"
+        }
+    }
+}
