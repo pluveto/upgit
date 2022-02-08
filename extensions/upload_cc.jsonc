@@ -2,6 +2,7 @@
     "meta": {
         "id": "uploadcc",
         "name": "Upload.cc Uploader",
+        "description": "此插件尚在调试中，请勿使用",
         "type": "simple-http-uploader",
         "version": "0.0.1",
         "repository": ""

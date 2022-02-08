@@ -1,6 +1,7 @@
 {
     "meta": {
         "id": "juejin",
+        "description": "此插件尚在调试中，请勿使用",
         "name": "Juejin Uploader",
         "type": "simple-http-uploader",
         "version": "0.0.1",
