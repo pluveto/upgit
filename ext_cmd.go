@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/alexflint/go-arg"
 	"github.com/pluveto/upgit/lib/xgithub"
@@ -34,6 +35,13 @@ type ExtArgs struct {
 
 var extArgs ExtArgs
 
+func autoFixExtName(extName string) string {
+	if !strings.Contains(extName, ".") {
+		extName += ".jsonc"
+	}
+	return extName
+}
+
 func extSubcommand() {
 	err := arg.Parse(&extArgs)
 	if err != nil || extArgs.Ext == nil {
@@ -59,9 +67,10 @@ func extSubcommand() {
 		if len(extName) == 0 {
 			xlog.AbortErr(errors.New("extension name is required"))
 		}
+		extName = autoFixExtName(extName)
 		buf, err := xgithub.GetFile("pluveto/upgit", "master", "/extensions/"+extName)
 		if err != nil {
-			xlog.AbortErr(errors.New("extension not found or network error: " + err.Error()))
+			xlog.AbortErr(errors.New("extension " + extName + " not found or network error: " + err.Error()))
 		}
 		// save buf
 		file, err := os.Create(path.Join(MustGetApplicationPath("extensions"), extName))
