@@ -30,9 +30,9 @@ func (e ExtDef) DisplaySimple(prefix, suffix string) {
 	// Gitub Uploader (id: github) v1.0.0 - Description
 	fmt.Print(prefix)
 	fmt.Printf("%-32s", color.CyanString(e.Meta.Name))
-	fmt.Printf("id: %-16s", e.Meta.Id)
+	fmt.Printf("id: %-16s", color.YellowString(e.Meta.Id))
 	if len(e.Meta.Version) > 0 {
-		fmt.Printf(" v%-8s", color.GreenString(e.Meta.Version))
+		fmt.Printf(" v%-8s", e.Meta.Version)
 	}
 	if len(e.Meta.Description) > 0 {
 		fmt.Print("- " + e.Meta.Description)
