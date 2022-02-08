@@ -32,7 +32,8 @@
     },
     "upload": {
         "rawUrl": {
-            "from": "text_response"
+            "from": "json_response",
+            "path": "content.download_url"
         }
     }
 }
