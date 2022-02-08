@@ -12,13 +12,13 @@ const (
 )
 
 type Task struct {
-	Status     UploadStatus
-	TaskId     int
-	LocalPath  string
-	TargetDir  string
-	TargetPath string
-	Ignored    bool
-	RawUrl     string
-	Url        string
-	FinishTime time.Time
+	Status     UploadStatus `toml:"status" mapstructure:"status"`
+	TaskId     int          `toml:"task_id" mapstructure:"task_id"`
+	LocalPath  string       `toml:"local_path" mapstructure:"local_path"`
+	TargetDir  string       `toml:"target_dir" mapstructure:"target_dir"`
+	TargetPath string       `toml:"target_path" mapstructure:"target_path"`
+	Ignored    bool         `toml:"ignored" mapstructure:"ignored"`
+	RawUrl     string       `toml:"raw_url" mapstructure:"raw_url"`
+	Url        string       `toml:"url" mapstructure:"url"`
+	FinishTime time.Time    `toml:"finish_time" mapstructure:"finish_time"`
 }
