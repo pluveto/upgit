@@ -22,10 +22,17 @@
 ### 上传扩展
 
 + Github
++ Gitee
 + 腾讯云 COS
 + 七牛云 Kodo
++ 又拍云
++ Hello
++ Niupic
 + SM.MS
 + Imgur
++ ImgUrl.org
++ CatBox
++ LSkyPro
 + Chevereto
 + ImgBB
 

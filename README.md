@@ -27,10 +27,17 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 ### Supported Upload Extensions
 
 + Github
-+ QCloudCOS
-+ Qiniu
++ Gitee
++ Tecent QcloudCOS
++ Qiniu Kodo
++ Upyun
++ Hello
++ Niupic
 + SM.MS
 + Imgur
++ ImgUrl.org
++ CatBox
++ LSkyPro
 + Chevereto
 + ImgBB
 
