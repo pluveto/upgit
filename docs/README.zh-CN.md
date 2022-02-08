@@ -22,11 +22,12 @@
 ### 上传扩展
 
 + Github
++ 腾讯云 COS
++ 七牛云 Kodo
 + SM.MS
 + Imgur
 + Chevereto
 + ImgBB
-+ 腾讯云 COS
 
 查看更多: `./upgit ext ls`
 

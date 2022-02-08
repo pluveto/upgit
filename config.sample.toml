@@ -77,3 +77,9 @@ upload_url = "https://chevereto.com/api/v1/upload"
 host = "xxx.cos.ap-chengdu.myqcloud.com"
 secret_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 secret_key= "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Qiniu cloud
+[uploaders.qiniu]
+# Generate Token: http://jsfiddle.net/gh/get/extjs/4.2/icattlecoder/jsfiddle/tree/master/uptoken
+token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=="
+prefix = "https://cdn.mydomain.com/"

@@ -79,3 +79,9 @@ key = "c8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8"
 host = "xxx.cos.ap-chengdu.myqcloud.com"
 secret_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 secret_key= "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 七牛云存储
+[uploaders.qiniu]
+# Generate Token: http://jsfiddle.net/gh/get/extjs/4.2/icattlecoder/jsfiddle/tree/master/uptoken
+token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=="
+prefix = "https://cdn.mydomain.com/"

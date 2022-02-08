@@ -28,6 +28,7 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 
 + Github
 + QCloudCOS
++ Qiniu
 + SM.MS
 + Imgur
 + Chevereto
