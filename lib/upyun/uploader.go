@@ -64,7 +64,6 @@ func (u UpyunUploader) Upload(t *model.Task) error {
 
 func (u *UpyunUploader) buildUrl(urlfmt, path string) string {
 	r := strings.NewReplacer(
-		// <BucketName-APPID>.cos.<Region>.myqcloud.com
 		"{host}", u.Config.Host,
 		"{path}", path,
 	)

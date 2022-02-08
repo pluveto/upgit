@@ -9,7 +9,13 @@ func (r Result[T]) Ok() bool {
 	return r.Err == nil
 }
 
-func FromGoRet[T any](in ...interface{}) Result[T] {
+// From 
+// In Golang we usually return by the format of `data ,err`. 
+// This function convert it to a Result[T], so that you can handle error in a tidy way
+func From[T any](in ...interface{}) Result[T] {
+	if len(in) != 2 {
+		panic("unexpected number of return values")
+	}
 	if nil != in[1] {
 		return Result[T]{
 			Err: in[1].(error),
@@ -34,9 +40,9 @@ func (r Result[T]) ValueOrPanic() T {
 	panic(r.Err)
 }
 
-type ErrorHandler func(err error)
+type AbortHandler func(err error)
 
-var AbortErr ErrorHandler
+var AbortErr AbortHandler
 
 func (r Result[T]) ValueOrExit() T {
 	if r.Err == nil {

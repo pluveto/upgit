@@ -41,6 +41,31 @@ func main() {
 
 func mainCommand() {
 	// parse cli args
+	loadCliOpts()
+
+	// load config
+	loadEnvConfig(&xapp.AppCfg)
+	loadConfig(&xapp.AppCfg)
+
+	xlog.GVerbose.TraceStruct(xapp.AppCfg)
+
+	// handle clipboard if need
+	loadClipboard()
+
+	// validating args
+	validArgs()
+
+	// executing uploading
+	dispatchUploader()
+
+	if xapp.AppOpt.Wait {
+		fmt.Scanln()
+	}
+
+	return
+}
+
+func loadCliOpts() {
 	arg.MustParse(&xapp.AppOpt)
 	xapp.AppOpt.TargetDir = strings.Trim(xapp.AppOpt.TargetDir, "/")
 	xapp.AppOpt.ApplicationPath = strings.Trim(xapp.AppOpt.ApplicationPath, "/")
@@ -59,37 +84,6 @@ func mainCommand() {
 	}
 	xlog.GVerbose.VerboseEnabled = xapp.AppOpt.Verbose
 	xlog.GVerbose.TraceStruct(xapp.AppOpt)
-
-	// load config
-	loadEnvConfig(&xapp.AppCfg)
-	loadTomlConfig(&xapp.AppCfg)
-
-	// fill config
-	xapp.AppCfg.Rename = strings.Trim(xapp.AppCfg.Rename, "/")
-	xapp.AppCfg.Rename = xstrings.RemoveFmtUnderscore(xapp.AppCfg.Rename)
-
-	// -- integrated formats
-	if nil == xapp.AppCfg.OutputFormats {
-		xapp.AppCfg.OutputFormats = make(map[string]string)
-	}
-	xapp.AppCfg.OutputFormats["markdown"] = `![{url_fname}]({url})`
-	xapp.AppCfg.OutputFormats["url"] = `{url}`
-	xlog.GVerbose.TraceStruct(xapp.AppCfg)
-
-	// handle clipboard if need
-	loadClipboard()
-
-	// validating args
-	validArgs()
-
-	// executing uploading
-	upload()
-
-	if xapp.AppOpt.Wait {
-		fmt.Scanln()
-	}
-
-	return
 }
 
 func onUploaded(r result.Result[*model.Task]) {
@@ -180,7 +174,7 @@ func validArgs() {
 	}
 }
 
-func loadTomlConfig(cfg *xapp.Config) {
+func loadConfig(cfg *xapp.Config) {
 
 	homeDir, err := os.UserHomeDir()
 	xlog.AbortErr(err)
@@ -205,13 +199,20 @@ func loadTomlConfig(cfg *xapp.Config) {
 			xlog.AbortErr(fmt.Errorf("invalid config: " + err.Error()))
 		}
 		xapp.ConfigFilePath = configFile
-		return
+		break
 	}
 
-}
+	// fill config
+	xapp.AppCfg.Rename = strings.Trim(xapp.AppCfg.Rename, "/")
+	xapp.AppCfg.Rename = xstrings.RemoveFmtUnderscore(xapp.AppCfg.Rename)
 
-type Nullable[T any] struct {
-	Value *T
+	// -- integrated formats
+	if nil == xapp.AppCfg.OutputFormats {
+		xapp.AppCfg.OutputFormats = make(map[string]string)
+	}
+	xapp.AppCfg.OutputFormats["markdown"] = `![{url_fname}]({url})`
+	xapp.AppCfg.OutputFormats["url"] = `{url}`
+
 }
 
 // UploadAll will upload all given file to targetDir.
@@ -227,20 +228,28 @@ func UploadAll(uploader model.Uploader, localPaths []string, targetDir string) {
 			TargetDir:  targetDir,
 			RawUrl:     "",
 			Url:        "",
-			FinishTime: time.Now(),
+			CreateTime: time.Now(),
 		}
+		var err error
 		// ignore non-local path
 		if strings.HasPrefix(localPath, "http") {
 			task.Ignored = true
 			task.Status = model.TASK_FINISHED
 		} else {
-			uploader.Upload(&task)
+			err = uploader.Upload(&task)
 		}
-		ret = result.Result[*model.Task]{
-			Value: &task,
+		if err != nil {
+			task.Status = model.TASK_FAILED
+			ret = result.Result[*model.Task]{
+				Err: err,
+			}
+		} else {
+			ret = result.Result[*model.Task]{
+				Value: &task,
+			}
 		}
 
-		if ret.Err == nil {
+		if err == nil {
 			xlog.GVerbose.TraceStruct(ret.Value)
 		}
 		callback := uploader.GetCallback()
@@ -250,7 +259,7 @@ func UploadAll(uploader model.Uploader, localPaths []string, targetDir string) {
 	}
 }
 
-func upload() {
+func dispatchUploader() {
 	uploaderId := xstrings.ValueOrDefault(xapp.AppOpt.Uploader, xapp.AppCfg.DefaultUploader)
 	xlog.GVerbose.Info("uploader: " + uploaderId)
 	if uploaderId == "github" {
@@ -304,10 +313,10 @@ func upload() {
 		// load file to json
 		uploaderDef, err := xext.GetExtDefinitionInterface(extDir, fname)
 		xlog.AbortErr(err)
-		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != uploaderId {
+		if result.From[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != uploaderId {
 			continue
 		}
-		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
+		if result.From[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
 			continue
 		}
 		uploader = &SimpleHttpUploader{OnTaskStatusChanged: onUploaded, Definition: uploaderDef}
@@ -367,6 +376,7 @@ func loadEnvConfig(cfg *xapp.Config) {
 }
 
 func loadGithubUploaderEnvConfig(gCfg *GithubUploaderConfig) {
+	// TODO: Auto generate env key name and adapt for all uploaders
 	if pat, found := syscall.Getenv("GITHUB_TOKEN"); found {
 		gCfg.PAT = pat
 	}

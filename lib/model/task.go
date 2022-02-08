@@ -20,5 +20,6 @@ type Task struct {
 	Ignored    bool         `toml:"ignored" mapstructure:"ignored"`
 	RawUrl     string       `toml:"raw_url" mapstructure:"raw_url"`
 	Url        string       `toml:"url" mapstructure:"url"`
+	CreateTime time.Time    `toml:"create_time" mapstructure:"create_time"`
 	FinishTime time.Time    `toml:"finish_time" mapstructure:"finish_time"`
 }
