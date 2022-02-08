@@ -304,14 +304,14 @@ func upload() {
 		// load file to json
 		uploaderDef, err := xext.GetExtDefinitionInterface(extDir, fname)
 		xlog.AbortErr(err)
-		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != xapp.AppOpt.Uploader {
+		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != uploaderId {
 			continue
 		}
 		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
 			continue
 		}
 		uploader = &SimpleHttpUploader{OnTaskStatusChanged: onUploaded, Definition: uploaderDef}
-		extConfig, err := xapp.LoadUploaderConfig[map[string]interface{}](xapp.AppOpt.Uploader)
+		extConfig, err := xapp.LoadUploaderConfig[map[string]interface{}](uploaderId)
 		if err == nil {
 			uploader.Config = extConfig
 			xlog.GVerbose.Trace("uploader config:")
@@ -322,7 +322,7 @@ func upload() {
 		break
 	}
 	if nil == uploader {
-		xlog.AbortErr(errors.New("unknown uploader: " + xapp.AppOpt.Uploader))
+		xlog.AbortErr(errors.New("unknown uploader: " + uploaderId))
 	}
 	UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
 	return
