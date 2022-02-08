@@ -113,7 +113,7 @@ func onUploaded(r result.Result[*model.Task]) {
 
 func recordHistory(r model.Task) {
 	xio.AppendToFile(xpath.MustGetApplicationPath("history.log"), []byte(
-		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}\n`),
+		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`+"\n"),
 	)
 	xlog.GVerbose.Info(MustMarshall(r))
 }
