@@ -212,7 +212,7 @@ func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err err
 		if err != nil {
 			return "", errors.New("json response is not valid")
 		}
-		if !(resp.StatusCode <= 200 && resp.StatusCode < 300) {
+		if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
 			return "", fmt.Errorf("response status code %d is not expected. resp: %s", resp.StatusCode, string(bodyBytes))
 		}
 		rawUrlPath := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.path")).ValueOrExit()
