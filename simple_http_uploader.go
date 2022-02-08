@@ -224,9 +224,9 @@ func (u SimpleHttpUploader) UploadFile(task *model.Task) (rawUrl string, err err
 			return "", fmt.Errorf("unable to get url. resp: %s", string(bodyBytes))
 		}
 		xlog.GVerbose.Trace("got rawUrl from resp: " + rawUrl)
-	}else if urlFrom = "text_response" {
+	} else if urlFrom == "text_response" {
 		rawUrl = string(bodyBytes)
-	}	else if urlFrom == "template" {
+	} else if urlFrom == "template" {
 		template := result.FromGoRet[string](xmap.GetDeep[string](u.Definition, "upload.rawUrl.template")).ValueOrExit()
 		rawUrl = u.replaceStringPlaceholder(template, *task)
 	} else if urlFrom == "response_header" {
