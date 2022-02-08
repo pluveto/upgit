@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pluveto/upgit/lib/xlog"
 )
 
 func Basename(path string) string {
@@ -26,4 +28,12 @@ func GetApplicationPath() (path string, err error) {
 	}
 	path = filepath.Dir(exec)
 	return
+}
+
+func MustGetApplicationPath(append string) string {
+	path, err := GetApplicationPath()
+	if err != nil {
+		xlog.AbortErr(err)
+	}
+	return filepath.Join(path, append)
 }

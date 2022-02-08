@@ -8,13 +8,19 @@ require (
 	gopkg.in/validator.v2 v2.0.0-20210331031555-b37d688a7fb0
 )
 
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/mattn/go-colorable v0.1.9 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+)
+
 require github.com/mitchellh/mapstructure v1.4.3 // direct
 
 require (
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
 	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d // direct
 	golang.org/x/mobile v0.0.0-20210716004757-34ab1303b554 // indirect
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 )
 
 require (

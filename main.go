@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -21,6 +20,7 @@ import (
 	"github.com/pluveto/upgit/lib/upyun"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xclipboard"
+	"github.com/pluveto/upgit/lib/xext"
 	"github.com/pluveto/upgit/lib/xio"
 	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xmap"
@@ -52,7 +52,7 @@ func mainCommand() {
 	}
 	if false == xapp.AppOpt.NoLog {
 		xlog.GVerbose.LogEnabled = true
-		xlog.GVerbose.LogFile = MustGetApplicationPath("upgit.log")
+		xlog.GVerbose.LogFile = xpath.MustGetApplicationPath("upgit.log")
 		xlog.GVerbose.Info("Started")
 	}
 	xlog.GVerbose.VerboseEnabled = xapp.AppOpt.Verbose
@@ -64,7 +64,7 @@ func mainCommand() {
 
 	// fill config
 	xapp.AppCfg.Rename = strings.Trim(xapp.AppCfg.Rename, "/")
-	xapp.AppCfg.Rename = RemoveFmtUnderscore(xapp.AppCfg.Rename)
+	xapp.AppCfg.Rename = xstrings.RemoveFmtUnderscore(xapp.AppCfg.Rename)
 
 	// -- integrated formats
 	if nil == xapp.AppCfg.OutputFormats {
@@ -110,7 +110,7 @@ func onUploaded(r result.Result[*model.Task]) {
 }
 
 func recordHistory(r model.Task) {
-	xio.AppendToFile(MustGetApplicationPath("history.log"), []byte(
+	xio.AppendToFile(xpath.MustGetApplicationPath("history.log"), []byte(
 		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`),
 	)
 	xlog.GVerbose.Info(MustMarshall(r))
@@ -148,7 +148,7 @@ func outputFormat(r model.Task) (content string, err error) {
 		"{url}", outUrl,
 		"{urlfname}", filepath.Base(outUrl),
 		"{fname}", filepath.Base(r.LocalPath),
-	).Replace(RemoveFmtUnderscore(val))
+	).Replace(xstrings.RemoveFmtUnderscore(val))
 
 	return
 }
@@ -183,7 +183,7 @@ func loadTomlConfig(cfg *xapp.Config) {
 	homeDir, err := os.UserHomeDir()
 	xlog.AbortErr(err)
 
-	appDir := MustGetApplicationPath("")
+	appDir := xpath.MustGetApplicationPath("")
 
 	var configFiles = []string{
 		filepath.Join(homeDir, ".upgit.config.toml"),
@@ -288,7 +288,7 @@ func upload() {
 	}
 	// try http simple uploader
 	// list file in ./extensions
-	extDir := MustGetApplicationPath("extensions")
+	extDir := xpath.MustGetApplicationPath("extensions")
 	info, err := ioutil.ReadDir(extDir)
 	xlog.AbortErr(err)
 	var uploader *SimpleHttpUploader
@@ -300,13 +300,7 @@ func upload() {
 			continue
 		}
 		// load file to json
-		jsonBytes, err := ioutil.ReadFile(filepath.Join(extDir, fname))
-		xlog.AbortErr(err)
-		jsonBytes = RemoveJsoncComments(jsonBytes)
-		xlog.GVerbose.Trace("file content: %s", string(jsonBytes))
-		var uploaderDef map[string]interface{}
-		err = json.Unmarshal(jsonBytes, &uploaderDef)
-
+		uploaderDef, err := xext.GetExtDefinitionInterface(extDir, fname)
 		xlog.AbortErr(err)
 		if result.FromGoRet[string](xmap.GetDeep[string](uploaderDef, `meta.id`)).ValueOrExit() != xapp.AppOpt.Uploader {
 			continue

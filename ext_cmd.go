@@ -3,16 +3,22 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/alexflint/go-arg"
+	"github.com/pluveto/upgit/lib/xext"
 	"github.com/pluveto/upgit/lib/xgithub"
 	"github.com/pluveto/upgit/lib/xlog"
+	"github.com/pluveto/upgit/lib/xpath"
 )
 
 type ExtListCmd struct {
+}
+
+type ExtListLocalCmd struct {
 }
 
 type ExtAddCmd struct {
@@ -24,9 +30,10 @@ type ExtRemoveCmd struct {
 }
 
 type ExtCmd struct {
-	List   *ExtListCmd   `arg:"subcommand:list,subcommand:ls"`
-	Add    *ExtAddCmd    `arg:"subcommand:add,subcommand:install"`
-	Remove *ExtRemoveCmd `arg:"subcommand:remove,subcommand:rm"`
+	ListLocal *ExtListCmd   `arg:"subcommand:listlocal,subcommand:lsmy,subcommand:my"`
+	List      *ExtListCmd   `arg:"subcommand:list,subcommand:ls"`
+	Add       *ExtAddCmd    `arg:"subcommand:add,subcommand:install"`
+	Remove    *ExtRemoveCmd `arg:"subcommand:remove,subcommand:rm"`
 }
 
 type ExtArgs struct {
@@ -49,6 +56,7 @@ func extSubcommand() {
 		printExtHelp()
 		return
 	}
+	extDir := xpath.MustGetApplicationPath("extensions")
 
 	switch {
 	case extArgs.Ext.List != nil:
@@ -56,7 +64,7 @@ func extSubcommand() {
 		if err != nil {
 			xlog.AbortErr(err)
 		}
-		fmt.Println("Extensions (install with FULL name):")
+		fmt.Println("All Extensions:")
 		for i, v := range ls {
 			fmt.Printf("%d. %s\n", i, v.Name)
 		}
@@ -73,15 +81,11 @@ func extSubcommand() {
 			xlog.AbortErr(errors.New("extension " + extName + " not found or network error: " + err.Error()))
 		}
 		// save buf
-		file, err := os.Create(path.Join(MustGetApplicationPath("extensions"), extName))
+		file, err := os.Create(path.Join(extDir, extName))
 		defer file.Close()
-		if err != nil {
-			xlog.AbortErr(err)
-		}
+		xlog.AbortErr(err)
 		_, err = file.Write(buf)
-		if err != nil {
-			xlog.AbortErr(err)
-		}
+		xlog.AbortErr(err)
 		fmt.Println("Extension installed:", extName)
 		os.Exit(0)
 
@@ -90,18 +94,31 @@ func extSubcommand() {
 		if len(extName) == 0 {
 			xlog.AbortErr(errors.New("extension name is required"))
 		}
-		err := os.Remove(path.Join(MustGetApplicationPath("extensions"), extName))
-		if err != nil {
-			xlog.AbortErr(err)
-		}
+		extName = autoFixExtName(extName)
+		extPath := path.Join(extDir, extName)
+		err := os.Remove(extPath)
+		xlog.AbortErr(err)
 		fmt.Println("Extension removed:", extName)
 		os.Exit(0)
+
+	case extArgs.Ext.ListLocal != nil:
+		files, err := ioutil.ReadDir(extDir)
+		xlog.AbortErr(err)
+		fmt.Println("Installed Extensions:")
+		for i, v := range files {
+			uploaderDef, err := xext.GetExtDefinition(extDir, v.Name())
+			xlog.AbortErr(err)
+			uploaderDef.DisplaySimple(fmt.Sprintf("%2d ", i), "\n")
+		}
+		os.Exit(0)
+
 	}
+
 	os.Stderr.WriteString("Unknown subcommand\n")
 	printExtHelp()
 	os.Exit(0)
 }
 
 func printExtHelp() {
-	os.Stdout.WriteString("Usage: upgit ext [list|add|remove]\n")
+	os.Stdout.WriteString("Usage: upgit ext [list|my|add|remove]\n")
 }
