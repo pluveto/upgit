@@ -24,7 +24,8 @@ func GetDeep[T any](m map[string]interface{}, path string) (ret T, err error) {
 		if key == "" {
 			continue
 		}
-		// match xxx[i]           $1    $2
+		// match xxx[i] (array form)
+		//                         $1    $2
 		r := regexp.MustCompile(`^(.*)\[(\d+)\]$`)
 		arrIndex := 0
 		matches := r.FindAllString(key, -1)

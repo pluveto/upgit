@@ -415,17 +415,6 @@ func StringMd5(s string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func FileMd5(name string) string {
-	f, err := os.Open(name)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-
-	h := md5.New()
-	io.Copy(h, f)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
 
 func timeoutDialer(timeout int) func(string, string) (net.Conn, error) {
 	return func(netw, addr string) (c net.Conn, err error) {
