@@ -27,7 +27,7 @@ func VariableReplaceFunc(s, delimiterLeft, delimiterRight string, dictFunc func(
 	return &ret
 }
 
-func EmptyOrDefault(try, default_ string) string {
+func ValueOrDefault(try, default_ string) string {
 	if try == "" {
 		return default_
 	}

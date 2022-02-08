@@ -251,7 +251,7 @@ func UploadAll(uploader model.Uploader, localPaths []string, targetDir string) {
 }
 
 func upload() {
-	uploaderId := xstrings.EmptyOrDefault(xapp.AppOpt.Uploader, xapp.AppCfg.DefaultUploader)
+	uploaderId := xstrings.ValueOrDefault(xapp.AppOpt.Uploader, xapp.AppCfg.DefaultUploader)
 	xlog.GVerbose.Info("uploader: " + uploaderId)
 	if uploaderId == "github" {
 		gCfg, err := xapp.LoadUploaderConfig[GithubUploaderConfig](uploaderId)

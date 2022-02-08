@@ -96,7 +96,7 @@ func (u *COSUploader) PutFile(localPath, targetPath string) (err error) {
 	req.Host = u.Config.Host
 	req.Header.Set("Date", time.Now().UTC().Format(http.TimeFormat))
 	req.Header.Set("Content-MD5", base64.StdEncoding.EncodeToString(calMD5Digest(data)))
-	req.Header.Set("Content-Type", xstrings.EmptyOrDefault(mimeType, "application/octet-stream"))
+	req.Header.Set("Content-Type", xstrings.ValueOrDefault(mimeType, "application/octet-stream"))
 	req.Header.Set("User-Agent", xapp.UserAgent)
 	// set body
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(data))
