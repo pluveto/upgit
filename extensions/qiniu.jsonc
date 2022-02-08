@@ -1,0 +1,39 @@
+{
+    "meta": {
+        "id": "qiniu",
+        "name": "Qiniu Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            "url": "http://up.qiniu.com",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "token": {
+                    "type": "string",
+                    "value": "$(ext_config.token)"
+                },
+                "key": {
+                    "type": "string",
+                    "value": "$(task.target_path)"
+                },
+                "file": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "template",
+            "template": "$(ext_config.prefix)$(task.target_path)"
+        }
+    }
+}
