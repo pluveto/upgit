@@ -13,8 +13,8 @@ windows: create_dist_dir
 	GOOS=windows GOARCH=arm64   go build -o $(BINARY)_win_arm64.exe $(LDFLAGS) $(SRC)
 
 macos: create_dist_dir
-	GOOS=darwin  GOARCH=amd64   go build -o $(BINARY)_macos_amd64   $(LDFLAGS) $(SRC)
-	GOOS=darwin  GOARCH=arm64   go build -o $(BINARY)_macos_arm64   $(LDFLAGS) $(SRC)
+	GOOS=darwin  GOARCH=amd64   CGO_ENABLED=1 go build -o $(BINARY)_macos_amd64   $(LDFLAGS) $(SRC)
+	GOOS=darwin  GOARCH=arm64   CGO_ENABLED=1 go build -o $(BINARY)_macos_arm64   $(LDFLAGS) $(SRC)
 
 linux: create_dist_dir
 	GOOS=linux   GOARCH=386     go build -o $(BINARY)_linux_386     $(LDFLAGS) $(SRC)
