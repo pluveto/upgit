@@ -90,3 +90,7 @@ username = "username"
 repo = "repo-name"
 # https://gitee.com/profile/personal_access_tokens/new
 access_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[uploaders.cloudinary]
+cloud_name = "my_cloud"
+upload_preset = "preset_name"

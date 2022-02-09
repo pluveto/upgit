@@ -1,0 +1,36 @@
+{
+    "meta": {
+        "id": "cloudinary",
+        "name": "Cloudinary Uploader",
+        "type": "simple-http-uploader",
+        "version": "0.0.1",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            // See https://cloudinary.com/console/settings/upload
+            "url": "https://api.cloudinary.com/v1_1/$(ext_config.cloud_name)/upload",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "upload_preset": {
+                    "type": "string",
+                    "value": "$(ext_config.upload_preset)"
+                },
+                "file": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "secure_url"
+        }
+    }
+}
