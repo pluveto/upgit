@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       # Fetch depth 0 is required for Changelog generation
       - name: Checkout      
