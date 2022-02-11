@@ -35,6 +35,7 @@
 + LSkyPro
 + Chevereto
 + ImgBB
++ Cloudinary
 
 查看更多: `./upgit ext ls`
 
