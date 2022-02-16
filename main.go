@@ -88,8 +88,7 @@ func loadCliOpts() {
 
 func onUploaded(r result.Result[*model.Task]) {
 	if !r.Ok() && xapp.AppOpt.OutputType == xapp.O_Stdout {
-		fmt.Println("Failed: " + r.Err.Error())
-		xlog.GVerbose.Info("Failed to upload %s: %s", r.Value.LocalPath, r.Err.Error())
+		fmt.Println("Failed: " + r.Err.Error())		
 		return
 	}
 	if xapp.AppOpt.Clean && !r.Value.Ignored {
