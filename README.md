@@ -215,6 +215,9 @@ For Windows user:
 | -- `{year}`           | -- Year like `2006`                                          |
 | -- `{month}`          | -- Month like `01`                                           |
 | -- `{day}`            | -- Day like `02`                                             |
+| -- `{hour}`            | -- Hours of current time                                              |
+| -- `{minute}`            | -- Minutes of current time  |
+| -- `{second}`            | -- Seconds of current time  |
 | -- `{unix_ts}`        | -- Unix timestamp in second. Like `1643373370`.              |
 | -- `{unix_tsms}`        | -- Unix timestamp in microsecond. Like `1644212979622`.              |
 | --- `{ext}`           | -- Extension like `.png`, and empty when the original file has no extension |
