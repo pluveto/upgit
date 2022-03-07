@@ -34,6 +34,7 @@ func Rename(path string, time time.Time) (ret string) {
 		"{ext}", ext,
 		"{fullname}", base+ext,
 		"{filename}", base,
+		"{fname}", base,
 		"{filenamehash}", md5HashStr,
 		"{fnamehash}", md5HashStr,
 		"{fnamehash4}", md5HashStr[:4],
