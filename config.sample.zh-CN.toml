@@ -96,3 +96,7 @@ access_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 [uploaders.cloudinary]
 cloud_name = "my_cloud"
 upload_preset = "preset_name"
+
+[uploaders.easyimage]
+request_url = "https://img.545141.com/api/index.php"
+token = "1c17b11693cb5ec63859b0ccccccccccc"
