@@ -19,6 +19,10 @@
                 "image": {
                     "type": "file",
                     "value": "$(task.local_path)"
+                },
+                "token": {
+                    "type": "string",
+                    "value": "$(ext_config.token)"
                 }
             }
         }
