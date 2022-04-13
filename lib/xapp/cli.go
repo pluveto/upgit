@@ -15,6 +15,7 @@ type CLIOptions struct {
 	Verbose      bool       `arg:"-V,--verbose"       help:"when set, output more details to help developers"`
 	SizeLimit    *int64     `arg:"-s,--size-limit"    help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
 	Wait         bool       `arg:"-w,--wait"          help:"when set, not exit after upload, util user press any key"`
+	ConfigFile   string     `arg:"-c,--config-file"   help:"when set, will use specific config file"`
 	Clean        bool       `arg:"-C,--clean"         help:"when set, remove local file after upload"`
 	Raw          bool       `arg:"-r,--raw"           help:"when set, output non-replaced raw url"`
 	NoLog        bool       `arg:"-n,--no-log"        help:"when set, disable logging"`

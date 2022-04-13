@@ -184,6 +184,7 @@ func validArgs() {
 	}
 }
 
+// loadConfig loads config from config file to xapp.AppCfg
 func loadConfig(cfg *xapp.Config) {
 
 	homeDir, err := os.UserHomeDir()
@@ -191,14 +192,21 @@ func loadConfig(cfg *xapp.Config) {
 
 	appDir := xpath.MustGetApplicationPath("")
 
-	var configFiles = []string{
-		filepath.Join(homeDir, ".upgit.config.toml"),
-		filepath.Join(homeDir, ".upgit.toml"),
-		filepath.Join(appDir, "config.toml"),
+	var configFiles = map[string]bool{
+		filepath.Join(homeDir, ".upgit.config.toml"): false,
+		filepath.Join(homeDir, ".upgit.toml"):        false,
+		filepath.Join(appDir, "config.toml"):         false,
 	}
 
-	for _, configFile := range configFiles {
+	if xapp.AppOpt.ConfigFile != "" {
+		configFiles[xapp.AppOpt.ConfigFile] = true
+	}
+
+	for configFile, required := range configFiles {
 		if _, err := os.Stat(configFile); err != nil {
+			if required {
+				xlog.AbortErr(fmt.Errorf("config file %s not found", configFile))
+			}
 			continue
 		}
 		optRawBytes, err := ioutil.ReadFile(configFile)
@@ -210,6 +218,10 @@ func loadConfig(cfg *xapp.Config) {
 		}
 		xapp.ConfigFilePath = configFile
 		break
+	}
+
+	if xapp.ConfigFilePath == "" {
+		xlog.AbortErr(fmt.Errorf("no config file found"))
 	}
 
 	// fill config
