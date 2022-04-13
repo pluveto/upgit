@@ -66,6 +66,7 @@ func mainCommand() {
 	return
 }
 
+// loadCliOpts load cli options into xapp.AppOpt
 func loadCliOpts() {
 	arg.MustParse(&xapp.AppOpt)
 	xapp.AppOpt.TargetDir = strings.Trim(xapp.AppOpt.TargetDir, "/")
