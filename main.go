@@ -17,6 +17,7 @@ import (
 	"github.com/pluveto/upgit/lib/model"
 	"github.com/pluveto/upgit/lib/qcloudcos"
 	"github.com/pluveto/upgit/lib/result"
+	"github.com/pluveto/upgit/lib/uploaders"
 	"github.com/pluveto/upgit/lib/upyun"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xclipboard"
@@ -88,7 +89,7 @@ func loadCliOpts() {
 
 func onUploaded(r result.Result[*model.Task]) {
 	if !r.Ok() && xapp.AppOpt.OutputType == xapp.O_Stdout {
-		fmt.Println("Failed: " + r.Err.Error())		
+		fmt.Println("Failed: " + r.Err.Error())
 		return
 	}
 	if xapp.AppOpt.Clean && !r.Value.Ignored {
@@ -104,11 +105,20 @@ func onUploaded(r result.Result[*model.Task]) {
 	recordHistory(*r.Value)
 }
 
+func mustMarshall(s interface{}) string {
+	b, err := toml.Marshal(s)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 func recordHistory(r model.Task) {
 	xio.AppendToFile(xpath.MustGetApplicationPath("history.log"), []byte(
 		`{"time":"`+time.Now().Local().String()+`","rawUrl":"`+r.RawUrl+`","url":"`+r.Url+`"}`+"\n"),
 	)
-	xlog.GVerbose.Info(MustMarshall(r))
+
+	xlog.GVerbose.Info(mustMarshall(r))
 }
 
 func outputLink(r model.Task) {
@@ -262,7 +272,7 @@ func dispatchUploader() {
 	uploaderId := xstrings.ValueOrDefault(xapp.AppOpt.Uploader, xapp.AppCfg.DefaultUploader)
 	xlog.GVerbose.Info("uploader: " + uploaderId)
 	if uploaderId == "github" {
-		gCfg, err := xapp.LoadUploaderConfig[GithubUploaderConfig](uploaderId)
+		gCfg, err := xapp.LoadUploaderConfig[uploaders.GithubUploaderConfig](uploaderId)
 		xlog.AbortErr(err)
 		err = validator.Validate(&gCfg)
 		xlog.AbortErr(err)
@@ -270,7 +280,7 @@ func dispatchUploader() {
 			gCfg.Branch = xapp.DefaultBranch
 		}
 
-		uploader := GithubUploader{Config: gCfg, OnTaskStatusChanged: onUploaded}
+		uploader := uploaders.GithubUploader{Config: gCfg, OnTaskStatusChanged: onUploaded}
 		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
 		return
 	}
@@ -301,7 +311,7 @@ func dispatchUploader() {
 	extDir := xpath.MustGetApplicationPath("extensions")
 	info, err := ioutil.ReadDir(extDir)
 	xlog.AbortErr(err)
-	var uploader *SimpleHttpUploader
+	var uploader *uploaders.SimpleHttpUploader
 	for _, f := range info {
 		fname := f.Name()
 		xlog.GVerbose.Trace("found file %s", fname)
@@ -318,7 +328,7 @@ func dispatchUploader() {
 		if result.From[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
 			continue
 		}
-		uploader = &SimpleHttpUploader{OnTaskStatusChanged: onUploaded, Definition: uploaderDef}
+		uploader = &uploaders.SimpleHttpUploader{OnTaskStatusChanged: onUploaded, Definition: uploaderDef}
 		extConfig, err := xapp.LoadUploaderConfig[map[string]interface{}](uploaderId)
 		if err == nil {
 			uploader.Config = extConfig
@@ -374,7 +384,7 @@ func loadEnvConfig(cfg *xapp.Config) {
 	}
 }
 
-func loadGithubUploaderEnvConfig(gCfg *GithubUploaderConfig) {
+func loadGithubUploaderEnvConfig(gCfg *uploaders.GithubUploaderConfig) {
 	// TODO: Auto generate env key name and adapt for all uploaders
 	if pat, found := syscall.Getenv("GITHUB_TOKEN"); found {
 		gCfg.PAT = pat
