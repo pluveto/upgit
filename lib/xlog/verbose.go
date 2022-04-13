@@ -91,7 +91,7 @@ func (v Verbose) TraceStruct(s interface{}) {
 func AbortErr(err error) {
 	if err != nil {
 		GVerbose.Error("abort: " + err.Error())
-		os.Stderr.WriteString(err.Error())
+		os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
 	}
 }
