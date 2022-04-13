@@ -92,7 +92,7 @@ For more help, type `-h` argument
 Upload anything to github repo or other remote storages and then get its link.
 For more information: https://github.com/pluveto/upgit
 
-Usage: upgit.exe [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--clean] [--raw] [--no-log] [--uploader UPLOADER] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] [--application-path APPLICATION-PATH] FILE [FILE ...]
+Usage: upgit [--target-dir TARGET-DIR] [--verbose] [--size-limit SIZE-LIMIT] [--wait] [--config-file CONFIG-FILE] [--clean] [--raw] [--no-log] [--uploader UPLOADER] [--output-type OUTPUT-TYPE] [--output-format OUTPUT-FORMAT] [--application-path APPLICATION-PATH] FILE [FILE ...]
 
 Positional arguments:
   FILE                   local file path to upload. :clipboard for uploading clipboard image
@@ -104,7 +104,9 @@ Options:
   --size-limit SIZE-LIMIT, -s SIZE-LIMIT
                          in bytes. overwrite default size limit (5MiB). 0 means no limit
   --wait, -w             when set, not exit after upload, util user press any key
-  --clean, -c            when set, remove local file after upload
+  --config-file CONFIG-FILE, -c CONFIG-FILE
+                         when set, will use specific config file
+  --clean, -C            when set, remove local file after upload
   --raw, -r              when set, output non-replaced raw url
   --no-log, -n           when set, disable logging
   --uploader UPLOADER, -u UPLOADER
