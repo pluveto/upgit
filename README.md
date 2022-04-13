@@ -16,6 +16,7 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 
 ## Feature
 
++ Integrate with VSCode via [extension](https://github.com/pluveto/upgit-vscode-extension)
 + Support for Linux, Windows and macOS
 + Upload any file to given remote github repo folder
 + Upload from **clipboard**
