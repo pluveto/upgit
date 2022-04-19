@@ -1,0 +1,36 @@
+{
+    "meta": {
+        "id": "lskypro2",
+        "name": "LskyPro2 Uploader",
+        "type": "simple-http-uploader",
+        "version": "2.0.0",
+        "repository": ""
+    },
+    "http": {
+        "request": {
+            "url": "$(ext_config.host)/api/v1/upload",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "multipart/form-data",
+                "Authorization": "$(ext_config.token)",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36"
+            },
+            "body": {
+                "file": {
+                    "type": "file",
+                    "value": "$(task.local_path)"
+                },
+                "token": {
+                    "type": "string",
+                    "value": "$(ext_config.token)"
+                }
+            }
+        }
+    },
+    "upload": {
+        "rawUrl": {
+            "from": "json_response",
+            "path": "data.links.url"
+        }
+    }
+}
