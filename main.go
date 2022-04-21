@@ -188,7 +188,9 @@ func validArgs() {
 func loadConfig(cfg *xapp.Config) {
 
 	homeDir, err := os.UserHomeDir()
-	xlog.AbortErr(err)
+	if err != nil {
+		homeDir = ""
+	}
 
 	appDir := xpath.MustGetApplicationPath("")
 
