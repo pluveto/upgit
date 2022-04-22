@@ -100,3 +100,7 @@ upload_preset = "preset_name"
 [uploaders.easyimage]
 request_url = "https://img.545141.com/api/index.php"
 token = "1c17b11693cb5ec63859b0ccccccccccc"
+
+[uploaders.lskypro2]
+host = "my_images_host"
+token = "images_host_token"
