@@ -198,6 +198,7 @@ func loadConfig(cfg *xapp.Config) {
 		filepath.Join(homeDir, ".upgit.config.toml"): false,
 		filepath.Join(homeDir, ".upgit.toml"):        false,
 		filepath.Join(appDir, "config.toml"):         false,
+		filepath.Join(appDir, "upgit.toml"):         false,
 	}
 
 	if xapp.AppOpt.ConfigFile != "" {
