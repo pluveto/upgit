@@ -5,16 +5,16 @@
 # default uploader id
 default_uploader = "github"
 
-# The file name formatting template was uploaded
-#   / The directory separator is used to distinguish directories
+# The file name formatting template is applied when uploading
+#   / is directory separator used to distinguish directories
 #   {year} Year, for example: 2022
 #   {month} Month, for example: 02
 #   {day} Day, for example: 01
-#   {unix_ts} Time stamp, for example: 1643617626
+#   {unix_ts} Time stamp, for example: 1643617626. If you're uploading frequently, try {unix_tsms} to escape name repeating
 #   {fname} Original file name, such as logo (without suffix)
 #   {fname_hash} MD5 hash value of {fname}
 #   {ext} File name suffix, for example: .png
-#   The following example generates a file name preview: 2022/01/upgit_20220131_1643617626.png
+#   The following example generates a file name like: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 
 # -----------------------------------------------------------------------------
@@ -27,7 +27,7 @@ rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
 "markdown-simple" = "![]({url})"
 
 # -----------------------------------------------------------------------------
-# URL replacing rules. RawUrl -[replace]-> Url
+# URL replacing rules. Process: RawUrl -[replace]-> Url
 # -----------------------------------------------------------------------------
 
 # If your network access to Github is abnormal or sluggish, you can try the following CDN acceleration.
