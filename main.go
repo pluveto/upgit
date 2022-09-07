@@ -196,7 +196,7 @@ func loadConfig(cfg *xapp.Config) {
 
 	var configFiles = map[string]bool{
 		filepath.Join(homeDir, ".upgit.config.toml"): false,
-		filepath.Join(homeDir, ".config/upgitrc"):    false,
+		filepath.Join(homeDir, filepath.Join(".config", "upgitrc")): false,
 		filepath.Join(appDir, "config.toml"):         false,
 		filepath.Join(appDir, "upgit.toml"):          false,
 	}
