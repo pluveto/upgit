@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -22,11 +24,14 @@ import (
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xclipboard"
 	"github.com/pluveto/upgit/lib/xext"
+	"github.com/pluveto/upgit/lib/xgithub"
+	"github.com/pluveto/upgit/lib/xhttp"
 	"github.com/pluveto/upgit/lib/xio"
 	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xmap"
 	"github.com/pluveto/upgit/lib/xpath"
 	"github.com/pluveto/upgit/lib/xstrings"
+	"github.com/pluveto/upgit/lib/xzip"
 	"golang.design/x/clipboard"
 	"gopkg.in/validator.v2"
 )
@@ -51,7 +56,7 @@ func mainCommand() {
 	xlog.GVerbose.TraceStruct(xapp.AppCfg)
 
 	// handle clipboard if need
-	loadClipboard()
+	handleClipboard()
 
 	// validating args
 	validArgs()
@@ -63,7 +68,6 @@ func mainCommand() {
 		fmt.Scanln()
 	}
 
-	return
 }
 
 // loadCliOpts load cli options into xapp.AppOpt
@@ -195,10 +199,10 @@ func loadConfig(cfg *xapp.Config) {
 	appDir := xpath.MustGetApplicationPath("")
 
 	var configFiles = map[string]bool{
-		filepath.Join(homeDir, ".upgit.config.toml"): false,
+		filepath.Join(homeDir, ".upgit.config.toml"):                false,
 		filepath.Join(homeDir, filepath.Join(".config", "upgitrc")): false,
-		filepath.Join(appDir, "config.toml"):         false,
-		filepath.Join(appDir, "upgit.toml"):          false,
+		filepath.Join(appDir, "config.toml"):                        false,
+		filepath.Join(appDir, "upgit.toml"):                         false,
 	}
 
 	if xapp.AppOpt.ConfigFile != "" {
@@ -359,34 +363,104 @@ func dispatchUploader() {
 		xlog.AbortErr(errors.New("unknown uploader: " + uploaderId))
 	}
 	UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
-	return
 
 }
 
-func loadClipboard() {
-	if len(xapp.AppOpt.LocalPaths) == 1 && strings.ToLower(xapp.AppOpt.LocalPaths[0]) == xapp.ClipboardPlaceholder {
-		err := clipboard.Init()
-		if err != nil {
-			xlog.AbortErr(fmt.Errorf("failed to init clipboard: " + err.Error()))
-		}
-
-		tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
-		buf := clipboard.Read(clipboard.FmtImage)
-		if nil == buf {
-			// try second chance for Windows user. To adapt bitmap format (compatible with Snipaste)
-			if runtime.GOOS == "windows" {
-				buf, err = xclipboard.ReadClipboardImage()
-			}
+func handleClipboard() {
+	if len(xapp.AppOpt.LocalPaths) == 1 {
+		label := strings.ToLower(xapp.AppOpt.LocalPaths[0])
+		if label == xapp.ClipboardPlaceholder {
+			err := clipboard.Init()
 			if err != nil {
-				xlog.GVerbose.Error("failed to read clipboard image: " + err.Error())
+				xlog.AbortErr(fmt.Errorf("failed to init clipboard: " + err.Error()))
 			}
+
+			tmpFileName := fmt.Sprint(os.TempDir(), "/upgit_tmp_", time.Now().UnixMicro(), ".png")
+			buf := clipboard.Read(clipboard.FmtImage)
+			if nil == buf {
+				// try second chance for Windows user. To adapt bitmap format (compatible with Snipaste)
+				if runtime.GOOS == "windows" {
+					buf, err = xclipboard.ReadClipboardImage()
+				}
+				if err != nil {
+					xlog.GVerbose.Error("failed to read clipboard image: " + err.Error())
+				}
+			}
+			if nil == buf {
+				xlog.AbortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
+			}
+			os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
+			xapp.AppOpt.LocalPaths[0] = tmpFileName
+			xapp.AppOpt.Clean = true
 		}
-		if nil == buf {
-			xlog.AbortErr(fmt.Errorf("failed: no image in clipboard or unsupported format"))
+		if strings.HasPrefix(label, xapp.ClipboardFilePlaceholder) {
+			// Must be Windows
+			if runtime.GOOS != "windows" {
+				xlog.AbortErr(fmt.Errorf("failed: clipboard file only supported on Windows"))
+			}
+			// Download latest https://github.com/pluveto/APIProxy-Win32/releases
+			// and put it in same directory with upgit.exe
+			download := func() {
+				downloadUrl, err := xgithub.GetLatestReleaseDownloadUrl("pluveto/APIProxy-Win32")
+				xlog.AbortErr(err)
+				xlog.GVerbose.Trace("download url: %s", downloadUrl)
+				saveName := xpath.MustGetApplicationPath("/apiproxy-win32.zip")
+				xlog.AbortErr(xhttp.DownloadFile(downloadUrl, saveName))
+				// Unzip
+				xlog.AbortErr(xzip.Unzip(saveName, xpath.MustGetApplicationPath("/")))
+				// Clean downloaded zip
+				xlog.AbortErr(os.Remove(saveName))
+			}
+			// Run
+			executable := xpath.MustGetApplicationPath("APIProxy.exe")
+			if _, err := os.Stat(executable); os.IsNotExist(err) {
+				println("APIProxy not found, downloading...")
+				download()
+			}
+			execArgs := []string{"clipboard", "GetFilePaths"}
+			cmd := exec.Command(executable)
+			cmd.Args = append(cmd.Args, execArgs...)
+			// Wait and fetch cmdOutput
+			cmdOutput, err := cmd.Output()
+			if err != nil {
+				xlog.AbortErr(fmt.Errorf("failed to run APIProxy: %s, stderr: %s", err.Error(), cmdOutput))
+			}
+			parseOutput := func(output string) []string {
+				/*
+				   Type: ApplicationError
+				   Msg: No handler name specified
+				   HMsg:
+				   Data: null
+				*/
+				lines := strings.Split(output, "\n")
+				for i, line := range lines {
+					lines[i] = strings.TrimSpace(line)
+					if len(lines[i]) == 0 {
+						lines = append(lines[:i], lines[i+1:]...)
+					}
+				}
+				var result []string
+				if len(lines) != 4 {
+					xlog.AbortErr(errors.New("unable to parse APIProxy output, unexpected line count. output: " + output))
+					return result
+				}
+				if !strings.HasPrefix(lines[0], "Type: Success") {
+					xlog.AbortErr(errors.New("got error from APIProxy output: " + output))
+					return result
+				}
+				// Parse data
+				jsonStr := lines[3][len("Data: "):]
+				var paths []string
+				xlog.AbortErr(json.Unmarshal([]byte(jsonStr), &paths))
+				return paths
+			}
+			xlog.GVerbose.Trace("stdout: %s", cmdOutput)
+			paths := parseOutput(string(cmdOutput))
+			if len(paths) == 0 {
+				xlog.AbortErr(errors.New("no file in clipboard"))
+			}
+			xapp.AppOpt.LocalPaths = paths
 		}
-		os.WriteFile(tmpFileName, buf, os.FileMode(fs.ModePerm))
-		xapp.AppOpt.LocalPaths[0] = tmpFileName
-		xapp.AppOpt.Clean = true
 	}
 }
 

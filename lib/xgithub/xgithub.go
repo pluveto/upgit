@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 
 	"github.com/pluveto/upgit/lib/xapp"
 )
@@ -94,4 +95,32 @@ func GetFile(repo string, branch string, path string) ([]byte, error) {
 		return nil, fmt.Errorf("%d %s", resp.StatusCode, bodyBuf)
 	}
 	return bodyBuf, nil
+}
+
+func GetLatestReleaseDownloadUrl(repo string) (string, error) {
+	url := "https://api.github.com/repos/" + repo + "/releases/latest"
+	// logger.Trace("GET " + url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", xapp.UserAgent)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	bodyBuf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	jsonStr := string(bodyBuf)
+	// find "browser_download_url": "{link}"
+	re := regexp.MustCompile(`"browser_download_url":\s*"([^"]+)"`)
+	matches := re.FindStringSubmatch(jsonStr)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("cannot find browser_download_url in %s", jsonStr)
+	}
+	return matches[1], nil
 }

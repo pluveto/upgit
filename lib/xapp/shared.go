@@ -15,7 +15,10 @@ import (
 
 const UserAgent = "UPGIT/0.2"
 const DefaultBranch = "master"
+
+// case insensitive
 const ClipboardPlaceholder = ":clipboard"
+const ClipboardFilePlaceholder = ":clipboard-file"
 
 var MaxUploadSize = int64(5 * 1024 * 1024)
 var ConfigFilePath string
