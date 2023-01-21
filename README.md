@@ -4,11 +4,7 @@
 
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" /> <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=F0F0F0" />
 
-
-
 **Languages**: English / [简体中文](docs/README.zh-CN.md)
-
-
 
 *Upgit* is a native & lightweight tool to helps you upload any file to your Github repository and then get a raw URL for it.
 
@@ -147,7 +143,7 @@ Input *upgit* program location into *Command* textbox.
 
 Now enjoy it!
 
-### Upload Clipboard
+### Upload Clipboard Image
 
 Use `:clipboard` place holder for clipboard image. (Only supports **png** format)
 
@@ -157,9 +153,21 @@ Use `:clipboard` place holder for clipboard image. (Only supports **png** format
 
 Shortcuts for screenshot:
 
-- On macOS, use `Ctrl+Shift+Cmd+4`
-- On Linux/Ubuntu, use `Ctrl+Shift+PrintScreen`
-- On Windows, use `Shift+Win+s`
++ On macOS, use `Ctrl+Shift+Cmd+4`
++ On Linux/Ubuntu, use `Ctrl+Shift+PrintScreen`
++ On Windows, use `Shift+Win+s`
+
+### Upload Clipboard Files
+
+**Note:** This feature is only supported on Windows.
+
+Use `:clipboard-files` or `:clipboard-file` place holder for clipboard files. Both will upload all files in clipboard.
+
+```shell
+./upgit :clipboard-files
+```
+
+Because golang doesn't support clipboard file list, so *upgit* will use [APIProxy-Win32](https://github.com/pluveto/APIProxy-Win32) to get clipboard file list. It will be downloaded automatically when you first use this feature.
 
 ### Save URL to Clipboard
 
@@ -205,7 +213,6 @@ For Windows user:
 **Compatible with Snipaste**
 
 (Windows Only, from v0.1.5) We recently added support for Snipaste bitmap format. Just copy screenshot and upload!
-
 
 ## Config Instructions
 

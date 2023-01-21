@@ -1,7 +1,5 @@
 # ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
-
-
 *Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。简洁跨平台，不常驻内存。
 
 可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用。
@@ -67,12 +65,10 @@
 ./upgit logo.png
 # for windows: .\upgit.exe logo.png
 ```
+
 然后会看到一个指向  `logo.png` 的直链。
 
-
-
 比如上传 `logo.png`  到远程文件夹 `/my_images/demo`，执行：
-
 
 ```shell
 ./upgit logo.png -t /my_images/demo
@@ -80,7 +76,6 @@
 ```
 
 有关更多帮助，请键入“-h”参数
-
 
 ```shell
 
@@ -124,8 +119,6 @@ Actions:
   remove smms.jsonc      remove SMMS uploader
 ```
 
-
-
 ### 配合 Typora 使用
 
 > 假设 *upgit* 程序保存在`“C:\repo\upgit\upgit.exe`。
@@ -146,8 +139,6 @@ Actions:
 
 ### 上传剪贴板图像
 
-
-
 使用  `:clipboard`  占位符放置剪贴板图像。（仅支持**png**格式）
 
 ```shell
@@ -156,16 +147,25 @@ Actions:
 
 截图快捷键：
 
-- 在 macOS 上，使用 `Ctrl+Shift+Cmd+4`
-- 在 Linux/Ubuntu 上，使用 `Ctrl+Shift+PrintScreen`
-- 在 Windows 上，使用 `Shift+Win+s`
++ 在 macOS 上，使用 `Ctrl+Shift+Cmd+4`
++ 在 Linux/Ubuntu 上，使用 `Ctrl+Shift+PrintScreen`
++ 在 Windows 上，使用 `Shift+Win+s`
 
+### 上传剪贴板文件
 
+**注意：**此功能仅在 Windows 上支持。
+
+使用 `:clipboard-files` 或 `:clipboard-file` 的位置标识来表示剪贴板文件。两者都将上传剪贴板中的所有文件。
+
+```shell
+./upgit :clipboard-files
+```
+
+因为 golang 不支持直接获取剪贴板文件列表，所以 *upgit* 将使用 [APIProxy-Win32](https://github.com/pluveto/APIProxy-Win32) 来获取剪贴板文件列表。当你第一次使用这个功能时，它将自动下载。
 
 ### 将 URL 保存到剪贴板
 
 使用参数 `--output-type clipboard`:
-
 
 ```shell
 ./upgit logo.png --output-type clipboard
@@ -193,14 +193,15 @@ Actions:
 
 1. 安装AHK
 2. 创建这个脚本 `upload_clipboard.ahk` 并运行：
+
    ```ahk
    ; Press Ctrl + F9 to upload clipboard image
    ^F9::
    RunWait, "upgit.exe" :clipboard --output-type clipboard --output-format markdown
    return
    ```
-3. 然后按 <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> 截图，按 <kbd>Ctrl</kbd><kbd>F9</kbd>上传并将其链接复制到剪贴板
 
+3. 然后按 <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> 截图，按 <kbd>Ctrl</kbd><kbd>F9</kbd>上传并将其链接复制到剪贴板
 
 ## 配置文件说明
 
