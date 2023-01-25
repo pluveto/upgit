@@ -35,6 +35,7 @@ jobs:
       - name: Cross Build
         # You may pin to the exact commit or the version.
         run: |
+          brew install filosottile/musl-cross/musl-cross
           make all
 
       - name: Create Tag
