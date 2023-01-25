@@ -32,7 +32,7 @@ linux: create_dist_dir
 	GOOS=linux   GOARCH=arm     go build -o $(BINARY)_linux_arm     $(LDFLAGS) $(SRC)
 	GOOS=linux   GOARCH=arm64   go build -o $(BINARY)_linux_arm64   $(LDFLAGS) $(SRC)
 
-	GOOS=linux   GOARCH=amd64   CGO_ENABLED=1 go build -o $(BINARY)_cgo_linux_amd64   $(LDFLAGS) $(SRC)
+	GOOS=linux   GOARCH=amd64   CGO_ENABLED=1 CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ go build -o $(BINARY)_cgo_linux_amd64   $(LDFLAGS) $(SRC)
 
 upx: all
 	for i in $(DIST_DIR)/*
