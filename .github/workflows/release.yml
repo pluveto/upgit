@@ -36,6 +36,7 @@ jobs:
         # You may pin to the exact commit or the version.
         run: |
           brew install filosottile/musl-cross/musl-cross
+          brew install libx11
           make all
 
       - name: Create Tag
