@@ -37,6 +37,7 @@ jobs:
         run: |
           brew install filosottile/musl-cross/musl-cross
           brew install libx11
+          ln -s /opt/X11/include/X11 /usr/local/include/X11
           make all
 
       - name: Create Tag
