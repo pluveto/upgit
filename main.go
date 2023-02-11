@@ -26,6 +26,7 @@ import (
 	"github.com/pluveto/upgit/lib/xext"
 	"github.com/pluveto/upgit/lib/xgithub"
 	"github.com/pluveto/upgit/lib/xhttp"
+	"github.com/pluveto/upgit/lib/ximage"
 	"github.com/pluveto/upgit/lib/xio"
 	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xmap"
@@ -60,14 +61,62 @@ func mainCommand() {
 
 	// validating args
 	validArgs()
-
+	var tmpFiles []string
+	defer func() {
+		for _, path := range tmpFiles {
+			os.Remove(path)
+		}
+	}()
+	handleScaleFix(tmpFiles)
 	// executing uploading
 	dispatchUploader()
 
 	if xapp.AppOpt.Wait {
 		fmt.Scanln()
 	}
+}
 
+func handleScaleFix(tmpFiles []string) {
+
+	scaleFix := GetScaleFix()
+	if scaleFix != 100 {
+		// read file to buf
+		for i, path := range xapp.AppOpt.LocalPaths {
+			newTmpPath := path + ".upgit_tmp.png"
+
+			buf, err := xio.ReadFile(path)
+			if err != nil {
+				xlog.AbortErr(err)
+				return
+			}
+
+			if !(xapp.AppCfg.ScaleFix > 100 && xapp.AppCfg.ScaleFix <= 200) {
+				xlog.AbortErr(fmt.Errorf("failed: scale fix must be in range 100-200"))
+			}
+			factor := 100.0 / float32(scaleFix)
+			width, height, err := ximage.GetSize(buf)
+			if err != nil {
+				xlog.AbortErr(fmt.Errorf("failed: failed to get image size: %s", err.Error()))
+			}
+			newWidth := uint(float32(width) * factor)
+			newHeight := uint(float32(height) * factor)
+			buf, err = ximage.Scale(buf, newWidth, newHeight)
+			if nil == buf || err != nil {
+				xlog.AbortErr(fmt.Errorf("failed: scale image failed to size %d x %d", width, height))
+				xlog.AbortErr(err)
+			}
+			xlog.GVerbose.Info("scale fix: %d%%, from %d x %d to %d x %d", xapp.AppCfg.ScaleFix, width, height, newWidth, newHeight)
+
+			// write to tmp file
+			err = xio.WriteFile(newTmpPath, buf)
+			if err != nil {
+				xlog.AbortErr(err)
+				return
+			}
+			xapp.AppOpt.LocalPaths[i] = newTmpPath
+			tmpFiles = append(tmpFiles, newTmpPath)
+		}
+	}
 }
 
 // loadCliOpts load cli options into xapp.AppOpt
@@ -462,6 +511,17 @@ func handleClipboard() {
 			xapp.AppOpt.LocalPaths = paths
 		}
 	}
+}
+
+func GetScaleFix() int {
+	scaleFix := 100
+	if xapp.AppCfg.ScaleFix != 0 && xapp.AppCfg.ScaleFix != 100 {
+		scaleFix = xapp.AppCfg.ScaleFix
+	}
+	if xapp.AppOpt.ScaleFix != nil && *xapp.AppOpt.ScaleFix != 100 {
+		scaleFix = *xapp.AppOpt.ScaleFix
+	}
+	return scaleFix
 }
 
 func loadEnvConfig(cfg *xapp.Config) {

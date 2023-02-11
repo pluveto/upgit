@@ -16,6 +16,10 @@ default_uploader = "github"
 #   {ext} File name suffix, for example: .png
 #   The following example generates a file name like: 2022/01/upgit_20220131_1643617626.png
 rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+# This can be useful if you enabled system ui scaling.
+# - 100 means no scaling, the process will be bypassed.
+# - 125 means input image has been scaled by 125%, the process will be scaled back to 100%.
+scale_fix = 100
 
 # -----------------------------------------------------------------------------
 # Custom extra output formats

@@ -14,6 +14,7 @@ type CLIOptions struct {
 	TargetDir    string     `arg:"-t,--target-dir"    help:"upload file with original name to given directory. if not set, will use renaming rules"`
 	Verbose      bool       `arg:"-V,--verbose"       help:"when set, output more details to help developers"`
 	SizeLimit    *int64     `arg:"-s,--size-limit"    help:"in bytes. overwrite default size limit (5MiB). 0 means no limit"`
+	ScaleFix     *int       `arg:"-S,--scale-fix"     help:"when set, will scale image to reciprocal of given value. 100 means no scale. you can set to your screen scale factor"`
 	Wait         bool       `arg:"-w,--wait"          help:"when set, not exit after upload, util user press any key"`
 	ConfigFile   string     `arg:"-c,--config-file"   help:"when set, will use specific config file"`
 	Clean        bool       `arg:"-C,--clean"         help:"when set, remove local file after upload"`

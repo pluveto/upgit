@@ -18,3 +18,31 @@ func panicErrWithoutLog(err error) {
 		panic(err)
 	}
 }
+
+func ReadFile(filePath string) ([]byte, error) {
+	file, err := os.Open(filePath)
+	defer file.Close()
+	if err != nil {
+		return nil, err
+	}
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	var size = fileInfo.Size()
+	bytes := make([]byte, size)
+	buffer := make([]byte, 1024)
+	for {
+		c, err := file.Read(buffer)
+		if err != nil {
+			break
+		}
+		bytes = append(bytes, buffer[:c]...)
+	}
+	return bytes, nil
+}
+
+func WriteFile(filePath string, buf []byte) error {
+	err := os.WriteFile(filePath, buf, 0755)
+	return err
+}
