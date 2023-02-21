@@ -52,6 +52,7 @@ Download it from [Release](https://github.com/pluveto/upgit/releases).
 >
 > + For most Windows users, choose `upgit_win_amd64.exe`
 > + For most macOS users, choose `upgit_macos_arm64`
+> + Execute `chmod +x upgit` if permission is needed
 
 Rename it to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like. To access it from anywhere, add its directory to the `PATH` environment variable.
 
