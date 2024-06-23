@@ -333,7 +333,8 @@ func dispatchUploader() {
 		xlog.AbortErr(err)
 		xlog.GVerbose.Trace("qcloudcos config: ")
 		xlog.GVerbose.TraceStruct(&ucfg)
-		uploader := s3.S3Uploader{Config: ucfg}
+		uploader, err := s3.NewS3Uploader(ucfg)
+		xlog.AbortErr(err)
 		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 		return
 	}
