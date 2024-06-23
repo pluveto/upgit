@@ -98,3 +98,12 @@ upload_preset = "preset_name"
 [uploaders.easyimage]
 request_url = "https://img.545141.com/api/index.php"
 token = "1c17b11693cb5ec63859b0ccccccccccc"
+
+# S3 Uploader
+[uploaders.s3]
+region = "us-west-2"
+bucket_name = "my-bucket"
+access_key = "your-access-key"
+secret_key = "your-secret-key"
+endpoint = "https://s3.us-west-2.amazonaws.com"
+url_format = "{endpoint}/{bucket}/{path}"

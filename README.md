@@ -24,6 +24,17 @@ This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-
 ### Supported Upload Extensions
 
 + Github
++ S3 Compatible Storages
+   <!-- (AWS, MinIO, Cloudflare R2, etc.) -->
+   + AWS S3
+   + MinIO
+   + Cloudflare R2
+   + Ceph
+   + Backblaze
+   + Flexify.IO
+   + IBM Cloud Object Storage
+   + DigitalOcean Spaces
+   + Wasabi
 + Gitee
 + Tencent QcloudCOS
 + Qiniu Kodo
