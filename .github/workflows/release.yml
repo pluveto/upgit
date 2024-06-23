@@ -50,15 +50,17 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco install make
 
-      - name: Build
-        run: |
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            make linux
-          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-            make windows
-          elif [ "${{ matrix.os }}" == "macos-13" ]; then
-            make macos
-          fi
+      - name: Build on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: make linux
+
+      - name: Build on Windows
+        if: matrix.os == 'windows-latest'
+        run: make windows
+
+      - name: Build on macOS
+        if: matrix.os == 'macos-13'
+        run: make macos
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
