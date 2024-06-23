@@ -37,7 +37,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get install -y musl-tools libx11-dev
-          ln -s /opt/X11/include/X11 /usr/local/include/X11
+          sudo ln -s /opt/X11/include/X11 /usr/local/include/X11
 
       - name: Install dependencies on macOS
         if: matrix.os == 'macos-13'
