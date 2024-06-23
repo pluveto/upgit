@@ -19,6 +19,7 @@ import (
 	"github.com/pluveto/upgit/lib/model"
 	"github.com/pluveto/upgit/lib/qcloudcos"
 	"github.com/pluveto/upgit/lib/result"
+	"github.com/pluveto/upgit/lib/s3"
 	"github.com/pluveto/upgit/lib/uploaders"
 	"github.com/pluveto/upgit/lib/upyun"
 	"github.com/pluveto/upgit/lib/xapp"
@@ -246,7 +247,7 @@ func loadConfig(cfg *xapp.Config) {
 
 // UploadAll will upload all given file to targetDir.
 // If targetDir is not set, it will upload using rename rules.
-func UploadAll(uploader model.Uploader, localPaths []string, targetDir string) {
+func UploadAll(uploader model.Uploader, localPaths []string, targetDir string, callback func(result.Result[*model.Task])) {
 	for taskId, localPath := range localPaths {
 
 		var ret result.Result[*model.Task]
@@ -281,7 +282,6 @@ func UploadAll(uploader model.Uploader, localPaths []string, targetDir string) {
 		if err == nil {
 			xlog.GVerbose.TraceStruct(ret.Value)
 		}
-		callback := uploader.GetCallback()
 		if nil != callback {
 			callback(ret)
 		}
@@ -300,8 +300,8 @@ func dispatchUploader() {
 			gCfg.Branch = xapp.DefaultBranch
 		}
 
-		uploader := uploaders.GithubUploader{Config: gCfg, OnTaskStatusChanged: onUploaded}
-		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
+		uploader := uploaders.GithubUploader{Config: gCfg}
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 		return
 	}
 	if uploaderId == "qcloudcos" {
@@ -311,8 +311,8 @@ func dispatchUploader() {
 		xlog.AbortErr(err)
 		xlog.GVerbose.Trace("qcloudcos config: ")
 		xlog.GVerbose.TraceStruct(&qCfg)
-		uploader := qcloudcos.COSUploader{Config: qCfg, OnTaskStatusChanged: onUploaded}
-		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
+		uploader := qcloudcos.COSUploader{Config: qCfg}
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 		return
 	}
 	if uploaderId == "upyun" {
@@ -322,8 +322,19 @@ func dispatchUploader() {
 		xlog.AbortErr(err)
 		xlog.GVerbose.Trace("qcloudcos config: ")
 		xlog.GVerbose.TraceStruct(&ucfg)
-		uploader := upyun.UpyunUploader{Config: ucfg, OnTaskStatusChanged: onUploaded}
-		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
+		uploader := upyun.UpyunUploader{Config: ucfg}
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
+		return
+	}
+	if uploaderId == "s3" {
+		ucfg, err := xapp.LoadUploaderConfig[s3.S3Config](uploaderId)
+		xlog.AbortErr(err)
+		err = validator.Validate(&ucfg)
+		xlog.AbortErr(err)
+		xlog.GVerbose.Trace("qcloudcos config: ")
+		xlog.GVerbose.TraceStruct(&ucfg)
+		uploader := s3.S3Uploader{Config: ucfg}
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 		return
 	}
 	// try http simple uploader
@@ -348,7 +359,7 @@ func dispatchUploader() {
 		if result.From[string](xmap.GetDeep[string](uploaderDef, "meta.type")).ValueOrExit() != "simple-http-uploader" {
 			continue
 		}
-		uploader = &uploaders.SimpleHttpUploader{OnTaskStatusChanged: onUploaded, Definition: uploaderDef}
+		uploader = &uploaders.SimpleHttpUploader{Definition: uploaderDef}
 		extConfig, err := xapp.LoadUploaderConfig[map[string]interface{}](uploaderId)
 		if err == nil {
 			uploader.Config = extConfig
@@ -362,7 +373,7 @@ func dispatchUploader() {
 	if nil == uploader {
 		xlog.AbortErr(errors.New("unknown uploader: " + uploaderId))
 	}
-	UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir)
+	UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 
 }
 

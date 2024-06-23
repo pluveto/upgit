@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/pluveto/upgit/lib/model"
-	"github.com/pluveto/upgit/lib/result"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xlog"
 )
@@ -28,20 +27,11 @@ type GithubUploaderConfig struct {
 	Branch   string `toml:"branch,omitempty"`
 }
 type GithubUploader struct {
-	Config              GithubUploaderConfig
-	OnTaskStatusChanged func(result result.Result[*model.Task])
+	Config GithubUploaderConfig
 }
 
 const kRawUrlFmt = "https://raw.githubusercontent.com/{username}/{repo}/{branch}/{path}"
 const kApiFmt = "https://api.github.com/repos/{username}/{repo}/contents/{path}"
-
-func (u GithubUploader) SetCallback(f func(result.Result[*model.Task])) {
-	u.OnTaskStatusChanged = f
-}
-
-func (u GithubUploader) GetCallback() func(result.Result[*model.Task]) {
-	return u.OnTaskStatusChanged
-}
 
 func (u GithubUploader) PutFile(message, path, name string) (err error) {
 	dat, err := ioutil.ReadFile(path)

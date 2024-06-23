@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pluveto/upgit/lib/model"
-	"github.com/pluveto/upgit/lib/result"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xlog"
 	"github.com/pluveto/upgit/lib/xstrings"
@@ -26,16 +25,7 @@ type COSConfig struct {
 }
 
 type COSUploader struct {
-	Config              COSConfig
-	OnTaskStatusChanged func(result result.Result[*model.Task])
-}
-
-func (u COSUploader) SetCallback(f func(result.Result[*model.Task])) {
-	u.OnTaskStatusChanged = f
-}
-
-func (u COSUploader) GetCallback() func(result.Result[*model.Task]) {
-	return u.OnTaskStatusChanged
+	Config COSConfig
 }
 
 var urlfmt = "https://{host}/{path}"

@@ -25,17 +25,8 @@ import (
 )
 
 type SimpleHttpUploader struct {
-	Config              map[string]interface{}
-	Definition          map[string]interface{}
-	OnTaskStatusChanged func(result.Result[*model.Task])
-}
-
-func (u SimpleHttpUploader) SetCallback(f func(result.Result[*model.Task])) {
-	u.OnTaskStatusChanged = f
-}
-
-func (u SimpleHttpUploader) GetCallback() func(result.Result[*model.Task]) {
-	return u.OnTaskStatusChanged
+	Config     map[string]interface{}
+	Definition map[string]interface{}
 }
 
 // func (u SimpleHttpUploader) UploadAll(localPaths []string, targetDir string) {

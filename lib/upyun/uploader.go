@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pluveto/upgit/lib/model"
-	"github.com/pluveto/upgit/lib/result"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xlog"
 )
@@ -20,16 +19,7 @@ type UpyunConfig struct {
 }
 
 type UpyunUploader struct {
-	Config              UpyunConfig
-	OnTaskStatusChanged func(result result.Result[*model.Task])
-}
-
-func (u UpyunUploader) SetCallback(f func(result.Result[*model.Task])) {
-	u.OnTaskStatusChanged = f
-}
-
-func (u UpyunUploader) GetCallback() func(result.Result[*model.Task]) {
-	return u.OnTaskStatusChanged
+	Config UpyunConfig
 }
 
 var urlfmt = "https://{host}/{path}"
