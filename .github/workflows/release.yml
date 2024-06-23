@@ -122,9 +122,6 @@ jobs:
           tag_name:  ${{ github.event.inputs.tag }} 
           release_name: Upgit ${{ github.event.inputs.tag }} 
           body: ${{ steps.changelog.outputs.changes }}
-          asset_files: |
-            dist/linux/
-            dist/windows/
-            dist/macos/
+          asset_files: 'dist/'
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
