@@ -122,6 +122,14 @@ jobs:
           tag_name:  ${{ github.event.inputs.tag }} 
           release_name: Upgit ${{ github.event.inputs.tag }} 
           body: ${{ steps.changelog.outputs.changes }}
-          asset_files: 'dist/'
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/**/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
