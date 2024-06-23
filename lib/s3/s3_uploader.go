@@ -21,14 +21,13 @@ type S3Config struct {
 	AccessKey  string `toml:"access_key" mapstructure:"access_key" validate:"nonzero"`
 	SecretKey  string `toml:"secret_key" mapstructure:"secret_key" validate:"nonzero"`
 	Endpoint   string `toml:"endpoint" mapstructure:"endpoint" validate:"nonzero"`
+	UrlFormat  string `toml:"url_format" mapstructure:"url_format" validate:"nonzero" default:"{endpoint}/{bucket}/{path}"`
 }
 
 type S3Uploader struct {
 	Config   S3Config
 	s3Client *s3.S3
 }
-
-var urlfmt = "https://{bucket}.{endpoint}/{path}"
 
 func (u S3Uploader) Upload(t *model.Task) error {
 	now := time.Now()
@@ -39,7 +38,7 @@ func (u S3Uploader) Upload(t *model.Task) error {
 	} else {
 		targetPath = xapp.Rename(name, now)
 	}
-	rawUrl := u.buildUrl(urlfmt, targetPath)
+	rawUrl := u.buildUrl(u.Config.UrlFormat, targetPath)
 	url := xapp.ReplaceUrl(rawUrl)
 	xlog.GVerbose.Info("uploading #TASK_%d %s\n", t.TaskId, t.LocalPath)
 
