@@ -9,7 +9,7 @@ on:
       prerelease:
         type: boolean
         required: false
-        default: yes
+        default: true
         
 jobs:
   build:
@@ -33,11 +33,26 @@ jobs:
       - name: Go Test
         run: go test
 
-      - name: Install dependencies on Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install and run dependencies (xvfb libx11-dev)
+        if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt-get install -y musl-tools libx11-dev
-          sudo ln -s /opt/X11/include/X11 /usr/local/include/X11
+          sudo apt update
+          sudo apt install -y xvfb libx11-dev x11-utils libegl1-mesa-dev libgles2-mesa-dev
+          Xvfb :0 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          # Wait for Xvfb
+          MAX_ATTEMPTS=120 # About 60 seconds
+          COUNT=0
+          echo -n "Waiting for Xvfb to be ready..."
+          while ! xdpyinfo -display "${DISPLAY}" >/dev/null 2>&1; do
+            echo -n "."
+            sleep 0.50s
+            COUNT=$(( COUNT + 1 ))
+            if [ "${COUNT}" -ge "${MAX_ATTEMPTS}" ]; then
+              echo "  Gave up waiting for X server on ${DISPLAY}"
+              exit 1
+            fi
+          done
+          echo "Done - Xvfb is ready!"
 
       - name: Install dependencies on macOS
         if: matrix.os == 'macos-13'
