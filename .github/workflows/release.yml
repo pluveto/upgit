@@ -9,15 +9,17 @@ on:
       prerelease:
         type: boolean
         required: false
-        default: yes
+        default: true
         
 jobs:
   build:
     name: Build
-    runs-on: macos-13
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
     steps:
-      # Fetch depth 0 is required for Changelog generation
-      - name: Checkout      
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -29,16 +31,69 @@ jobs:
           stable: false
 
       - name: Go Test
+        run: go test
+
+      - name: Install and run dependencies (xvfb libx11-dev)
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          go test
-          
-      - name: Cross Build
-        # You may pin to the exact commit or the version.
+          sudo apt update
+          sudo apt install -y xvfb libx11-dev x11-utils libegl1-mesa-dev libgles2-mesa-dev
+
+      - name: Install dependencies on macOS
+        if: matrix.os == 'macos-13'
         run: |
           brew install filosottile/musl-cross/musl-cross
           brew install libx11
           ln -s /opt/X11/include/X11 /usr/local/include/X11
-          make all
+
+      - name: Install dependencies on Windows
+        if: matrix.os == 'windows-latest'
+        run: choco install make
+
+      - name: Build on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: make linux
+
+      - name: Build on Windows
+        if: matrix.os == 'windows-latest'
+        run: make windows
+
+      - name: Build on macOS
+        if: matrix.os == 'macos-13'
+        run: make macos
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.os }}
+          path: dist/
+
+  tag_and_release:
+    needs: build
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts from Linux
+        uses: actions/download-artifact@v3
+        with:
+          name: build-ubuntu-latest
+          path: dist/linux
+
+      - name: Download build artifacts from Windows
+        uses: actions/download-artifact@v3
+        with:
+          name: build-windows-latest
+          path: dist/windows
+
+      - name: Download build artifacts from macOS
+        uses: actions/download-artifact@v3
+        with:
+          name: build-macos-13
+          path: dist/macos
 
       - name: Create Tag
         uses: negz/create-tag@v1
@@ -64,16 +119,9 @@ jobs:
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # The name of the tag
           tag_name:  ${{ github.event.inputs.tag }} 
-          # The name of the release
           release_name: Upgit ${{ github.event.inputs.tag }} 
-          # Text describing the contents of the tag
           body: ${{ steps.changelog.outputs.changes }}
-          # The path to the asset you want to upload
-          asset_files: dist/
-          # `true` to create a draft (unpublished) release, `false` to create a published one. Default: `false`
+          asset_files: 'dist/'
           draft: false
-          # `true` to identify the release as a prerelease. `false` to identify the release as a full release. Default: `false`
-          prerelease: ${{ github.event.inputs.prerelease }}          
-          
+          prerelease: ${{ github.event.inputs.prerelease }}
