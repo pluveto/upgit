@@ -22,13 +22,22 @@ windows: create_dist_dir
 	GOOS=windows GOARCH=arm     go build -o $(BINARY)_win_arm.exe   $(LDFLAGS) $(SRC)
 	GOOS=windows GOARCH=arm64   go build -o $(BINARY)_win_arm64.exe $(LDFLAGS) $(SRC)
 
-# You need to install gcc-multilib to build 32-bit binaries on 64-bit Linux
+# You may need to install gcc-multilib to build 32-bit binaries on 64-bit Linux
 # ```
 # sudo apt-get install gcc-multilib
 # ```
 linux: create_dist_dir
-	GOOS=linux   GOARCH=amd64   CGO_ENABLED=1 CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ XCFLAGS=-I/opt/X11/include XLIBS=-L/opt/X11/lib  go build -o $(BINARY)_cgo_linux_amd64   $(LDFLAGS) $(SRC)
-	
+	@if x86_64-linux-musl-gcc --version >/dev/null 2>&1; then \
+		echo "Using musl compiler"; \
+		export CC=x86_64-linux-musl-gcc; \
+		export CXX=x86_64-linux-musl-g++; \
+	else \
+		echo "musl compiler not found. Using gnu compiler"; \
+		export CC=gcc; \
+		export CXX=g++; \
+	fi && \
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC=$$CC CXX=$$CXX go build -o $(BINARY)_cgo_linux_amd64 $(LDFLAGS) $(SRC)
+
 	GOOS=linux   GOARCH=386     go build -o $(BINARY)_linux_386     $(LDFLAGS) $(SRC)
 	GOOS=linux   GOARCH=amd64   go build -o $(BINARY)_linux_amd64   $(LDFLAGS) $(SRC)
 	GOOS=linux   GOARCH=arm     go build -o $(BINARY)_linux_arm     $(LDFLAGS) $(SRC)
