@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,10 +74,18 @@ func (u *S3Uploader) PutFile(localPath, targetPath string) error {
 	}
 	defer file.Close()
 
+	// Detect the MIME type based on the file extension
+	ext := filepath.Ext(localPath)
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = "application/octet-stream" // Default to binary/octet-stream if detection fails
+	}
+
 	_, err = u.s3Client.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(u.Config.BucketName),
-		Key:    aws.String(targetPath),
-		Body:   file,
+		Bucket:      aws.String(u.Config.BucketName),
+		Key:         aws.String(targetPath),
+		Body:        file,
+		ContentType: aws.String(mimeType),
 	})
 	return err
 }
