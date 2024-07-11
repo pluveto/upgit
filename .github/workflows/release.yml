@@ -120,7 +120,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name:  ${{ github.event.inputs.tag }} 
-          release_name: Upgit ${{ github.event.inputs.tag }} 
+          release_name: ${{ github.event.inputs.tag }} 
           body: ${{ steps.changelog.outputs.changes }}
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
@@ -130,6 +130,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: dist/**/*
-          tag: ${{ github.ref }}
+          tag: ${{ github.event.inputs.tag }}
           overwrite: true
           file_glob: true
