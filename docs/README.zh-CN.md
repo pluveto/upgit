@@ -35,6 +35,7 @@
 + ImgBB
 + Cloudinary
 + EasyImage
++ DALEXNI
 
 查看更多: `./upgit ext ls`
 
