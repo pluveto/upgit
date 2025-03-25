@@ -16,6 +16,7 @@ import (
 
 	"github.com/alexflint/go-arg"
 	"github.com/pelletier/go-toml/v2"
+	"github.com/pluveto/upgit/lib/aliyunoss"
 	"github.com/pluveto/upgit/lib/model"
 	"github.com/pluveto/upgit/lib/qcloudcos"
 	"github.com/pluveto/upgit/lib/result"
@@ -320,7 +321,7 @@ func dispatchUploader() {
 		xlog.AbortErr(err)
 		err = validator.Validate(&ucfg)
 		xlog.AbortErr(err)
-		xlog.GVerbose.Trace("qcloudcos config: ")
+		xlog.GVerbose.Trace("upyun config: ")
 		xlog.GVerbose.TraceStruct(&ucfg)
 		uploader := upyun.UpyunUploader{Config: ucfg}
 		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
@@ -331,10 +332,21 @@ func dispatchUploader() {
 		xlog.AbortErr(err)
 		err = validator.Validate(&ucfg)
 		xlog.AbortErr(err)
-		xlog.GVerbose.Trace("qcloudcos config: ")
+		xlog.GVerbose.Trace("s3 config: ")
 		xlog.GVerbose.TraceStruct(&ucfg)
 		uploader, err := s3.NewS3Uploader(ucfg)
 		xlog.AbortErr(err)
+		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
+		return
+	}
+	if uploaderId == "aliyunoss" {
+		aCfg, err := xapp.LoadUploaderConfig[aliyunoss.OSSConfig](uploaderId)
+		xlog.AbortErr(err)
+		err = validator.Validate(&aCfg)
+		xlog.AbortErr(err)
+		xlog.GVerbose.Trace("aliyunoss config: ")
+		xlog.GVerbose.TraceStruct(&aCfg)
+		uploader := aliyunoss.OSSUploader{Config: aCfg}
 		UploadAll(uploader, xapp.AppOpt.LocalPaths, xapp.AppOpt.TargetDir, onUploaded)
 		return
 	}
