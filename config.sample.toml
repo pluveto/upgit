@@ -107,3 +107,11 @@ access_key = "your-access-key"
 secret_key = "your-secret-key"
 endpoint = "https://s3.us-west-2.amazonaws.com"
 url_format = "{endpoint}/{bucket}/{path}"
+
+# AliyunOSS Uploader
+[uploaders.aliyunoss]
+endpoint = "https://oss-cn-shanghai.aliyuncs.com"
+access_key_id = "your-access-key-id"
+access_key_secret = "your-access-key-secret"
+bucket_name = "your-bucket-name"
+host = "https://cdn.example.com"
