@@ -3,7 +3,6 @@ package aliyunoss
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pluveto/upgit/lib/model"
@@ -58,11 +57,11 @@ func (u *OSSUploader) buildUrl(path string) string {
 func (u *OSSUploader) PutFile(localPath, targetPath string) (err error) {
 	endpoint := u.Config.Endpoint
 
-	endpoint = strings.Replace(endpoint, "https://oss-", "", 1)
-	endpoint = strings.Replace(endpoint, "http://oss-", "", 1)
-	endpoint = strings.Replace(endpoint, ".aliyuncs.com", "", 1)
-
-	cli, err := oss.New(u.Config.AccessKeyId, u.Config.AccessKeySecret, u.Config.BucketName, endpoint)
+	cli, err := oss.New(u.Config.AccessKeyId, u.Config.AccessKeySecret, u.Config.BucketName, "cn-shanghai")
+	if err != nil {
+		return err
+	}
+	err = cli.Bucket.SetEndPointDomain(endpoint)
 	if err != nil {
 		return err
 	}
