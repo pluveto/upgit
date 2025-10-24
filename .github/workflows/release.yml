@@ -30,8 +30,6 @@ jobs:
           go-version: 1.18.0-beta1
           stable: false
 
-      - name: Go Test
-        run: go test
 
       - name: Install and run dependencies (xvfb libx11-dev)
         if: matrix.os == 'ubuntu-latest'
@@ -45,6 +43,9 @@ jobs:
           brew install filosottile/musl-cross/musl-cross
           brew install libx11
           ln -s /opt/X11/include/X11 /usr/local/include/X11
+
+      - name: Go Test
+        run: go test
 
       - name: Install dependencies on Windows
         if: matrix.os == 'windows-latest'
