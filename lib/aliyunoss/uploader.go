@@ -2,14 +2,13 @@ package aliyunoss
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/pluveto/upgit/lib/model"
 	"github.com/pluveto/upgit/lib/xapp"
 	"github.com/pluveto/upgit/lib/xlog"
+	"github.com/tu6ge/oss-go"
 )
 
 type OSSConfig struct {
@@ -56,21 +55,19 @@ func (u *OSSUploader) buildUrl(path string) string {
 }
 
 func (u *OSSUploader) PutFile(localPath, targetPath string) (err error) {
-	cli, err := oss.New(u.Config.Endpoint, u.Config.AccessKeyId, u.Config.AccessKeySecret)
+	endpoint := u.Config.Endpoint
+
+	cli, err := oss.New(u.Config.AccessKeyId, u.Config.AccessKeySecret, u.Config.BucketName, "cn-shanghai")
+	if err != nil {
+		return err
+	}
+	err = cli.Bucket.SetEndPointDomain(endpoint)
 	if err != nil {
 		return err
 	}
 
-	bucket, err := cli.Bucket(u.Config.BucketName)
-	if err != nil {
-		return err
-	}
+	obj := oss.NewObject(targetPath)
 
-	file, err := os.OpenFile(localPath, os.O_RDONLY, 0644)
-	if err != nil {
-		return err
-	}
-
-	err = bucket.PutObject(targetPath, file)
+	err = obj.FilePath(localPath).ContentType("").Upload(&cli)
 	return
 }
