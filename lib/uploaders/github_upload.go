@@ -88,7 +88,7 @@ func (u GithubUploader) Upload(t *model.Task) error {
 	// var err error
 	err := u.PutFile("upload "+base+" via upgit client", t.LocalPath, targetPath)
 	if err == nil {
-		xlog.GVerbose.Info("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
+		xlog.GVerbose.Info("successfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
 	} else {
 		xlog.GVerbose.Info("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())
 	}

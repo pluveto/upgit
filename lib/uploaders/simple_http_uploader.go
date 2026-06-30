@@ -286,7 +286,7 @@ func (u SimpleHttpUploader) Upload(t *model.Task) (err error) {
 	var url string
 	if err == nil {
 		url := xapp.ReplaceUrl(rawUrl)
-		xlog.GVerbose.Trace("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
+		xlog.GVerbose.Trace("successfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
 		t.Status = model.TASK_FINISHED
 	} else {
 		xlog.GVerbose.Trace("failed to upload #TASK_%d %s : %s\n", t.TaskId, t.LocalPath, err.Error())

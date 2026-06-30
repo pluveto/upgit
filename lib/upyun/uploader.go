@@ -39,7 +39,7 @@ func (u UpyunUploader) Upload(t *model.Task) error {
 	// var err error
 	err := u.PutFile(t.LocalPath, targetPath)
 	if err == nil {
-		xlog.GVerbose.Info("sucessfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
+		xlog.GVerbose.Info("successfully uploaded #TASK_%d %s => %s\n", t.TaskId, t.LocalPath, url)
 		t.Status = model.TASK_FINISHED
 		t.Url = url
 		t.FinishTime = time.Now()
