@@ -8,3 +8,5 @@
 /APIProxy*
 /dist
 /.idea
+/target
+/.tmp
