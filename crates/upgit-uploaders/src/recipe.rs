@@ -5,6 +5,7 @@ use thiserror::Error;
 use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::form::{self, Part};
+use crate::util::{could_not_reach, host_of, json_string_field, looks_like_signature_error};
 
 #[derive(Debug, Error)]
 pub enum RecipeError {
@@ -182,6 +183,65 @@ impl HttpRecipeUploader {
         Self { recipe, config }
     }
 
+    fn config_hint(&self) -> String {
+        let id = self.recipe.id();
+        let mut keys: Vec<&str> = self.config.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        if keys.is_empty() {
+            format!("Check [uploaders.{id}].")
+        } else {
+            format!("Check [uploaders.{id}] {}.", keys.join(", "))
+        }
+    }
+
+    /// Map an HTTP recipe status + body to a user-facing error. Never dumps JSON.
+    pub fn explain(&self, status: u16, body: &str) -> UploadError {
+        let id = self.recipe.id();
+        let hint = self.config_hint();
+        match status {
+            401 => UploadError::new(
+                id,
+                format!("{id} rejected credentials (HTTP 401)."),
+                hint,
+                Some(status),
+            ),
+            403 if looks_like_signature_error(body) => UploadError::new(
+                id,
+                format!("{id} rejected the request signature (HTTP 403)."),
+                hint,
+                Some(status),
+            ),
+            403 => UploadError::new(
+                id,
+                format!("{id} denied the upload (HTTP 403)."),
+                hint,
+                Some(status),
+            ),
+            404 => UploadError::new(
+                id,
+                format!("{id} endpoint was not found (HTTP 404)."),
+                format!("{hint} Confirm the recipe URL."),
+                Some(status),
+            ),
+            500..=599 => UploadError::new(
+                id,
+                format!("{id} is failing (HTTP {status})."),
+                "Retry later; this is a remote server error, not a config problem.",
+                Some(status),
+            ),
+            _ => {
+                let extra = json_string_field(body, "message")
+                    .or_else(|| json_string_field(body, "error"))
+                    .or_else(|| json_string_field(body, "msg"));
+                let what = match extra {
+                    Some(msg) => format!("{id} upload failed (HTTP {status}): {msg}"),
+                    None => format!("{id} upload failed (HTTP {status})."),
+                };
+                UploadError::new(id, what, hint, Some(status))
+            }
+        }
+    }
+
     fn context(&self, key: &ObjectKey) -> RecipeContext {
         let mut ctx = RecipeContext::new();
         ctx.put("key", key.as_str());
@@ -209,14 +269,21 @@ impl HttpRecipeUploader {
             request = request.set(k, v);
         }
         if parts.is_empty() {
-            Self::read_response(request.call())
+            self.read_response(url, request.call())
         } else {
             let (content_type, body) = form::encode(parts);
-            Self::read_response(request.set("Content-Type", &content_type).send_bytes(&body))
+            self.read_response(
+                url,
+                request.set("Content-Type", &content_type).send_bytes(&body),
+            )
         }
     }
 
-    fn read_response(result: Result<ureq::Response, ureq::Error>) -> Result<Vec<u8>, UploadError> {
+    fn read_response(
+        &self,
+        url: &str,
+        result: Result<ureq::Response, ureq::Error>,
+    ) -> Result<Vec<u8>, UploadError> {
         match result {
             Ok(resp) => resp
                 .into_string()
@@ -224,9 +291,9 @@ impl HttpRecipeUploader {
                 .map_err(|e| UploadError::message(e.to_string())),
             Err(ureq::Error::Status(code, resp)) => {
                 let text = resp.into_string().unwrap_or_default();
-                Err(UploadError::message(format!("upload HTTP {code}: {text}")))
+                Err(self.explain(code, &text))
             }
-            Err(e) => Err(UploadError::message(e.to_string())),
+            Err(e) => Err(could_not_reach(self.recipe.id(), host_of(url), e)),
         }
     }
 }

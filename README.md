@@ -8,13 +8,11 @@ This is the 0.3 Rust rewrite. It is **not** a drop-in for 0.2 (Go): no JSONC ext
 
 ## Install
 
-Download a **zip** from [Releases](https://github.com/pluveto/upgit/releases) (`v0.3.0-alpha.2` or newer). It contains the binary, `config.sample.toml`, and `recipes/`. Unzip, then:
+Download a **zip** from [Releases](https://github.com/pluveto/upgit/releases) (`v0.3.0-alpha.2` or newer). It contains `upgit`, `config.toml` (GitHub-only), and `recipes/`. Unzip, fill the GitHub fields in `config.toml`, then run `upgit logo.png`.
 
-```bash
-upgit init    # writes config.toml + recipes/ next to you
-```
+From source, `upgit init` writes that same GitHub `config.toml` and extracts `recipes/`. The full host catalog is [`config.sample.toml`](config.sample.toml) in this repo — it is **not** packed in the zip.
 
-Do not copy JSONC by hand. Fill secrets in `config.toml` and run `upgit logo.png`. GitHub is the usual path.
+Do not copy JSONC by hand. GitHub is the default.
 
 Or from source:
 
@@ -32,7 +30,7 @@ upgit init
 upgit logo.png
 ```
 
-`config.toml` (also `config.sample.toml`):
+`config.toml` (GitHub-only; other hosts live in [`config.sample.toml`](config.sample.toml)):
 
 ```toml
 default = "github"
@@ -69,7 +67,7 @@ First-class: `github`, `s3`, `aliyunoss`, `qcloudcos`, `upyun`, `qiniu`.
 
 HTTP recipes (table name = recipe id; no `type = "http"` needed): `smms`, `imgur`, `catbox`, `cloudinary`, `easyimage`, `lskypro`, `lskypro2`, `hello`, `niupic`, `imgurlorg`, `imgbb`, `chevereto`, `gitee`, `dalexni`, `imgtg`, `juejin`, `moetu`, `netease`, `sougou`, `upload_cc`.
 
-The release zip still contains `recipes/`. `upgit init` writes the sample config and extracts those recipes.
+The release zip contains `recipes/`. `upgit init` writes the GitHub `config.toml` and extracts those recipes. Copy a table from [`config.sample.toml`](config.sample.toml) to use another host.
 
 Gitee is in the sample for 0.2 parity. Do not use it as a public image host: they block repos used as 图床.
 

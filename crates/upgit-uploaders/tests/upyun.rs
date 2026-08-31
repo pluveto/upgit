@@ -29,3 +29,26 @@ fn authorization_matches_md5_sign_vector() {
     );
     assert_eq!(auth, "UpYun operator:27fd70f6f2779937aa9cf204048bc610");
 }
+
+#[test]
+fn explain_401_points_at_operator_credentials() {
+    let err = uploader().explain(401, "unauthorized");
+    let s = err.to_string();
+    assert!(s.contains("401"), "got {s}");
+    assert!(
+        s.contains("user_name") || s.contains("pass_word"),
+        "got {s}"
+    );
+    assert!(
+        !s.contains("unauthorized\n") && s.lines().count() <= 3,
+        "dumped body: {s}"
+    );
+}
+
+#[test]
+fn explain_404_mentions_bucket() {
+    let err = uploader().explain(404, r#"{"msg":"bucket not found","code":404}"#);
+    let s = err.to_string();
+    assert!(s.contains("not found") || s.contains("bucket"), "got {s}");
+    assert!(!s.contains(r#""code":404"#), "dumped JSON: {s}");
+}

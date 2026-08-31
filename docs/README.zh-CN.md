@@ -4,13 +4,11 @@
 
 ## 安装
 
-从 [Releases](https://github.com/pluveto/upgit/releases) 下载 **zip**（`v0.3.0-alpha.2` 起）。包内是二进制、`config.sample.toml` 和 `recipes/`。解压后：
+从 [Releases](https://github.com/pluveto/upgit/releases) 下载 **zip**（`v0.3.0-alpha.2` 起）。包内是 `upgit`、`config.toml`（仅 GitHub）和 `recipes/`。解压后在 `config.toml` 里填 GitHub 字段，然后 `upgit logo.png`。
 
-```bash
-upgit init    # 写出 config.toml 和 recipes/
-```
+从源码安装时，`upgit init` 会写出同一份 GitHub `config.toml` 并解出 `recipes/`。完整图床目录在仓库的 [`config.sample.toml`](../config.sample.toml)，**不会**打进 zip。中文说明见本文档；中文示例仍在仓库的 `config.sample.zh-CN.toml`。
 
-不要手拷 JSONC。在 `config.toml` 里填密钥，然后 `upgit logo.png`。默认走 GitHub。中文示例见仓库里的 `config.sample.zh-CN.toml`。
+不要手拷 JSONC。默认走 GitHub。
 
 或从源码：
 
@@ -65,7 +63,7 @@ public_base = "https://cdn.example.com/"
 
 HTTP 配方（表名即配方 id，不必写 `type = "http"`）：`smms`、`imgur`、`catbox`、`cloudinary`、`easyimage`、`lskypro`、`lskypro2`、`hello`、`niupic`、`imgurlorg`、`imgbb`、`chevereto`、`gitee`、`dalexni`、`imgtg`、`juejin`、`moetu`、`netease`、`sougou`、`upload_cc`。
 
-发布包里仍有 `recipes/`。`upgit init` 会写出示例配置并解出这些配方。
+发布包里仍有 `recipes/`。`upgit init` 会写出 GitHub 用的 `config.toml` 并解出这些配方。要用其他图床，从仓库的 [`config.sample.toml`](../config.sample.toml) 拷一段表即可。
 
 码云仍出现在示例配置里，以便对齐 0.2。不要用 Gitee 当公开图床，他们会拦截图床仓库。
 

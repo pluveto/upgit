@@ -148,8 +148,106 @@ pub(crate) fn collapse_slash_runs(url: &str) -> String {
     out
 }
 
-pub(crate) fn status_error(kind: &str, code: u16, body: &str) -> upgit_core::UploadError {
-    upgit_core::UploadError::message(format!("{kind} upload HTTP {code}: {body}"))
+/// Host part of an HTTP URL (or a bare host), without scheme, path, or trailing slash.
+pub(crate) fn host_of(url: &str) -> &str {
+    let rest = url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    let rest = rest.split_once('/').map(|(h, _)| h).unwrap_or(rest);
+    rest.trim_end_matches('/')
+}
+
+pub(crate) fn one_line(s: &str, max: usize) -> String {
+    let line = s.lines().next().unwrap_or("").trim();
+    let n = line.chars().count();
+    if n <= max {
+        line.to_string()
+    } else {
+        let mut out: String = line.chars().take(max).collect();
+        out.push('…');
+        out
+    }
+}
+
+/// First line of a JSON string field, truncated. Never returns the whole body.
+pub(crate) fn json_string_field(body: &str, field: &str) -> Option<String> {
+    let value: serde_json::Value = serde_json::from_str(body.trim()).ok()?;
+    value.get(field)?.as_str().map(|s| one_line(s, 120))
+}
+
+pub(crate) fn xml_error_summary(uploader: &str, status: u16, body: &str) -> String {
+    if let Some(code) = xml_text(body, "Code").filter(|s| !s.is_empty()) {
+        return format!(
+            "{uploader} upload failed (HTTP {status}): {}",
+            one_line(code, 80)
+        );
+    }
+    if let Some(msg) = xml_text(body, "Message").filter(|s| !s.is_empty()) {
+        return format!(
+            "{uploader} upload failed (HTTP {status}): {}",
+            one_line(msg, 120)
+        );
+    }
+    format!("{uploader} upload failed (HTTP {status}).")
+}
+
+pub(crate) fn xml_text<'a>(body: &'a str, tag: &str) -> Option<&'a str> {
+    let open = format!("<{tag}>");
+    let close = format!("</{tag}>");
+    let lower = body.to_ascii_lowercase();
+    let start = lower.find(&open.to_ascii_lowercase())? + open.len();
+    let end_rel = lower.get(start..)?.find(&close.to_ascii_lowercase())?;
+    Some(body.get(start..start + end_rel)?.trim())
+}
+
+pub(crate) fn looks_like_rate_limit(body: &str) -> bool {
+    let b = body.to_ascii_lowercase();
+    b.contains("rate limit") || b.contains("ratelimit") || b.contains("too many requests")
+}
+
+pub(crate) fn looks_like_signature_error(body: &str) -> bool {
+    let b = body.to_ascii_lowercase();
+    b.contains("signaturedoesnotmatch")
+        || b.contains("invalidaccesskey")
+        || b.contains("signature does not match")
+        || b.contains("invalid signature")
+        || b.contains("incorrect signature")
+        || b.contains("authorizationheader")
+}
+
+pub(crate) fn looks_like_missing_bucket(body: &str) -> bool {
+    let b = body.to_ascii_lowercase();
+    b.contains("nosuchbucket")
+        || b.contains("no such bucket")
+        || b.contains("the specified bucket does not exist")
+}
+
+fn transport_io(err: &ureq::Error) -> String {
+    match err {
+        ureq::Error::Status(code, _) => format!("HTTP {code}"),
+        ureq::Error::Transport(t) => {
+            let mut detail = t
+                .message()
+                .map(str::to_string)
+                .unwrap_or_else(|| t.kind().to_string());
+            let mut src = std::error::Error::source(t);
+            while let Some(s) = src {
+                detail = s.to_string();
+                src = s.source();
+            }
+            detail
+        }
+    }
+}
+
+pub(crate) fn could_not_reach(uploader: &str, host: &str, err: ureq::Error) -> UploadError {
+    UploadError::new(
+        uploader,
+        format!("could not reach {host}: {}", transport_io(&err)),
+        String::new(),
+        None,
+    )
 }
 
 #[cfg(test)]
@@ -169,5 +267,30 @@ mod tests {
         let t = UNIX_EPOCH + Duration::from_secs(1_369_353_600);
         assert_eq!(http_date_gmt(t), "Fri, 24 May 2013 00:00:00 GMT");
         assert_eq!(amz_date(t), "20130524T000000Z");
+    }
+
+    #[test]
+    fn host_of_strips_scheme_and_path() {
+        assert_eq!(
+            host_of("https://api.github.com/repos/a/b"),
+            "api.github.com"
+        );
+        assert_eq!(
+            host_of("s3.us-west-2.amazonaws.com"),
+            "s3.us-west-2.amazonaws.com"
+        );
+        assert_eq!(host_of("https://upload.qiniup.com"), "upload.qiniup.com");
+    }
+
+    #[test]
+    fn json_string_field_is_one_line_not_the_body() {
+        let body = r#"{"message":"Not Found","documentation_url":"https://docs.github.com/rest"}"#;
+        assert_eq!(
+            json_string_field(body, "message").as_deref(),
+            Some("Not Found")
+        );
+        assert!(json_string_field(body, "documentation_url")
+            .unwrap()
+            .starts_with("https://"));
     }
 }

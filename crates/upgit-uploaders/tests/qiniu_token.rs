@@ -84,3 +84,38 @@ fn qiniu_config_is_ak_sk_bucket_not_a_static_token() {
         region: Some("z0".into()),
     };
 }
+
+fn qiniu() -> QiniuUploader {
+    QiniuUploader::new(QiniuConfig {
+        access_key: "ak".into(),
+        secret_key: "sk".into(),
+        bucket: "test-bucket".into(),
+        public_base: "https://cdn.example.com/".into(),
+        region: None,
+    })
+}
+
+#[test]
+fn explain_401_does_not_dump_json() {
+    let err = qiniu().explain(401, r#"{"error":"bad token","request_id":"abc123"}"#);
+    let s = err.to_string();
+    assert!(s.contains("401"), "got {s}");
+    assert!(
+        s.contains("access_key") || s.contains("secret_key"),
+        "got {s}"
+    );
+    assert!(!s.contains("request_id"), "dumped JSON: {s}");
+    assert!(!s.contains("abc123"), "dumped JSON: {s}");
+}
+
+#[test]
+fn explain_missing_bucket_mentions_bucket() {
+    let err = qiniu().explain(400, r#"{"error":"no such bucket","error_code":631}"#);
+    let s = err.to_string();
+    assert!(s.contains("not found") || s.contains("bucket"), "got {s}");
+    assert!(
+        s.contains("test-bucket") || s.contains("[uploaders.qiniu]"),
+        "got {s}"
+    );
+    assert!(!s.contains("error_code"), "dumped JSON: {s}");
+}
