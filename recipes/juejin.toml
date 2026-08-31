@@ -1,0 +1,15 @@
+[meta]
+id = "juejin"
+
+[request]
+method = "POST"
+url = "https://cdn-ms.juejin.im/v1/upload?bucket=gold-user-assets"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+file = { type = "file" }
+
+[response]
+url = { from = "json", path = "success_image[0].url" }

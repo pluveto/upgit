@@ -1,0 +1,17 @@
+[meta]
+id = "gitee"
+
+[request]
+method = "POST"
+url = "https://gitee.com/api/v5/repos/{config.username}/{config.repo}/contents/{key}"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+message = { type = "string", value = "upload via upgit" }
+access_token = { type = "string", value = "{config.access_token}" }
+content = { type = "file_base64" }
+
+[response]
+url = { from = "json", path = "content.download_url" }

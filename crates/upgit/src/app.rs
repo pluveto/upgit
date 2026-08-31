@@ -43,7 +43,7 @@ impl App {
         let artifacts = intake.collect()?;
         let uploader = self.registry.get(&self.uploader_id).map_err(|err| {
             format!(
-                "{err} For Qiniu (no JSONC, no static token):\n[uploaders.qiniu]\naccess_key = \"...\"\nsecret_key = \"...\"\nbucket = \"...\"\npublic_base = \"https://your-cdn.example/\"\n"
+                "{err} For GitHub:\n[uploaders.github]\npat = \"...\"\nusername = \"...\"\nrepo = \"...\"\n\nFor Qiniu (no JSONC, no static token):\n[uploaders.qiniu]\naccess_key = \"...\"\nsecret_key = \"...\"\nbucket = \"...\"\npublic_base = \"https://your-cdn.example/\"\n"
             )
         })?;
         let now = SystemTime::now();

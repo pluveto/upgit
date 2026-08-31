@@ -1,10 +1,48 @@
 # Written by `upgit init`. Fill secrets; do not hand-write recipes.
-# HTTP hosts: uncomment a table named after a file in recipes/ (smms, imgur, …).
-# Qiniu is built-in (AK/SK, not a web upload token).
+# GitHub is the default. Qiniu is optional for a CN CDN.
+# HTTP hosts: a table named after a file in recipes/ needs no `type = "http"`.
+# First-class kinds (github, s3, aliyunoss, qcloudcos, upyun, qiniu) use their real fields.
+# `default_uploader` is an alias of `default`. `rename` is an alias of `naming`.
+# `prefix` is an alias of Qiniu `public_base`. `replacements` is an alias of `link`.
 
-default = "qiniu"
-naming = "{year}/{month}/{stem}_{unix}{ext}"
+default = "github"
+naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}_{hmac}{ext}"
 
+hmac_key = "YOUR_HMAC_KEY"
+hmac_format = "{year}_{month}_{day}_{unix}{ext}"
+hmac_len = 31
+
+# If GitHub raw is slow, try jsDelivr:
+# [link]
+# "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
+# "/master" = "@master"
+
+# Github. Repo must be public or raw URLs 404.
+# PAT with "repo" scope: https://github.com/settings/tokens
+[uploaders.github]
+pat = "ghp_YOUR_GITHUB_PAT"
+username = "username"
+repo = "repo-name"
+branch = "master"
+
+# SM.MS: https://sm.ms/home/apitoken
+[uploaders.smms]
+token = "YOUR_SMMS_TOKEN"
+
+# Imgur: https://api.imgur.com/oauth2/addclient
+[uploaders.imgur]
+client_id = "YOUR_IMGUR_CLIENT_ID"
+
+[uploaders.chevereto]
+key = "YOUR_CHEVERETO_KEY"
+upload_url = "https://chevereto.com/api/1/upload"
+
+[uploaders.qcloudcos]
+host = "xxx.cos.ap-chengdu.myqcloud.com"
+secret_id = "YOUR_COS_SECRET_ID"
+secret_key = "YOUR_COS_SECRET_KEY"
+
+# Qiniu: AK/SK mint a token on every put. Do not paste a web upload token.
 [uploaders.qiniu]
 access_key = "YOUR_ACCESS_KEY"
 secret_key = "YOUR_SECRET_KEY"
@@ -12,12 +50,63 @@ bucket = "YOUR_BUCKET"
 public_base = "https://cdn.example.com/"
 # region = "z0"
 
-# [uploaders.smms]
-# token = "YOUR_SMMS_TOKEN"
+# Gitee may block public image-bed repos. Still listed for 0.2 parity.
+[uploaders.gitee]
+username = "username"
+repo = "repo-name"
+access_token = "YOUR_GITEE_ACCESS_TOKEN"
 
-# [uploaders.imgur]
-# client_id = "YOUR_IMGUR_CLIENT_ID"
+[uploaders.cloudinary]
+cloud_name = "YOUR_CLOUD_NAME"
+upload_preset = "YOUR_UPLOAD_PRESET"
 
-# [uploaders.lskypro2]
-# host = "https://your-lsky.example"
-# token = "Bearer YOUR_TOKEN"
+[uploaders.easyimage]
+request_url = "https://img.example.com/api/index.php"
+token = "YOUR_EASYIMAGE_TOKEN"
+
+[uploaders.lskypro2]
+host = "https://your-lsky.example"
+token = "Bearer YOUR_TOKEN"
+
+[uploaders.s3]
+region = "us-west-2"
+bucket_name = "my-bucket"
+access_key = "YOUR_S3_ACCESS_KEY"
+secret_key = "YOUR_S3_SECRET_KEY"
+endpoint = "https://s3.us-west-2.amazonaws.com"
+url_format = "{endpoint}/{bucket}/{path}"
+
+[uploaders.aliyunoss]
+endpoint = "https://oss-cn-shanghai.aliyuncs.com"
+access_key_id = "YOUR_OSS_ACCESS_KEY_ID"
+access_key_secret = "YOUR_OSS_ACCESS_KEY_SECRET"
+bucket_name = "your-bucket-name"
+host = "https://cdn.example.com"
+
+[uploaders.upyun]
+host = "cdn.example.com"
+bucket_name = "YOUR_UPYUN_BUCKET"
+user_name = "YOUR_UPYUN_USER"
+pass_word = "YOUR_UPYUN_PASSWORD"
+
+[uploaders.catbox]
+userhash = "YOUR_CATBOX_USERHASH"
+
+[uploaders.hello]
+username = "YOUR_HELLO_USERNAME"
+password = "YOUR_HELLO_PASSWORD"
+
+[uploaders.niupic]
+
+[uploaders.imgurlorg]
+
+[uploaders.imgbb]
+key = "YOUR_IMGBB_KEY"
+
+[uploaders.lskypro]
+host = "https://your-lsky.example"
+token = "YOUR_LSKYPRO_TOKEN"
+
+# DALEXNI: https://dalexni.com/settings/api
+[uploaders.dalexni]
+key = "YOUR_DALEXNI_KEY"

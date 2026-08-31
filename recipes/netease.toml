@@ -1,0 +1,15 @@
+[meta]
+id = "netease"
+
+[request]
+method = "POST"
+url = "http://you.163.com/xhr/file/upload.json"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+file = { type = "file" }
+
+[response]
+url = { from = "json", path = "success_image[0].url" }

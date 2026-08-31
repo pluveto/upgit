@@ -7,8 +7,13 @@ use thiserror::Error;
 use upgit_core::Registry;
 
 use crate::catalog::RecipeCatalog;
+use crate::cos::{CosConfig, CosUploader};
+use crate::github::{GithubConfig, GithubUploader};
+use crate::oss::{OssConfig, OssUploader};
 use crate::qiniu::{QiniuConfig, QiniuUploader};
 use crate::recipe::{HttpRecipe, HttpRecipeUploader, RecipeError};
+use crate::s3::{S3Config, S3Uploader};
+use crate::upyun::{UpyunConfig, UpyunUploader};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -22,7 +27,7 @@ pub enum InstallError {
     MissingField { id: String, field: String },
     #[error("uploader `{id}` still has a static Qiniu upload token, which expires. Set access_key, secret_key, bucket, and public_base (alias: prefix) instead. Run `upgit init` for a sample. Do not use an extensions/*.jsonc file.")]
     ExpiredQiniuToken { id: String },
-    #[error("unknown uploader type `{kind}` for `{id}` (qiniu is built-in: access_key, secret_key, bucket, public_base; HTTP hosts use type = \"http\"). There is no extensions/ directory.")]
+    #[error("unknown uploader type `{kind}` for `{id}` (github is built-in: pat, username, repo; qiniu is built-in: access_key, secret_key, bucket, public_base; HTTP hosts use type = \"http\"). There is no extensions/ directory.")]
     UnknownKind { id: String, kind: String },
     #[error("unknown http recipe `{recipe}` for `{id}`")]
     UnknownRecipe { id: String, recipe: String },
@@ -113,6 +118,26 @@ impl AppConfig {
     pub fn install_into(&self, registry: &mut Registry) -> Result<(), InstallError> {
         for (id, profile) in &self.uploaders {
             match resolved_kind(id, profile)?.as_str() {
+                "github" => {
+                    let uploader = github_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                "s3" => {
+                    let uploader = s3_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                "aliyunoss" => {
+                    let uploader = oss_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                "qcloudcos" => {
+                    let uploader = cos_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                "upyun" => {
+                    let uploader = upyun_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
                 "qiniu" => {
                     let uploader = qiniu_from_profile(id, profile)?;
                     registry.register(id.clone(), Box::new(uploader));
@@ -138,11 +163,39 @@ fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallE
     if !kind.is_empty() {
         return Ok(kind.to_string());
     }
-    let qiniu_keys = optional_string(profile, "access_key").is_some()
-        && optional_string(profile, "secret_key").is_some()
-        && optional_string(profile, "bucket").is_some();
+    let github_keys =
+        has_field(profile, "pat") && has_field(profile, "username") && has_field(profile, "repo");
+    if id == "github" || github_keys {
+        return Ok("github".to_string());
+    }
+    // Qiniu uses `bucket` (not bucket_name) and has no endpoint. Check before S3.
+    let qiniu_keys = has_field(profile, "access_key")
+        && has_field(profile, "secret_key")
+        && has_field(profile, "bucket");
     if id == "qiniu" || qiniu_keys {
         return Ok("qiniu".to_string());
+    }
+    let s3_keys = has_field(profile, "bucket_name")
+        && has_field(profile, "endpoint")
+        && has_field(profile, "region");
+    if id == "s3" || s3_keys {
+        return Ok("s3".to_string());
+    }
+    let oss_keys = has_field(profile, "access_key_id")
+        && has_field(profile, "bucket_name")
+        && has_field(profile, "endpoint");
+    if id == "aliyunoss" || oss_keys {
+        return Ok("aliyunoss".to_string());
+    }
+    let cos_host = optional_string(profile, "host").unwrap_or_default();
+    if id == "qcloudcos" || (has_field(profile, "secret_id") && cos_host.contains("cos")) {
+        return Ok("qcloudcos".to_string());
+    }
+    let upyun_keys = has_field(profile, "user_name")
+        && has_field(profile, "pass_word")
+        && has_field(profile, "bucket_name");
+    if id == "upyun" || upyun_keys {
+        return Ok("upyun".to_string());
     }
     if profile.recipe.is_some()
         || RecipeCatalog::contains(id)
@@ -154,6 +207,74 @@ fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallE
         id: id.to_string(),
         kind: String::new(),
     })
+}
+
+fn has_field(profile: &UploaderProfile, field: &str) -> bool {
+    optional_string(profile, field).is_some()
+}
+
+fn github_from_profile(
+    id: &str,
+    profile: &UploaderProfile,
+) -> Result<GithubUploader, InstallError> {
+    Ok(GithubUploader::new(GithubConfig {
+        pat: require_string(id, profile, "pat")?,
+        username: require_string(id, profile, "username")?,
+        repo: require_string(id, profile, "repo")?,
+        branch: optional_string(profile, "branch").unwrap_or_default(),
+    }))
+}
+
+fn s3_from_profile(id: &str, profile: &UploaderProfile) -> Result<S3Uploader, InstallError> {
+    Ok(S3Uploader::new(S3Config {
+        region: require_string(id, profile, "region")?,
+        bucket_name: require_string(id, profile, "bucket_name")?,
+        access_key: require_string(id, profile, "access_key")?,
+        secret_key: require_string(id, profile, "secret_key")?,
+        endpoint: require_string(id, profile, "endpoint")?,
+        url_format: optional_string(profile, "url_format").unwrap_or_default(),
+    }))
+}
+
+fn oss_from_profile(id: &str, profile: &UploaderProfile) -> Result<OssUploader, InstallError> {
+    Ok(OssUploader::new(OssConfig {
+        endpoint: require_string(id, profile, "endpoint")?,
+        access_key_id: require_string(id, profile, "access_key_id")?,
+        access_key_secret: require_string(id, profile, "access_key_secret")?,
+        bucket_name: require_string(id, profile, "bucket_name")?,
+        host: require_string(id, profile, "host")?,
+    }))
+}
+
+fn cos_from_profile(id: &str, profile: &UploaderProfile) -> Result<CosUploader, InstallError> {
+    Ok(CosUploader::new(CosConfig {
+        host: require_string(id, profile, "host")?,
+        secret_id: require_string(id, profile, "secret_id")?,
+        secret_key: require_string(id, profile, "secret_key")?,
+    }))
+}
+
+fn upyun_from_profile(id: &str, profile: &UploaderProfile) -> Result<UpyunUploader, InstallError> {
+    let user_name = optional_string(profile, "user_name")
+        .or_else(|| optional_string(profile, "username"))
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| InstallError::MissingField {
+            id: id.to_string(),
+            field: "user_name".to_string(),
+        })?;
+    let pass_word = optional_string(profile, "pass_word")
+        .or_else(|| optional_string(profile, "password"))
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| InstallError::MissingField {
+            id: id.to_string(),
+            field: "pass_word".to_string(),
+        })?;
+    Ok(UpyunUploader::new(UpyunConfig {
+        host: require_string(id, profile, "host")?,
+        bucket_name: require_string(id, profile, "bucket_name")?,
+        user_name,
+        pass_word,
+    }))
 }
 
 fn qiniu_from_profile(id: &str, profile: &UploaderProfile) -> Result<QiniuUploader, InstallError> {
