@@ -32,6 +32,9 @@ pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
         RecipeCatalog::ids().count(),
         extracted
     );
-    println!("Fill [uploaders.qiniu] AK/SK (not a web upload token) and run: upgit FILE");
+    println!(
+        "GitHub is the default. Fill [uploaders.github] pat/username/repo/branch and run: upgit FILE"
+    );
+    println!("Qiniu is optional for CN CDN: fill AK/SK (not a web upload token).");
     Ok(())
 }

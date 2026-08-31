@@ -1,10 +1,49 @@
 # 由 `upgit init` 生成。只填密钥，不要手写配方。
-# HTTP 图床：取消注释 recipes/ 里同名的表（smms、imgur…）。
-# 七牛是内置的（AK/SK，不要填网页上的短时 token）。
+# 默认是 GitHub。七牛可选，适合国内 CDN。
+# HTTP 图床：表名与 recipes/ 里的文件名相同即可，不必写 `type = "http"`。
+# 内置类型（github、s3、aliyunoss、qcloudcos、upyun、qiniu）填写各自的真实字段。
+# `default_uploader` 是 `default` 的别名。`rename` 是 `naming` 的别名。
+# 七牛的 `prefix` 等价于 `public_base`。`replacements` 等价于 `link`。
 
-default = "qiniu"
-naming = "{year}/{month}/{stem}_{unix}{ext}"
+default = "github"
+naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}_{hmac}{ext}"
 
+hmac_key = "你的 HMAC 密钥"
+hmac_format = "{year}_{month}_{day}_{unix}{ext}"
+hmac_len = 31
+
+# 访问 GitHub raw 缓慢时可走 jsDelivr：
+# [link]
+# "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
+# "/master" = "@master"
+
+# Github。仓库必须公开，否则直链会 404。
+# 需要 repo 权限的 PAT：https://github.com/settings/tokens
+[uploaders.github]
+pat = "ghp_你的_GITHUB_PAT"
+username = "用户名"
+repo = "仓库名"
+branch = "master"
+
+# SM.MS：https://sm.ms/home/apitoken
+[uploaders.smms]
+token = "你的 SMMS token"
+
+# Imgur：https://api.imgur.com/oauth2/addclient
+[uploaders.imgur]
+client_id = "你的 Imgur client id"
+
+[uploaders.chevereto]
+key = "你的 Chevereto key"
+upload_url = "https://chevereto.com/api/1/upload"
+
+# 腾讯云 COS
+[uploaders.qcloudcos]
+host = "xxx.cos.ap-chengdu.myqcloud.com"
+secret_id = "你的 COS SecretId"
+secret_key = "你的 COS SecretKey"
+
+# 七牛：每次上传用 AK/SK 现场签发 token，不要填网页上的短时 token。
 [uploaders.qiniu]
 access_key = "你的 AccessKey"
 secret_key = "你的 SecretKey"
@@ -12,12 +51,65 @@ bucket = "你的空间名"
 public_base = "https://cdn.example.com/"
 # region = "z0"
 
-# [uploaders.smms]
-# token = "你的 SMMS token"
+# 码云可能会拦截「当图床用」的公开仓库。为与 0.2 对齐仍列出。
+[uploaders.gitee]
+username = "用户名"
+repo = "仓库名"
+access_token = "你的 Gitee access_token"
 
-# [uploaders.imgur]
-# client_id = "你的 Imgur client id"
+[uploaders.cloudinary]
+cloud_name = "你的 cloud_name"
+upload_preset = "你的 upload_preset"
 
-# [uploaders.lskypro2]
-# host = "https://your-lsky.example"
-# token = "Bearer 你的 token"
+[uploaders.easyimage]
+request_url = "https://img.example.com/api/index.php"
+token = "你的 EasyImage token"
+
+[uploaders.lskypro2]
+host = "https://your-lsky.example"
+token = "Bearer 你的 token"
+
+[uploaders.s3]
+region = "us-west-2"
+bucket_name = "my-bucket"
+access_key = "你的 S3 AccessKey"
+secret_key = "你的 S3 SecretKey"
+endpoint = "https://s3.us-west-2.amazonaws.com"
+url_format = "{endpoint}/{bucket}/{path}"
+
+# 阿里云 OSS
+[uploaders.aliyunoss]
+endpoint = "https://oss-cn-shanghai.aliyuncs.com"
+access_key_id = "你的 OSS AccessKeyId"
+access_key_secret = "你的 OSS AccessKeySecret"
+bucket_name = "你的 Bucket"
+host = "https://cdn.example.com"
+
+# 又拍云
+[uploaders.upyun]
+host = "cdn.example.com"
+bucket_name = "你的又拍云空间"
+user_name = "你的又拍云用户名"
+pass_word = "你的又拍云密码"
+
+[uploaders.catbox]
+userhash = "你的 Catbox userhash"
+
+[uploaders.hello]
+username = "你的 Hello 用户名"
+password = "你的 Hello 密码"
+
+[uploaders.niupic]
+
+[uploaders.imgurlorg]
+
+[uploaders.imgbb]
+key = "你的 ImgBB key"
+
+[uploaders.lskypro]
+host = "https://your-lsky.example"
+token = "你的 LskyPro token"
+
+# DALEXNI：https://dalexni.com/settings/api
+[uploaders.dalexni]
+key = "你的 DALEXNI key"

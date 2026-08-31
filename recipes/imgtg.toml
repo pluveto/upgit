@@ -1,0 +1,20 @@
+[meta]
+id = "imgtg"
+
+[request]
+method = "POST"
+url = "https://img.tg/json"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+auth_token = { type = "string", value = "{config.auth_token}" }
+type = { type = "string", value = "file" }
+action = { type = "string", value = "upload" }
+timestamp = { type = "string", value = "{config.timestamp}" }
+nsfw = { type = "string", value = "0" }
+source = { type = "file" }
+
+[response]
+url = { from = "json", path = "success_image[0].url" }

@@ -1,0 +1,15 @@
+[meta]
+id = "upload_cc"
+
+[request]
+method = "POST"
+url = "https://upload.cc/image_upload"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+"uploaded_file[]" = { type = "file" }
+
+[response]
+url = { from = "json", path = "success_image[0].url" }

@@ -1,0 +1,15 @@
+[meta]
+id = "sougou"
+
+[request]
+method = "POST"
+url = "http://pic.sogou.com/pic/upload_pic.jsp"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+pic_path = { type = "file" }
+
+[response]
+url = { from = "json", path = "success_image[0].url" }

@@ -1,0 +1,20 @@
+[meta]
+id = "dalexni"
+
+[request]
+method = "POST"
+url = "https://dalexni.com/api/1/upload"
+
+[request.params]
+key = "{config.key}"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+key = { type = "string", value = "{config.key}" }
+image = { type = "file_base64" }
+format = { type = "string", value = "json" }
+
+[response]
+url = { from = "json", path = "data.url" }

@@ -23,6 +23,14 @@ impl RecipeCatalog {
             ("imgurlorg", include_str!("../../../recipes/imgurlorg.toml")),
             ("imgbb", include_str!("../../../recipes/imgbb.toml")),
             ("chevereto", include_str!("../../../recipes/chevereto.toml")),
+            ("gitee", include_str!("../../../recipes/gitee.toml")),
+            ("dalexni", include_str!("../../../recipes/dalexni.toml")),
+            ("imgtg", include_str!("../../../recipes/imgtg.toml")),
+            ("juejin", include_str!("../../../recipes/juejin.toml")),
+            ("moetu", include_str!("../../../recipes/moetu.toml")),
+            ("netease", include_str!("../../../recipes/netease.toml")),
+            ("sougou", include_str!("../../../recipes/sougou.toml")),
+            ("upload_cc", include_str!("../../../recipes/upload_cc.toml")),
         ]
     }
 
