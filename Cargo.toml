@@ -1,3 +1,17 @@
 [workspace]
 resolver = "2"
 members = ["crates/upgit-core", "crates/upgit-uploaders", "crates/upgit"]
+
+[workspace.package]
+version = "0.3.0-alpha.1"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/pluveto/upgit"
+homepage = "https://github.com/pluveto/upgit"
+description = "Upload local files or clipboard images and get a public URL."
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
