@@ -9,6 +9,33 @@ use std::time::Duration;
 use upgit_core::{Artifact, ObjectKey, Uploader};
 use upgit_uploaders::recipe::{HttpRecipe, HttpRecipeUploader};
 
+fn read_http_request(stream: &mut std::net::TcpStream) -> Vec<u8> {
+    let mut buf = Vec::new();
+    let mut tmp = [0u8; 4096];
+    loop {
+        match stream.read(&mut tmp) {
+            Ok(0) => break,
+            Ok(n) => buf.extend_from_slice(&tmp[..n]),
+            Err(_) => break,
+        }
+        let Some(header_end) = buf.windows(4).position(|w| w == b"\r\n\r\n") else {
+            continue;
+        };
+        let headers = String::from_utf8_lossy(&buf[..header_end]);
+        let content_len = headers
+            .lines()
+            .find(|line| line.to_ascii_lowercase().starts_with("content-length:"))
+            .and_then(|line| line.split(':').nth(1))
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .unwrap_or(0);
+        let body_start = header_end + 4;
+        if buf.len() >= body_start + content_len {
+            break;
+        }
+    }
+    buf
+}
+
 fn serve_one_json(json: &'static str) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     listener.set_nonblocking(false).expect("blocking listener");
@@ -16,21 +43,7 @@ fn serve_one_json(json: &'static str) -> (String, thread::JoinHandle<()>) {
     let handle = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept");
         stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
-        let mut buf = Vec::new();
-        let mut tmp = [0u8; 4096];
-        // Read at least headers; small multipart bodies fit in a few reads.
-        for _ in 0..16 {
-            match stream.read(&mut tmp) {
-                Ok(0) => break,
-                Ok(n) => {
-                    buf.extend_from_slice(&tmp[..n]);
-                    if buf.windows(4).any(|w| w == b"\r\n\r\n") {
-                        break;
-                    }
-                }
-                Err(_) => break,
-            }
-        }
+        let buf = read_http_request(&mut stream);
         let req = String::from_utf8_lossy(&buf);
         assert!(
             req.starts_with("POST "),
