@@ -1,0 +1,16 @@
+[meta]
+id = "imgur"
+
+[request]
+method = "POST"
+url = "https://api.imgur.com/3/upload"
+
+[request.headers]
+Authorization = "Client-ID {config.client_id}"
+User-Agent = "upgit"
+
+[request.body]
+image = { type = "file" }
+
+[response]
+url = { from = "json", path = "data.link" }

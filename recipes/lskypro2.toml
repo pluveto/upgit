@@ -1,0 +1,17 @@
+[meta]
+id = "lskypro2"
+
+[request]
+method = "POST"
+url = "{config.host}/api/v1/upload"
+
+[request.headers]
+Authorization = "{config.token}"
+User-Agent = "upgit"
+
+[request.body]
+token = { type = "string", value = "{config.token}" }
+file = { type = "file" }
+
+[response]
+url = { from = "json", path = "data.links.url" }

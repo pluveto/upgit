@@ -4,7 +4,13 @@
 
 ## 安装
 
-从 [Releases](https://github.com/pluveto/upgit/releases) 下载（`v0.3.0-alpha.1` 起），改名为 `upgit`，放到 `PATH`。
+从 [Releases](https://github.com/pluveto/upgit/releases) 下载 **zip**（`v0.3.0-alpha.2` 起）。包内是二进制、`config.sample.toml` 和 `recipes/`。解压后：
+
+```bash
+upgit init    # 写出 config.toml 和 recipes/
+```
+
+不要手拷 JSONC。在 `config.toml` 里填密钥，然后 `upgit logo.png`。
 
 或从源码：
 

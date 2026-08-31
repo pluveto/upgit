@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/upgit-core", "crates/upgit-uploaders", "crates/upgit"]
 
 [workspace.package]
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/pluveto/upgit"

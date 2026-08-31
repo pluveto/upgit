@@ -1,0 +1,16 @@
+[meta]
+id = "easyimage"
+
+[request]
+method = "POST"
+url = "{config.request_url}"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+token = { type = "string", value = "{config.token}" }
+image = { type = "file" }
+
+[response]
+url = { from = "json", path = "url" }

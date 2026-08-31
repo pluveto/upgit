@@ -83,6 +83,26 @@ url = { from = "template", template = "{config.public_base}{key}" }
 }
 
 #[test]
+fn text_response_is_the_locator() {
+    let recipe = HttpRecipe::from_toml(
+        r#"
+[meta]
+id = "catbox"
+[request]
+method = "POST"
+url = "https://example.invalid/"
+[response]
+url = { from = "text" }
+"#,
+    )
+    .expect("parse");
+    let locator = recipe
+        .extract_locator(b"https://files.catbox.moe/abc.png\n", &RecipeContext::new())
+        .expect("url");
+    assert_eq!(locator.as_str(), "https://files.catbox.moe/abc.png");
+}
+
+#[test]
 fn header_placeholder_is_plain_string_interpolation() {
     let recipe = smms_recipe();
     let mut ctx = RecipeContext::new();

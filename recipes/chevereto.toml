@@ -1,0 +1,20 @@
+[meta]
+id = "chevereto"
+
+[request]
+method = "POST"
+url = "{config.upload_url}"
+
+[request.params]
+key = "{config.key}"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+key = { type = "string", value = "{config.key}" }
+source = { type = "file_base64" }
+format = { type = "string", value = "json" }
+
+[response]
+url = { from = "json", path = "image.url" }
