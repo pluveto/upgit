@@ -41,7 +41,11 @@ impl App {
     pub fn run(&self, cli: &Cli) -> Result<(), Box<dyn Error>> {
         let mut intake = Intake::from_cli(cli)?;
         let artifacts = intake.collect()?;
-        let uploader = self.registry.get(&self.uploader_id)?;
+        let uploader = self.registry.get(&self.uploader_id).map_err(|err| {
+            format!(
+                "{err} For Qiniu (no JSONC, no static token):\n[uploaders.qiniu]\naccess_key = \"...\"\nsecret_key = \"...\"\nbucket = \"...\"\npublic_base = \"https://your-cdn.example/\"\n"
+            )
+        })?;
         let now = SystemTime::now();
         let mut urls = Vec::new();
         for artifact in &artifacts {

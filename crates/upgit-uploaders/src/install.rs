@@ -56,7 +56,9 @@ pub enum ConfigError {
 pub enum InstallError {
     #[error("uploader `{id}` is missing required field `{field}`")]
     MissingField { id: String, field: String },
-    #[error("unknown uploader type `{kind}` for `{id}`")]
+    #[error("uploader `{id}` still has a static Qiniu upload token, which expires. Set access_key, secret_key, bucket, and public_base (alias: prefix) instead. Run `upgit init` for a sample. Do not use an extensions/*.jsonc file.")]
+    ExpiredQiniuToken { id: String },
+    #[error("unknown uploader type `{kind}` for `{id}` (qiniu is built-in: access_key, secret_key, bucket, public_base; HTTP hosts use type = \"http\"). There is no extensions/ directory.")]
     UnknownKind { id: String, kind: String },
     #[error("unknown http recipe `{recipe}` for `{id}`")]
     UnknownRecipe { id: String, recipe: String },
@@ -72,9 +74,9 @@ pub enum InstallError {
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AppConfig {
-    #[serde(default)]
+    #[serde(default, alias = "default_uploader")]
     pub default: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "rename")]
     pub naming: Option<String>,
     #[serde(default)]
     pub hmac_key: Option<String>,
@@ -82,7 +84,7 @@ pub struct AppConfig {
     pub hmac_format: Option<String>,
     #[serde(default)]
     pub hmac_len: Option<usize>,
-    #[serde(default)]
+    #[serde(default, alias = "replacements")]
     pub link: IndexMap<String, String>,
     #[serde(default)]
     pub uploaders: IndexMap<String, UploaderProfile>,
@@ -90,7 +92,7 @@ pub struct AppConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct UploaderProfile {
-    #[serde(rename = "type")]
+    #[serde(rename = "type", default)]
     pub kind: String,
     #[serde(default)]
     pub recipe: Option<RecipeSpec>,
@@ -146,7 +148,7 @@ impl AppConfig {
     /// This config object fills a registry with uploader objects.
     pub fn install_into(&self, registry: &mut Registry) -> Result<(), InstallError> {
         for (id, profile) in &self.uploaders {
-            match profile.kind.as_str() {
+            match resolved_kind(id, profile)?.as_str() {
                 "qiniu" => {
                     let uploader = qiniu_from_profile(id, profile)?;
                     registry.register(id.clone(), Box::new(uploader));
@@ -167,12 +169,44 @@ impl AppConfig {
     }
 }
 
+fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallError> {
+    let kind = profile.kind.trim();
+    if !kind.is_empty() {
+        return Ok(kind.to_string());
+    }
+    let qiniu_keys = optional_string(profile, "access_key").is_some()
+        && optional_string(profile, "secret_key").is_some()
+        && optional_string(profile, "bucket").is_some();
+    if id == "qiniu" || qiniu_keys {
+        return Ok("qiniu".to_string());
+    }
+    if profile.recipe.is_some() || optional_string(profile, "token").is_some() {
+        return Ok("http".to_string());
+    }
+    Err(InstallError::UnknownKind {
+        id: id.to_string(),
+        kind: String::new(),
+    })
+}
+
 fn qiniu_from_profile(id: &str, profile: &UploaderProfile) -> Result<QiniuUploader, InstallError> {
+    let has_ak = optional_string(profile, "access_key").is_some();
+    let has_token = optional_string(profile, "token").is_some();
+    if has_token && !has_ak {
+        return Err(InstallError::ExpiredQiniuToken { id: id.to_string() });
+    }
+    let public_base = optional_string(profile, "public_base")
+        .or_else(|| optional_string(profile, "prefix"))
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| InstallError::MissingField {
+            id: id.to_string(),
+            field: "public_base".to_string(),
+        })?;
     Ok(QiniuUploader::new(QiniuConfig {
         access_key: require_string(id, profile, "access_key")?,
         secret_key: require_string(id, profile, "secret_key")?,
         bucket: require_string(id, profile, "bucket")?,
-        public_base: require_string(id, profile, "public_base")?,
+        public_base,
         region: optional_string(profile, "region"),
     }))
 }

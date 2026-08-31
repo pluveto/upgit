@@ -32,3 +32,16 @@ fn unknown_id_lists_known_uploaders() {
     assert!(msg.contains("qiniu"), "got {msg}");
     assert!(msg.contains("smms"), "got {msg}");
 }
+
+#[test]
+fn empty_registry_does_not_look_like_a_missing_upload_file() {
+    let registry = Registry::new();
+    let err = registry.get("qiniu").expect_err("unknown");
+    let msg = err.to_string();
+    assert!(msg.contains("qiniu"), "got {msg}");
+    assert!(
+        msg.contains("config") || msg.contains("uploaders") || msg.contains("init"),
+        "got {msg}"
+    );
+    assert!(!msg.to_lowercase().contains("no such file"), "got {msg}");
+}

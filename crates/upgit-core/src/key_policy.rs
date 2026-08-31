@@ -147,7 +147,9 @@ impl<'a> Fields<'a> {
             .replace("{month}", &self.month)
             .replace("{day}", &self.day)
             .replace("{unix}", &self.unix)
+            .replace("{unix_ts}", &self.unix)
             .replace("{stem}", self.stem)
+            .replace("{fname}", self.stem)
             .replace("{ext}", self.ext);
         if let Some(hmac) = hmac {
             out = out.replace("{hmac}", hmac);
