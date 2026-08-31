@@ -1,0 +1,16 @@
+[package]
+name = "upgit"
+version = "0.1.0"
+edition = "2021"
+description = "Upload local files or clipboard images and print a public URL."
+
+[dependencies]
+arboard = "3"
+clap = { version = "4", features = ["derive"] }
+png = "0.17"
+tempfile = "3"
+upgit-core = { path = "../upgit-core" }
+upgit-uploaders = { path = "../upgit-uploaders" }
+
+[dev-dependencies]
+clap = { version = "4", features = ["derive"] }

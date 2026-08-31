@@ -1,0 +1,10 @@
+[package]
+name = "upgit-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+hmac = "0.12"
+sha2 = "0.10"
+thiserror = "2"
