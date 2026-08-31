@@ -30,6 +30,19 @@ struct HmacSpec {
     len: Option<usize>,
 }
 
+impl HmacSpec {
+    fn digest(&self, material: &str) -> Result<String, KeyPolicyError> {
+        let mut mac = HmacSha256::new_from_slice(self.key.as_bytes())
+            .map_err(|_| KeyPolicyError::InvalidHmacKey)?;
+        mac.update(material.as_bytes());
+        let mut hex = hex_lower(&mac.finalize().into_bytes());
+        if let Some(n) = self.len {
+            hex.truncate(n.min(hex.len()));
+        }
+        Ok(hex)
+    }
+}
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum KeyPolicyError {
     #[error("rename template is empty")]
@@ -91,7 +104,7 @@ impl KeyPolicy {
                 let hmac = match &self.hmac {
                     Some(spec) => {
                         let material = fields.interpolate(&spec.format, None);
-                        Some(hmac_sha256_hex(&spec.key, &material, spec.len)?)
+                        Some(spec.digest(&material)?)
                     }
                     None => None,
                 };
@@ -141,17 +154,6 @@ impl<'a> Fields<'a> {
         }
         out
     }
-}
-
-fn hmac_sha256_hex(key: &str, data: &str, len: Option<usize>) -> Result<String, KeyPolicyError> {
-    let mut mac =
-        HmacSha256::new_from_slice(key.as_bytes()).map_err(|_| KeyPolicyError::InvalidHmacKey)?;
-    mac.update(data.as_bytes());
-    let mut hex = hex_lower(&mac.finalize().into_bytes());
-    if let Some(n) = len {
-        hex.truncate(n.min(hex.len()));
-    }
-    Ok(hex)
 }
 
 fn hex_lower(bytes: &[u8]) -> String {

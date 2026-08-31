@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use crate::publish::Uploader;
+use crate::uploader::Uploader;
 
 /// Runtime lookup of uploaders by id. The binary must not `match` on id.
 #[derive(Default)]

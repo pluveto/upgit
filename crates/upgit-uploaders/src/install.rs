@@ -109,32 +109,62 @@ impl AppConfig {
     pub fn from_toml(s: &str) -> Result<Self, ConfigError> {
         Ok(toml::from_str(s)?)
     }
-}
 
-/// Build uploaders from config profiles. Kind dispatch lives here, not in the binary.
-pub fn install(
-    registry: &mut Registry,
-    profiles: impl IntoIterator<Item = (String, UploaderProfile)>,
-) -> Result<(), InstallError> {
-    for (id, profile) in profiles {
-        match profile.kind.as_str() {
-            "qiniu" => {
-                let uploader = qiniu_from_profile(&id, &profile)?;
-                registry.register(id, Box::new(uploader));
-            }
-            "http" => {
-                let uploader = http_from_profile(&id, &profile)?;
-                registry.register(id, Box::new(uploader));
-            }
-            kind => {
-                return Err(InstallError::UnknownKind {
-                    id,
-                    kind: kind.to_string(),
-                });
-            }
+    pub fn default_uploader(&self) -> Option<&str> {
+        self.default.as_deref().filter(|id| !id.is_empty())
+    }
+
+    pub fn namer(&self) -> upgit_core::KeyPolicy {
+        use upgit_core::KeyPolicy;
+        const DEFAULT_NAMING: &str = "{year}/{month}/{stem}_{unix}{ext}";
+        let template = self
+            .naming
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or(DEFAULT_NAMING);
+        let policy = KeyPolicy::template(template);
+        match self.hmac_key.as_deref().filter(|s| !s.is_empty()) {
+            Some(key) => policy.with_hmac(
+                key,
+                self.hmac_format
+                    .as_deref()
+                    .unwrap_or("{year}_{month}_{day}_{unix}{ext}"),
+                self.hmac_len,
+            ),
+            None => policy,
         }
     }
-    Ok(())
+
+    pub fn linker(&self) -> upgit_core::LinkPolicy {
+        upgit_core::LinkPolicy::from_pairs(
+            self.link
+                .iter()
+                .map(|(from, to)| (from.clone(), to.clone())),
+        )
+    }
+
+    /// This config object fills a registry with uploader objects.
+    pub fn install_into(&self, registry: &mut Registry) -> Result<(), InstallError> {
+        for (id, profile) in &self.uploaders {
+            match profile.kind.as_str() {
+                "qiniu" => {
+                    let uploader = qiniu_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                "http" => {
+                    let uploader = http_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
+                kind => {
+                    return Err(InstallError::UnknownKind {
+                        id: id.clone(),
+                        kind: kind.to_string(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 fn qiniu_from_profile(id: &str, profile: &UploaderProfile) -> Result<QiniuUploader, InstallError> {

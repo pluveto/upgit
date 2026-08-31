@@ -4,7 +4,7 @@
 use std::time::{Duration, UNIX_EPOCH};
 
 use upgit_core::ObjectKey;
-use upgit_uploaders::qiniu::{mint_upload_token, QiniuConfig, QiniuUploader};
+use upgit_uploaders::qiniu::{QiniuConfig, QiniuUploader};
 
 const DEADLINE: u64 = 1_643_630_400;
 
@@ -13,7 +13,7 @@ const EXPECTED_TOKEN: &str = "test_ak:92T_VYZYdbzmcAItdA_Xlgh8MVc=:eyJzY29wZSI6I
 
 #[test]
 fn mint_token_matches_independent_vector() {
-    let token = mint_upload_token(
+    let token = QiniuUploader::mint_token(
         "test_ak",
         "test_sk",
         "test-bucket",
@@ -24,13 +24,13 @@ fn mint_token_matches_independent_vector() {
 
 #[test]
 fn different_secret_changes_the_signature() {
-    let a = mint_upload_token(
+    let a = QiniuUploader::mint_token(
         "test_ak",
         "test_sk",
         "test-bucket",
         UNIX_EPOCH + Duration::from_secs(DEADLINE),
     );
-    let b = mint_upload_token(
+    let b = QiniuUploader::mint_token(
         "test_ak",
         "other_sk",
         "test-bucket",
