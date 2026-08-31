@@ -34,7 +34,7 @@ pub struct Cli {
 }
 
 /// Destination for the public URL after upload.
-#[derive(Clone, Debug, Default, PartialEq, Eq, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
 pub enum Output {
     #[default]
     Stdout,

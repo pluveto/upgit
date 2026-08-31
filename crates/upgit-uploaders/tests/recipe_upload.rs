@@ -11,15 +11,11 @@ use upgit_uploaders::recipe::{HttpRecipe, HttpRecipeUploader};
 
 fn serve_one_json(json: &'static str) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
-    listener
-        .set_nonblocking(false)
-        .expect("blocking listener");
+    listener.set_nonblocking(false).expect("blocking listener");
     let addr = listener.local_addr().expect("addr");
     let handle = thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept");
-        stream
-            .set_read_timeout(Some(Duration::from_secs(2)))
-            .ok();
+        stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
         let mut buf = Vec::new();
         let mut tmp = [0u8; 4096];
         // Read at least headers; small multipart bodies fit in a few reads.

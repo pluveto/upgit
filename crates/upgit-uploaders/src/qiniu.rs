@@ -18,28 +18,6 @@ struct UploadPolicy<'a> {
     deadline: u64,
 }
 
-pub fn mint_upload_token(
-    access_key: &str,
-    secret_key: &str,
-    bucket: &str,
-    deadline: SystemTime,
-) -> String {
-    let unix = deadline
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let json = serde_json::to_string(&UploadPolicy {
-        scope: bucket,
-        deadline: unix,
-    })
-    .expect("policy json");
-    let encoded_policy = URL_SAFE.encode(json.as_bytes());
-    let mut mac = HmacSha1::new_from_slice(secret_key.as_bytes()).expect("hmac-sha1 key");
-    mac.update(encoded_policy.as_bytes());
-    let encoded_sign = URL_SAFE.encode(mac.finalize().into_bytes());
-    format!("{access_key}:{encoded_sign}:{encoded_policy}")
-}
-
 #[derive(Debug, Clone)]
 pub struct QiniuConfig {
     pub access_key: String,
@@ -57,6 +35,39 @@ pub struct QiniuUploader {
 impl QiniuUploader {
     pub fn new(config: QiniuConfig) -> Self {
         Self { config }
+    }
+
+    /// Mint an upload token from AK/SK. The Qiniu object owns this; callers do not.
+    pub fn mint_token(
+        access_key: &str,
+        secret_key: &str,
+        bucket: &str,
+        deadline: SystemTime,
+    ) -> String {
+        let unix = deadline
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let json = serde_json::to_string(&UploadPolicy {
+            scope: bucket,
+            deadline: unix,
+        })
+        .expect("policy json");
+        let encoded_policy = URL_SAFE.encode(json.as_bytes());
+        let mut mac = HmacSha1::new_from_slice(secret_key.as_bytes()).expect("hmac-sha1 key");
+        mac.update(encoded_policy.as_bytes());
+        let encoded_sign = URL_SAFE.encode(mac.finalize().into_bytes());
+        format!("{access_key}:{encoded_sign}:{encoded_policy}")
+    }
+
+    fn token_for_upload(&self) -> String {
+        let deadline = SystemTime::now() + Duration::from_secs(3600);
+        Self::mint_token(
+            &self.config.access_key,
+            &self.config.secret_key,
+            &self.config.bucket,
+            deadline,
+        )
     }
 
     pub fn locator_for(&self, key: &ObjectKey) -> Locator {
@@ -78,13 +89,7 @@ impl Uploader for QiniuUploader {
             UploadError::message("artifact has no local path; cannot upload bytes")
         })?;
         let data = std::fs::read(path).map_err(|e| UploadError::message(e.to_string()))?;
-        let deadline = SystemTime::now() + Duration::from_secs(3600);
-        let token = mint_upload_token(
-            &self.config.access_key,
-            &self.config.secret_key,
-            &self.config.bucket,
-            deadline,
-        );
+        let token = self.token_for_upload();
         let (content_type, body) = form::encode(&[
             Part::Text {
                 name: "token",

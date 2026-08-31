@@ -26,13 +26,42 @@ pub struct RecipeContext {
 }
 
 impl RecipeContext {
-    pub fn with(mut self, key: &str, value: impl Into<String>) -> Self {
-        self.values.insert(key.to_string(), value.into());
-        self
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    fn get(&self, key: &str) -> Option<&str> {
+    pub fn put(&mut self, key: &str, value: impl Into<String>) {
+        self.values.insert(key.to_string(), value.into());
+    }
+
+    pub fn get(&self, key: &str) -> Option<&str> {
         self.values.get(key).map(String::as_str)
+    }
+
+    pub fn interpolate(&self, template: &str) -> Result<String, RecipeError> {
+        let mut out = String::new();
+        let mut rest = template;
+        while let Some(start) = rest.find('{') {
+            out.push_str(&rest[..start]);
+            rest = &rest[start + 1..];
+            match rest.find('}') {
+                Some(end) => {
+                    let key = &rest[..end];
+                    let value = self
+                        .get(key)
+                        .ok_or_else(|| RecipeError::MissingPlaceholder(key.to_string()))?;
+                    out.push_str(value);
+                    rest = &rest[end + 1..];
+                }
+                None => {
+                    out.push('{');
+                    out.push_str(rest);
+                    rest = "";
+                }
+            }
+        }
+        out.push_str(rest);
+        Ok(out)
     }
 }
 
@@ -98,9 +127,9 @@ impl HttpRecipe {
         match &self.response.url {
             UrlSpec::Json { path } => {
                 let value: serde_json::Value = serde_json::from_slice(body)?;
-                Ok(Locator::new(lookup_path(&value, path)?))
+                Ok(Locator::new(Self::lookup_path(&value, path)?))
             }
-            UrlSpec::Template { template } => Ok(Locator::new(interpolate(template, ctx)?)),
+            UrlSpec::Template { template } => Ok(Locator::new(ctx.interpolate(template)?)),
         }
     }
 
@@ -111,8 +140,23 @@ impl HttpRecipe {
         self.request
             .headers
             .iter()
-            .map(|(k, v)| Ok((k.clone(), interpolate(v, ctx)?)))
+            .map(|(k, v)| Ok((k.clone(), ctx.interpolate(v)?)))
             .collect()
+    }
+
+    fn lookup_path(value: &serde_json::Value, path: &str) -> Result<String, RecipeError> {
+        let mut cur = value;
+        for part in path.split('.') {
+            cur = cur.get(part).ok_or_else(|| RecipeError::MissingPath {
+                path: path.to_string(),
+            })?;
+        }
+        match cur.as_str() {
+            Some(s) => Ok(s.to_string()),
+            None => Err(RecipeError::MissingPath {
+                path: path.to_string(),
+            }),
+        }
     }
 }
 
@@ -128,18 +172,56 @@ impl HttpRecipeUploader {
     }
 
     fn context(&self, key: &ObjectKey) -> RecipeContext {
-        let mut ctx = RecipeContext::default().with("key", key.as_str());
+        let mut ctx = RecipeContext::new();
+        ctx.put("key", key.as_str());
         for (k, v) in &self.config {
-            ctx = ctx.with(&format!("config.{k}"), v);
+            ctx.put(&format!("config.{k}"), v);
         }
         ctx
+    }
+
+    fn post(
+        &self,
+        url: &str,
+        headers: &[(String, String)],
+        parts: &[Part<'_>],
+    ) -> Result<Vec<u8>, UploadError> {
+        let mut request = ureq::request(&self.recipe.request.method, url);
+        for (k, v) in headers {
+            if k.eq_ignore_ascii_case("content-type") {
+                continue;
+            }
+            request = request.set(k, v);
+        }
+        if parts.is_empty() {
+            Self::read_response(request.call())
+        } else {
+            let (content_type, body) = form::encode(parts);
+            Self::read_response(request.set("Content-Type", &content_type).send_bytes(&body))
+        }
+    }
+
+    fn read_response(result: Result<ureq::Response, ureq::Error>) -> Result<Vec<u8>, UploadError> {
+        match result {
+            Ok(resp) => resp
+                .into_string()
+                .map(|s| s.into_bytes())
+                .map_err(|e| UploadError::message(e.to_string())),
+            Err(ureq::Error::Status(code, resp)) => {
+                let text = resp.into_string().unwrap_or_default();
+                Err(UploadError::message(format!("upload HTTP {code}: {text}")))
+            }
+            Err(e) => Err(UploadError::message(e.to_string())),
+        }
     }
 }
 
 impl Uploader for HttpRecipeUploader {
     fn upload(&self, artifact: &Artifact, key: &ObjectKey) -> Result<Locator, UploadError> {
         let ctx = self.context(key);
-        let url = interpolate(&self.recipe.request.url, &ctx).map_err(upload_err)?;
+        let url = ctx
+            .interpolate(&self.recipe.request.url)
+            .map_err(upload_err)?;
         let headers = self.recipe.interpolated_headers(&ctx).map_err(upload_err)?;
 
         let file_bytes = if self
@@ -160,7 +242,7 @@ impl Uploader for HttpRecipeUploader {
         let mut text_values = Vec::new();
         for (name, field) in &self.recipe.request.body {
             if let BodyField::String { value } = field {
-                text_values.push((name.clone(), interpolate(value, &ctx).map_err(upload_err)?));
+                text_values.push((name.clone(), ctx.interpolate(value).map_err(upload_err)?));
             }
         }
 
@@ -180,21 +262,7 @@ impl Uploader for HttpRecipeUploader {
             }
         }
 
-        let mut request = ureq::request(&self.recipe.request.method, &url);
-        for (k, v) in &headers {
-            if k.eq_ignore_ascii_case("content-type") {
-                continue;
-            }
-            request = request.set(k, v);
-        }
-
-        let response_body = if parts.is_empty() {
-            send_ureq(request.call())?
-        } else {
-            let (content_type, body) = form::encode(&parts);
-            send_ureq(request.set("Content-Type", &content_type).send_bytes(&body))?
-        };
-
+        let response_body = self.post(&url, &headers, &parts)?;
         self.recipe
             .extract_locator(&response_body, &ctx)
             .map_err(upload_err)
@@ -203,59 +271,4 @@ impl Uploader for HttpRecipeUploader {
 
 fn upload_err(e: RecipeError) -> UploadError {
     UploadError::message(e.to_string())
-}
-
-fn send_ureq(result: Result<ureq::Response, ureq::Error>) -> Result<Vec<u8>, UploadError> {
-    match result {
-        Ok(resp) => resp
-            .into_string()
-            .map(|s| s.into_bytes())
-            .map_err(|e| UploadError::message(e.to_string())),
-        Err(ureq::Error::Status(code, resp)) => {
-            let text = resp.into_string().unwrap_or_default();
-            Err(UploadError::message(format!("upload HTTP {code}: {text}")))
-        }
-        Err(e) => Err(UploadError::message(e.to_string())),
-    }
-}
-
-fn interpolate(template: &str, ctx: &RecipeContext) -> Result<String, RecipeError> {
-    let mut out = String::new();
-    let mut rest = template;
-    while let Some(start) = rest.find('{') {
-        out.push_str(&rest[..start]);
-        rest = &rest[start + 1..];
-        match rest.find('}') {
-            Some(end) => {
-                let key = &rest[..end];
-                let value = ctx
-                    .get(key)
-                    .ok_or_else(|| RecipeError::MissingPlaceholder(key.to_string()))?;
-                out.push_str(value);
-                rest = &rest[end + 1..];
-            }
-            None => {
-                out.push('{');
-                out.push_str(rest);
-                rest = "";
-            }
-        }
-    }
-    out.push_str(rest);
-    Ok(out)
-}
-
-fn lookup_path(value: &serde_json::Value, path: &str) -> Result<String, RecipeError> {
-    let mut cur = value;
-    for part in path.split('.') {
-        cur = cur.get(part).ok_or_else(|| RecipeError::MissingPath {
-            path: path.to_string(),
-        })?;
-    }
-    match cur.as_str() {
-        Some(s) => Ok(s.to_string()),
-        None => Err(RecipeError::MissingPath {
-            path: path.to_string(),
-        }),
-    }
 }

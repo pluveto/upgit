@@ -1,11 +1,12 @@
 //! The only upload message is: Artifact + ObjectKey -> Locator.
-//! The caller (and publish()) must not mint tokens or rename inside the Uploader.
+//! Publisher names and rewrites; the Uploader never sees a template or token.
 
 use std::sync::Mutex;
 use std::time::{Duration, UNIX_EPOCH};
 
 use upgit_core::{
-    publish, Artifact, KeyPolicy, LinkPolicy, Locator, ObjectKey, PublicUrl, UploadError, Uploader,
+    Artifact, KeyPolicy, LinkPolicy, Locator, ObjectKey, PublicUrl, Publisher, UploadError,
+    Uploader,
 };
 
 fn noon() -> std::time::SystemTime {
@@ -27,7 +28,7 @@ impl Uploader for RecordingUploader {
 }
 
 #[test]
-fn publish_computes_key_then_asks_uploader_with_that_key() {
+fn publisher_asks_uploader_with_the_computed_key() {
     let artifact =
         Artifact::from_name_and_size("logo.png", 2048, Some(5 * 1024 * 1024)).expect("artifact");
     let uploader = RecordingUploader {
@@ -35,14 +36,13 @@ fn publish_computes_key_then_asks_uploader_with_that_key() {
         received_key: Mutex::new(None),
         received_name: Mutex::new(None),
     };
-    let url = publish(
-        &uploader,
-        &artifact,
-        &KeyPolicy::template("{year}/{month}/{stem}_{unix}{ext}"),
-        &LinkPolicy::identity(),
-        noon(),
-    )
-    .expect("publish");
+    let publisher = Publisher::new(
+        KeyPolicy::template("{year}/{month}/{stem}_{unix}{ext}"),
+        LinkPolicy::identity(),
+    );
+    let url = publisher
+        .publish(&uploader, &artifact, noon())
+        .expect("publish");
 
     assert_eq!(
         uploader.received_key.lock().expect("lock").as_deref(),
@@ -60,7 +60,7 @@ fn publish_computes_key_then_asks_uploader_with_that_key() {
 }
 
 #[test]
-fn publish_applies_link_policy_after_the_uploader_returns() {
+fn publisher_asks_linker_after_the_uploader_returns() {
     let artifact =
         Artifact::from_name_and_size("logo.png", 2048, Some(5 * 1024 * 1024)).expect("artifact");
     let uploader = RecordingUploader {
@@ -70,20 +70,19 @@ fn publish_applies_link_policy_after_the_uploader_returns() {
         received_key: Mutex::new(None),
         received_name: Mutex::new(None),
     };
-    let url = publish(
-        &uploader,
-        &artifact,
-        &KeyPolicy::template("{year}/{month}/{stem}_{unix}{ext}"),
-        &LinkPolicy::from_pairs([
+    let publisher = Publisher::new(
+        KeyPolicy::template("{year}/{month}/{stem}_{unix}{ext}"),
+        LinkPolicy::from_pairs([
             (
                 "raw.githubusercontent.com".to_string(),
                 "cdn.jsdelivr.net/gh".to_string(),
             ),
             ("/master".to_string(), "@master".to_string()),
         ]),
-        noon(),
-    )
-    .expect("publish");
+    );
+    let url = publisher
+        .publish(&uploader, &artifact, noon())
+        .expect("publish");
     assert_eq!(
         url.as_str(),
         "https://cdn.jsdelivr.net/gh/user/repo@master/2022/01/logo_1643630400.png"
@@ -92,7 +91,6 @@ fn publish_applies_link_policy_after_the_uploader_returns() {
 
 #[test]
 fn uploader_trait_does_not_accept_a_rename_template_or_token() {
-    // If this still compiles, upload() takes only artifact + key.
     fn assert_upload_sig<U: Uploader>(u: &U, a: &Artifact, k: &ObjectKey) {
         let _ = u.upload(a, k);
     }

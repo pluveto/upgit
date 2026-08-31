@@ -75,9 +75,9 @@ url = { from = "template", template = "{config.public_base}{key}" }
 "#,
     )
     .expect("parse");
-    let ctx = RecipeContext::default()
-        .with("config.public_base", "https://cdn.example.com/")
-        .with("key", "2022/01/a.png");
+    let mut ctx = RecipeContext::new();
+    ctx.put("config.public_base", "https://cdn.example.com/");
+    ctx.put("key", "2022/01/a.png");
     let locator = recipe.extract_locator(b"", &ctx).expect("url");
     assert_eq!(locator.as_str(), "https://cdn.example.com/2022/01/a.png");
 }
@@ -85,7 +85,8 @@ url = { from = "template", template = "{config.public_base}{key}" }
 #[test]
 fn header_placeholder_is_plain_string_interpolation() {
     let recipe = smms_recipe();
-    let ctx = RecipeContext::default().with("config.token", "smms_secret");
+    let mut ctx = RecipeContext::new();
+    ctx.put("config.token", "smms_secret");
     let headers = recipe.interpolated_headers(&ctx).expect("headers");
     assert_eq!(
         headers

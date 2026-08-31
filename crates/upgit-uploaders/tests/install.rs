@@ -1,5 +1,5 @@
 use upgit_core::Registry;
-use upgit_uploaders::{install, AppConfig};
+use upgit_uploaders::AppConfig;
 
 #[test]
 fn install_registers_qiniu_and_http_from_config() {
@@ -27,7 +27,7 @@ token = "tok"
     )
     .expect("parse");
     let mut registry = Registry::new();
-    install(&mut registry, cfg.uploaders.clone()).expect("install");
+    cfg.install_into(&mut registry).expect("install");
     registry.get("qiniu").expect("qiniu registered");
     registry.get("smms").expect("smms registered");
     let err = registry.get("nope").expect_err("unknown");
@@ -48,7 +48,7 @@ host = "example"
     )
     .expect("parse");
     let mut registry = Registry::new();
-    let err = install(&mut registry, cfg.uploaders).expect_err("unknown kind");
+    let err = cfg.install_into(&mut registry).expect_err("unknown kind");
     let msg = err.to_string();
     assert!(msg.contains("sftp"), "got {msg}");
     assert!(msg.contains("mystery"), "got {msg}");
@@ -67,7 +67,7 @@ public_base = "https://cdn.example.com/"
     )
     .expect("parse");
     let mut registry = Registry::new();
-    let err = install(&mut registry, cfg.uploaders).expect_err("missing field");
+    let err = cfg.install_into(&mut registry).expect_err("missing field");
     let msg = err.to_string();
     assert!(msg.contains("access_key"), "got {msg}");
 }
