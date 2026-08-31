@@ -32,25 +32,25 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset: upgit_linux_amd64
+            asset: upgit_linux_amd64.zip
             bin: upgit
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            asset: upgit_linux_arm64
+            asset: upgit_linux_arm64.zip
             bin: upgit
             linker: aarch64-linux-gnu-gcc
             packages: gcc-aarch64-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            asset: upgit_win_amd64.exe
+            asset: upgit_win_amd64.zip
             bin: upgit.exe
           - os: macos-latest
             target: x86_64-apple-darwin
-            asset: upgit_macos_amd64
+            asset: upgit_macos_amd64.zip
             bin: upgit
           - os: macos-latest
             target: aarch64-apple-darwin
-            asset: upgit_macos_arm64
+            asset: upgit_macos_arm64.zip
             bin: upgit
     steps:
       - uses: actions/checkout@v4
@@ -73,12 +73,35 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
         run: cargo build --release --locked --target ${{ matrix.target }} -p upgit
 
-      - name: Stage asset
-        shell: bash
+      - name: Stage zip (binary + sample config + recipes)
+        env:
+          TARGET: ${{ matrix.target }}
+          BIN: ${{ matrix.bin }}
+          ASSET: ${{ matrix.asset }}
+        shell: python
         run: |
-          mkdir -p dist
-          src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
-          cp "$src" "dist/${{ matrix.asset }}"
+          import os, shutil, zipfile
+          from pathlib import Path
+          src = Path("target") / os.environ["TARGET"] / "release" / os.environ["BIN"]
+          pkg = Path("pkg")
+          if pkg.exists():
+              shutil.rmtree(pkg)
+          (pkg / "recipes").mkdir(parents=True)
+          dest_name = "upgit.exe" if src.suffix == ".exe" else "upgit"
+          shutil.copy2(src, pkg / dest_name)
+          shutil.copy2("config.sample.toml", pkg)
+          shutil.copy2("config.sample.zh-CN.toml", pkg)
+          for recipe in Path("recipes").glob("*.toml"):
+              shutil.copy2(recipe, pkg / "recipes" / recipe.name)
+          dist = Path("dist")
+          dist.mkdir(exist_ok=True)
+          zpath = dist / os.environ["ASSET"]
+          with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zf:
+              for f in pkg.rglob("*"):
+                  if f.is_file():
+                      zf.write(f, f.relative_to(pkg).as_posix())
+          print("wrote", zpath, "files", len(zf.namelist()) if False else "")
+          print("ok", zpath, zpath.stat().st_size)
 
       - uses: actions/upload-artifact@v4
         with:
@@ -105,17 +128,15 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.3.0-alpha.1' }}
-          name: upgit ${{ github.ref_type == 'tag' && github.ref_name || 'v0.3.0-alpha.1' }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.ref_name }}
+          name: upgit ${{ github.ref_type == 'tag' && github.ref_name || github.ref_name }}
           prerelease: true
           generate_release_notes: true
           body: |
-            First **0.3 alpha** of the Rust rewrite.
+            Rust rewrite. Each zip is `upgit` + `config.sample.toml` + `recipes/`.
+            Unzip, run `upgit init`, fill AK/SK (or uncomment an HTTP host). Do not hand-write JSONC.
 
-            Breaking vs 0.2: new TOML config, no JSONC extensions, no `:clipboard` placeholder.
-            Use `--clipboard` / `--clipboard-files`. Qiniu takes AK/SK (not a static upload token).
-
-            This is a prerelease. Do not use as a drop-in replacement for v0.2 without reading the flags.
+            Breaking vs 0.2: no `:clipboard` (use `--clipboard`), Qiniu uses AK/SK not a static token.
           files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

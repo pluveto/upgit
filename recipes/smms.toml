@@ -1,0 +1,17 @@
+[meta]
+id = "smms"
+
+[request]
+method = "POST"
+url = "https://sm.ms/api/v2/upload"
+
+[request.headers]
+Authorization = "{config.token}"
+User-Agent = "upgit"
+
+[request.body]
+format = { type = "string", value = "json" }
+smfile = { type = "file" }
+
+[response]
+url = { from = "json", path = "data.url" }

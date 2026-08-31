@@ -6,45 +6,9 @@ use serde::Deserialize;
 use thiserror::Error;
 use upgit_core::Registry;
 
+use crate::catalog::RecipeCatalog;
 use crate::qiniu::{QiniuConfig, QiniuUploader};
 use crate::recipe::{HttpRecipe, HttpRecipeUploader, RecipeError};
-
-const SMMS_RECIPE: &str = r#"
-[meta]
-id = "smms"
-
-[request]
-method = "POST"
-url = "https://sm.ms/api/v2/upload"
-
-[request.headers]
-Authorization = "{config.token}"
-
-[request.body]
-format = { type = "string", value = "json" }
-smfile = { type = "file" }
-
-[response]
-url = { from = "json", path = "data.url" }
-"#;
-
-const IMGUR_RECIPE: &str = r#"
-[meta]
-id = "imgur"
-
-[request]
-method = "POST"
-url = "https://api.imgur.com/3/upload"
-
-[request.headers]
-Authorization = "Client-ID {config.client_id}"
-
-[request.body]
-image = { type = "file" }
-
-[response]
-url = { from = "json", path = "data.link" }
-"#;
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -180,7 +144,10 @@ fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallE
     if id == "qiniu" || qiniu_keys {
         return Ok("qiniu".to_string());
     }
-    if profile.recipe.is_some() || optional_string(profile, "token").is_some() {
+    if profile.recipe.is_some()
+        || RecipeCatalog::contains(id)
+        || optional_string(profile, "token").is_some()
+    {
         return Ok("http".to_string());
     }
     Err(InstallError::UnknownKind {
@@ -238,9 +205,6 @@ fn load_recipe(id: &str, profile: &UploaderProfile) -> Result<HttpRecipe, Instal
 }
 
 fn recipe_from_name(id: &str, spec: &str) -> Result<HttpRecipe, InstallError> {
-    if let Some(embedded) = embedded_recipe(spec) {
-        return Ok(HttpRecipe::from_toml(embedded)?);
-    }
     let path = Path::new(spec);
     if path.is_file() {
         let text = std::fs::read_to_string(path).map_err(|source| InstallError::RecipeIo {
@@ -252,17 +216,12 @@ fn recipe_from_name(id: &str, spec: &str) -> Result<HttpRecipe, InstallError> {
     if spec.contains('[') {
         return Ok(HttpRecipe::from_toml(spec)?);
     }
-    Err(InstallError::UnknownRecipe {
-        id: id.to_string(),
-        recipe: spec.to_string(),
-    })
-}
-
-fn embedded_recipe(id: &str) -> Option<&'static str> {
-    match id {
-        "smms" => Some(SMMS_RECIPE),
-        "imgur" => Some(IMGUR_RECIPE),
-        _ => None,
+    match RecipeCatalog::load(spec) {
+        Ok(recipe) => Ok(recipe),
+        Err(_) => Err(InstallError::UnknownRecipe {
+            id: id.to_string(),
+            recipe: spec.to_string(),
+        }),
     }
 }
 

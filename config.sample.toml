@@ -1,27 +1,23 @@
-# upgit 0.3 config
-# Generate a copy with: upgit init
-#
-# Switching hosts is this file only. No extensions/ folder, no JSONC, no
-# short-lived Qiniu upload token (those expire; use AK/SK).
+# Written by `upgit init`. Fill secrets; do not hand-write recipes.
+# HTTP hosts: uncomment a table named after a file in recipes/ (smms, imgur, …).
+# Qiniu is built-in (AK/SK, not a web upload token).
 
 default = "qiniu"
 naming = "{year}/{month}/{stem}_{unix}{ext}"
 
-# Optional CDN rewrite after upload (GitHub raw -> jsDelivr, etc.)
-# [link]
-# "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
-
 [uploaders.qiniu]
-# `type` is optional when the table name is qiniu.
 access_key = "YOUR_ACCESS_KEY"
 secret_key = "YOUR_SECRET_KEY"
 bucket = "YOUR_BUCKET"
-# Bound domain, with or without trailing slash.
 public_base = "https://cdn.example.com/"
-# region = "z0"   # z0 huadong, z1 huabei, z2 huanan, na0, as0
+# region = "z0"
 
-# Unsigned HTTP hosts use a built-in recipe (smms, imgur) or a TOML file.
 # [uploaders.smms]
-# type = "http"
-# recipe = "smms"
 # token = "YOUR_SMMS_TOKEN"
+
+# [uploaders.imgur]
+# client_id = "YOUR_IMGUR_CLIENT_ID"
+
+# [uploaders.lskypro2]
+# host = "https://your-lsky.example"
+# token = "Bearer YOUR_TOKEN"

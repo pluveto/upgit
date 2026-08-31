@@ -1,0 +1,17 @@
+[meta]
+id = "catbox"
+
+[request]
+method = "POST"
+url = "https://catbox.moe/user/api.php"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+reqtype = { type = "string", value = "fileupload" }
+userhash = { type = "string", value = "{config.userhash}" }
+fileToUpload = { type = "file" }
+
+[response]
+url = { from = "text" }

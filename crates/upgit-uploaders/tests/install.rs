@@ -55,6 +55,30 @@ host = "example"
 }
 
 #[test]
+fn smms_table_name_is_enough_without_type_or_recipe_field() {
+    let cfg = AppConfig::from_toml(
+        r#"
+default = "smms"
+
+[uploaders.smms]
+token = "tok"
+"#,
+    )
+    .expect("parse");
+    let mut registry = Registry::new();
+    cfg.install_into(&mut registry).expect("install smms");
+    registry.get("smms").expect("smms");
+}
+
+#[test]
+fn catalog_bundles_http_recipes() {
+    use upgit_uploaders::RecipeCatalog;
+    assert!(RecipeCatalog::contains("smms"));
+    assert!(RecipeCatalog::contains("lskypro2"));
+    assert!(RecipeCatalog::load("smms").is_ok());
+}
+
+#[test]
 fn zhihu_shaped_qiniu_config_needs_no_jsonc() {
     let cfg = AppConfig::from_toml(
         r#"

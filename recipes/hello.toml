@@ -1,0 +1,17 @@
+[meta]
+id = "hello"
+
+[request]
+method = "POST"
+url = "https://www.helloimg.com/newapi/2/upload/?format=json"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+login-subject = { type = "string", value = "{config.username}" }
+password = { type = "string", value = "{config.password}" }
+source = { type = "file" }
+
+[response]
+url = { from = "json", path = "image" }

@@ -8,7 +8,13 @@ This is the 0.3 Rust rewrite. It is **not** a drop-in for 0.2 (Go): no JSONC ext
 
 ## Install
 
-Download a binary from [Releases](https://github.com/pluveto/upgit/releases) (`v0.3.0-alpha.1` or newer), rename it to `upgit`, put it on `PATH`.
+Download a **zip** from [Releases](https://github.com/pluveto/upgit/releases) (`v0.3.0-alpha.2` or newer). It contains the binary, `config.sample.toml`, and `recipes/`. Unzip, then:
+
+```bash
+upgit init    # writes config.toml + recipes/ next to you
+```
+
+Do not copy JSONC by hand. Fill secrets in `config.toml` and run `upgit logo.png`.
 
 Or from source:
 

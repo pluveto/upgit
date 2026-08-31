@@ -47,9 +47,13 @@ impl RecipeContext {
             match rest.find('}') {
                 Some(end) => {
                     let key = &rest[..end];
-                    let value = self
-                        .get(key)
-                        .ok_or_else(|| RecipeError::MissingPlaceholder(key.to_string()))?;
+                    let value = match self.get(key) {
+                        Some(v) => v,
+                        None if key.starts_with("config.") => "",
+                        None => {
+                            return Err(RecipeError::MissingPlaceholder(key.to_string()));
+                        }
+                    };
                     out.push_str(value);
                     rest = &rest[end + 1..];
                 }
@@ -84,6 +88,8 @@ struct Request {
     #[serde(default)]
     headers: HashMap<String, String>,
     #[serde(default)]
+    params: HashMap<String, String>,
+    #[serde(default)]
     body: HashMap<String, BodyField>,
 }
 
@@ -94,6 +100,8 @@ enum BodyField {
     String { value: String },
     #[serde(rename = "file")]
     File {},
+    #[serde(rename = "file_base64")]
+    FileBase64 {},
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -108,6 +116,8 @@ enum UrlSpec {
     Json { path: String },
     #[serde(rename = "template")]
     Template { template: String },
+    #[serde(rename = "text", alias = "text_response")]
+    Text,
 }
 
 impl HttpRecipe {
@@ -130,6 +140,7 @@ impl HttpRecipe {
                 Ok(Locator::new(Self::lookup_path(&value, path)?))
             }
             UrlSpec::Template { template } => Ok(Locator::new(ctx.interpolate(template)?)),
+            UrlSpec::Text => Ok(Locator::new(String::from_utf8_lossy(body).trim())),
         }
     }
 
@@ -184,9 +195,13 @@ impl HttpRecipeUploader {
         &self,
         url: &str,
         headers: &[(String, String)],
+        params: &[(String, String)],
         parts: &[Part<'_>],
     ) -> Result<Vec<u8>, UploadError> {
         let mut request = ureq::request(&self.recipe.request.method, url);
+        for (k, v) in params {
+            request = request.query(k, v);
+        }
         for (k, v) in headers {
             if k.eq_ignore_ascii_case("content-type") {
                 continue;
@@ -223,14 +238,18 @@ impl Uploader for HttpRecipeUploader {
             .interpolate(&self.recipe.request.url)
             .map_err(upload_err)?;
         let headers = self.recipe.interpolated_headers(&ctx).map_err(upload_err)?;
+        let mut params = Vec::new();
+        for (name, raw) in &self.recipe.request.params {
+            params.push((name.clone(), ctx.interpolate(raw).map_err(upload_err)?));
+        }
 
-        let file_bytes = if self
+        let needs_bytes = self
             .recipe
             .request
             .body
             .values()
-            .any(|f| matches!(f, BodyField::File { .. }))
-        {
+            .any(|f| matches!(f, BodyField::File { .. } | BodyField::FileBase64 { .. }));
+        let file_bytes = if needs_bytes {
             let path = artifact.path().ok_or_else(|| {
                 UploadError::message("artifact has no local path; cannot upload bytes")
             })?;
@@ -241,8 +260,20 @@ impl Uploader for HttpRecipeUploader {
 
         let mut text_values = Vec::new();
         for (name, field) in &self.recipe.request.body {
-            if let BodyField::String { value } = field {
-                text_values.push((name.clone(), ctx.interpolate(value).map_err(upload_err)?));
+            match field {
+                BodyField::String { value } => {
+                    text_values.push((name.clone(), ctx.interpolate(value).map_err(upload_err)?));
+                }
+                BodyField::FileBase64 { .. } => {
+                    let data = file_bytes.as_deref().ok_or_else(|| {
+                        UploadError::message("artifact has no local path; cannot upload bytes")
+                    })?;
+                    text_values.push((
+                        name.clone(),
+                        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, data),
+                    ));
+                }
+                BodyField::File { .. } => {}
             }
         }
 
@@ -262,7 +293,7 @@ impl Uploader for HttpRecipeUploader {
             }
         }
 
-        let response_body = self.post(&url, &headers, &parts)?;
+        let response_body = self.post(&url, &headers, &params, &parts)?;
         self.recipe
             .extract_locator(&response_body, &ctx)
             .map_err(upload_err)

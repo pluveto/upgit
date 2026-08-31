@@ -1,0 +1,16 @@
+[meta]
+id = "cloudinary"
+
+[request]
+method = "POST"
+url = "https://api.cloudinary.com/v1_1/{config.cloud_name}/upload"
+
+[request.headers]
+User-Agent = "upgit"
+
+[request.body]
+upload_preset = { type = "string", value = "{config.upload_preset}" }
+file = { type = "file" }
+
+[response]
+url = { from = "json", path = "secure_url" }

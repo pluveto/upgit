@@ -1,27 +1,23 @@
-# upgit 0.3 配置
-# 生成一份：upgit init
-#
-# 换图床只改这个文件。不需要 extensions 目录，不需要 JSONC，
-# 也不要填七牛网页上复制的短时 upload token（会过期，请用 AK/SK）。
+# 由 `upgit init` 生成。只填密钥，不要手写配方。
+# HTTP 图床：取消注释 recipes/ 里同名的表（smms、imgur…）。
+# 七牛是内置的（AK/SK，不要填网页上的短时 token）。
 
 default = "qiniu"
 naming = "{year}/{month}/{stem}_{unix}{ext}"
 
-# 上传后再改写 URL（例如 GitHub raw -> jsDelivr）
-# [link]
-# "raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
-
 [uploaders.qiniu]
-# 表名是 qiniu 时 type 可省略
 access_key = "你的 AccessKey"
 secret_key = "你的 SecretKey"
 bucket = "你的空间名"
-# 绑定的访问域名
 public_base = "https://cdn.example.com/"
-# region = "z0"   # z0 华东, z1 华北, z2 华南, na0, as0
+# region = "z0"
 
-# 未签名的 HTTP 图床用内置配方（smms、imgur）或一个 TOML 文件
 # [uploaders.smms]
-# type = "http"
-# recipe = "smms"
 # token = "你的 SMMS token"
+
+# [uploaders.imgur]
+# client_id = "你的 Imgur client id"
+
+# [uploaders.lskypro2]
+# host = "https://your-lsky.example"
+# token = "Bearer 你的 token"
