@@ -1,12 +1,7 @@
 /config.toml
-/test.csv
-/upgit.exe
-/an.py
-/*.log
-/.vscode
-/upgit
-/APIProxy*
-/dist
-/.idea
 /target
+/dist
 /.tmp
+/.idea
+/.vscode
+/*.log

@@ -34,6 +34,10 @@ fn help_documents_files_clipboard_uploader_and_output() {
         help.contains("--output"),
         "help must document --output:\n{help}"
     );
+    assert!(
+        help.contains("upgit init") || help.contains("init"),
+        "help must mention init:\n{help}"
+    );
 }
 
 #[test]

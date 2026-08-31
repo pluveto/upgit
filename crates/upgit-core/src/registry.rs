@@ -12,7 +12,7 @@ pub struct Registry {
 
 #[derive(Debug, Error)]
 pub enum RegistryError {
-    #[error("unknown uploader `{id}` (known: {known})")]
+    #[error("unknown uploader `{id}` (configured: {known}). There is no extensions/ folder; add [uploaders.{id}] in config.toml or run `upgit init`.")]
     Unknown { id: String, known: String },
 }
 
@@ -31,9 +31,14 @@ impl Registry {
             None => {
                 let mut known: Vec<&str> = self.uploaders.keys().map(String::as_str).collect();
                 known.sort_unstable();
+                let known = if known.is_empty() {
+                    "none — config has no [uploaders.*] tables".to_string()
+                } else {
+                    known.join(", ")
+                };
                 Err(RegistryError::Unknown {
                     id: id.to_string(),
-                    known: known.join(", "),
+                    known,
                 })
             }
         }
