@@ -94,3 +94,40 @@ fn sigv4_matches_independent_get_object_vector() {
         "got {auth}"
     );
 }
+
+const S3_NO_SUCH_BUCKET: &str = r#"<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message><BucketName>my-bucket</BucketName><RequestId>rid</RequestId></Error>"#;
+
+const S3_BAD_SIG: &str = r#"<?xml version="1.0" encoding="UTF-8"?><Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signature you provided.</Message></Error>"#;
+
+#[test]
+fn explain_404_does_not_dump_xml() {
+    let err = uploader("").explain(404, S3_NO_SUCH_BUCKET);
+    let s = err.to_string();
+    assert!(s.contains("not found") || s.contains("bucket"), "got {s}");
+    assert!(
+        s.contains("bucket_name") || s.contains("my-bucket"),
+        "got {s}"
+    );
+    assert!(!s.contains("<?xml"), "dumped XML: {s}");
+    assert!(!s.contains("RequestId"), "dumped XML: {s}");
+}
+
+#[test]
+fn explain_403_signature_points_at_keys() {
+    let err = uploader("").explain(403, S3_BAD_SIG);
+    let s = err.to_string();
+    assert!(s.contains("signature") || s.contains("403"), "got {s}");
+    assert!(
+        s.contains("access_key") || s.contains("secret_key"),
+        "got {s}"
+    );
+    assert!(!s.contains("<?xml"), "dumped XML: {s}");
+}
+
+#[test]
+fn explain_401_points_at_credentials() {
+    let err = uploader("").explain(401, "");
+    let s = err.to_string();
+    assert!(s.contains("401"), "got {s}");
+    assert!(s.contains("access_key"), "got {s}");
+}

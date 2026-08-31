@@ -42,3 +42,29 @@ fn oss_authorization_matches_independent_hmac_sha1_vector() {
     let auth = uploader().authorization_for("image/png", "Mon, 31 Jan 2022 12:00:00 GMT", &key);
     assert_eq!(auth, "OSS ak:0VtS1SWowIIIIYhCa17MSgSADMU=");
 }
+
+#[test]
+fn explain_404_does_not_dump_xml() {
+    let body = r#"<?xml version="1.0"?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message><RequestId>rid</RequestId></Error>"#;
+    let err = uploader().explain(404, body);
+    let s = err.to_string();
+    assert!(s.contains("not found") || s.contains("bucket"), "got {s}");
+    assert!(!s.contains("<?xml"), "dumped XML: {s}");
+    assert!(!s.contains("RequestId"), "dumped XML: {s}");
+}
+
+#[test]
+fn explain_403_signature_points_at_keys() {
+    let body = r#"<Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match.</Message></Error>"#;
+    let err = uploader().explain(403, body);
+    let s = err.to_string();
+    assert!(s.contains("signature") || s.contains("403"), "got {s}");
+    assert!(
+        s.contains("access_key_id") || s.contains("access_key_secret"),
+        "got {s}"
+    );
+    assert!(
+        !s.contains("<?xml") && !s.contains("<Error>"),
+        "dumped XML: {s}"
+    );
+}

@@ -3,7 +3,7 @@ use std::path::Path;
 
 use upgit_uploaders::RecipeCatalog;
 
-const SAMPLE: &str = include_str!("../../../config.sample.toml");
+const TEMPLATE: &str = include_str!("../../../config.github.toml");
 
 pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
     let dest = dest.unwrap_or(Path::new("config.toml"));
@@ -19,7 +19,7 @@ pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
             std::fs::create_dir_all(parent)?;
         }
     }
-    std::fs::write(dest, SAMPLE)?;
+    std::fs::write(dest, TEMPLATE)?;
     let recipes_dir = dest
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -35,6 +35,5 @@ pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
     println!(
         "GitHub is the default. Fill [uploaders.github] pat/username/repo/branch and run: upgit FILE"
     );
-    println!("Qiniu is optional for CN CDN: fill AK/SK (not a web upload token).");
     Ok(())
 }

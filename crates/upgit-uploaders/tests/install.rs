@@ -112,11 +112,28 @@ prefix = "http://file.moqian.cn/"
     registry.get("qiniu").expect("qiniu registered");
 }
 
+fn every_assignment_has_a_comment(text: &str) {
+    let lines: Vec<&str> = text.lines().collect();
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('[') {
+            continue;
+        }
+        if trimmed.contains('=') {
+            assert!(
+                i > 0 && lines[i - 1].trim_start().starts_with('#'),
+                "field `{trimmed}` needs a comment immediately above it"
+            );
+        }
+    }
+}
+
 #[test]
 fn sample_config_defaults_to_github_and_lists_uploaders() {
     let text = include_str!("../../../config.sample.toml");
     let cfg = AppConfig::from_toml(text).expect("sample");
     assert_eq!(cfg.default_uploader(), Some("github"));
+    every_assignment_has_a_comment(text);
     for table in [
         "[uploaders.github]",
         "[uploaders.s3]",
@@ -143,6 +160,20 @@ fn sample_config_defaults_to_github_and_lists_uploaders() {
     ] {
         registry.get(id).unwrap_or_else(|_| panic!("{id}"));
     }
+}
+
+#[test]
+fn github_init_template_installs_github_only() {
+    let text = include_str!("../../../config.github.toml");
+    let cfg = AppConfig::from_toml(text).expect("github template");
+    assert_eq!(cfg.default_uploader(), Some("github"));
+    assert!(cfg.uploaders.contains_key("github"));
+    assert!(!cfg.uploaders.contains_key("qiniu"));
+    every_assignment_has_a_comment(text);
+    let mut registry = Registry::new();
+    cfg.install_into(&mut registry)
+        .expect("github template should install");
+    registry.get("github").expect("github registered");
 }
 
 #[test]

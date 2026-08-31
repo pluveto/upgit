@@ -73,7 +73,7 @@ jobs:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
         run: cargo build --release --locked --target ${{ matrix.target }} -p upgit
 
-      - name: Stage zip (binary + sample config + recipes)
+      - name: Stage zip (binary + config.toml + recipes)
         env:
           TARGET: ${{ matrix.target }}
           BIN: ${{ matrix.bin }}
@@ -89,18 +89,23 @@ jobs:
           (pkg / "recipes").mkdir(parents=True)
           dest_name = "upgit.exe" if src.suffix == ".exe" else "upgit"
           shutil.copy2(src, pkg / dest_name)
-          shutil.copy2("config.sample.toml", pkg)
-          shutil.copy2("config.sample.zh-CN.toml", pkg)
+          shutil.copy2("config.github.toml", pkg / "config.toml")
           for recipe in Path("recipes").glob("*.toml"):
               shutil.copy2(recipe, pkg / "recipes" / recipe.name)
           dist = Path("dist")
           dist.mkdir(exist_ok=True)
           zpath = dist / os.environ["ASSET"]
+          names = []
           with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zf:
               for f in pkg.rglob("*"):
                   if f.is_file():
-                      zf.write(f, f.relative_to(pkg).as_posix())
-          print("wrote", zpath, "files", len(zf.namelist()) if False else "")
+                      rel = f.relative_to(pkg).as_posix()
+                      zf.write(f, rel)
+                      names.append(rel)
+          names.sort()
+          assert "config.toml" in names, names
+          assert not any("config.sample" in n for n in names), names
+          print("wrote", zpath, "files", names)
           print("ok", zpath, zpath.stat().st_size)
 
       - uses: actions/upload-artifact@v4
@@ -133,8 +138,9 @@ jobs:
           prerelease: true
           generate_release_notes: true
           body: |
-            Rust rewrite. Each zip is `upgit` + `config.sample.toml` + `recipes/`.
-            Unzip, run `upgit init`, fill AK/SK (or uncomment an HTTP host). Do not hand-write JSONC.
+            Rust rewrite. Each zip is `upgit` + `config.toml` (GitHub) + `recipes/`.
+            Unzip, fill GitHub `pat`/`username`/`repo` (public repo; PAT: https://github.com/settings/tokens), then `upgit FILE`.
+            Other hosts: copy a table from the repo `config.sample.toml` (not packed). Do not hand-write JSONC.
 
             Breaking vs 0.2: no `:clipboard` (use `--clipboard`), Qiniu uses AK/SK not a static token.
           files: dist/*

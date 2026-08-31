@@ -8,6 +8,7 @@ use sha1::Sha1;
 use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::form::{self, Part};
+use crate::util::{could_not_reach, host_of, json_string_field, looks_like_signature_error};
 
 type HmacSha1 = Hmac<Sha1>;
 
@@ -81,6 +82,87 @@ impl QiniuUploader {
             Some(region) => format!("https://upload-{region}.qiniup.com"),
         }
     }
+
+    /// Map a Qiniu HTTP status + body to a user-facing error. Never dumps JSON.
+    pub fn explain(&self, status: u16, body: &str) -> UploadError {
+        let bucket = self.config.bucket.as_str();
+        let lower = body.to_ascii_lowercase();
+        match status {
+            401 => UploadError::new(
+                "Qiniu",
+                "Qiniu rejected credentials (HTTP 401).",
+                "Check [uploaders.qiniu] access_key and secret_key.",
+                Some(status),
+            ),
+            403 if looks_like_signature_error(body) => UploadError::new(
+                "Qiniu",
+                "Qiniu signature did not match (HTTP 403).",
+                "Check [uploaders.qiniu] access_key and secret_key.",
+                Some(status),
+            ),
+            403 => UploadError::new(
+                "Qiniu",
+                format!("Qiniu denied access to bucket `{bucket}` (HTTP 403)."),
+                "Check [uploaders.qiniu] access_key, secret_key, and bucket.",
+                Some(status),
+            ),
+            404 => UploadError::new(
+                "Qiniu",
+                "Qiniu upload endpoint was not found (HTTP 404).",
+                "Check [uploaders.qiniu] region. The bucket must exist in that region.",
+                Some(status),
+            ),
+            500..=599 => UploadError::new(
+                "Qiniu",
+                format!("Qiniu is failing (HTTP {status})."),
+                "Retry later; this is a Qiniu server error, not a config problem.",
+                Some(status),
+            ),
+            _ if lower.contains("incorrect region") || lower.contains("wrong region") => {
+                UploadError::new(
+                    "Qiniu",
+                    format!("Qiniu upload used the wrong region (HTTP {status})."),
+                    "Check [uploaders.qiniu] region (z0, z1, z2, na0, as0, …).",
+                    Some(status),
+                )
+            }
+            _ if lower.contains("no such bucket")
+                || lower.contains("nosuchbucket")
+                || lower.contains("\"error_code\":631")
+                || lower.contains("error_code\": 631") =>
+            {
+                UploadError::new(
+                    "Qiniu",
+                    format!("Qiniu bucket `{bucket}` was not found (HTTP {status})."),
+                    "Check [uploaders.qiniu] bucket. The bucket must exist.",
+                    Some(status),
+                )
+            }
+            _ if looks_like_signature_error(body)
+                || lower.contains("bad token")
+                || lower.contains("invalid token") =>
+            {
+                UploadError::new(
+                    "Qiniu",
+                    format!("Qiniu rejected the upload token (HTTP {status})."),
+                    "Check [uploaders.qiniu] access_key and secret_key.",
+                    Some(status),
+                )
+            }
+            _ => {
+                let what = match json_string_field(body, "error") {
+                    Some(msg) => format!("Qiniu upload failed (HTTP {status}): {msg}"),
+                    None => format!("Qiniu upload failed (HTTP {status})."),
+                };
+                UploadError::new(
+                    "Qiniu",
+                    what,
+                    "Verify [uploaders.qiniu] access_key, secret_key, bucket, and region.",
+                    Some(status),
+                )
+            }
+        }
+    }
 }
 
 impl Uploader for QiniuUploader {
@@ -112,11 +194,9 @@ impl Uploader for QiniuUploader {
             Ok(_) => Ok(self.locator_for(key)),
             Err(ureq::Error::Status(code, resp)) => {
                 let text = resp.into_string().unwrap_or_default();
-                Err(UploadError::message(format!(
-                    "qiniu upload HTTP {code}: {text}"
-                )))
+                Err(self.explain(code, &text))
             }
-            Err(e) => Err(UploadError::message(e.to_string())),
+            Err(e) => Err(could_not_reach("Qiniu", host_of(&self.upload_url()), e)),
         }
     }
 }

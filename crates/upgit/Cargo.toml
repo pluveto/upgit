@@ -11,8 +11,8 @@ arboard = "3"
 clap = { version = "4", features = ["derive"] }
 png = "0.17"
 tempfile = "3"
-upgit-core = { path = "../upgit-core", version = "0.3.0-alpha.2" }
-upgit-uploaders = { path = "../upgit-uploaders", version = "0.3.0-alpha.2" }
+upgit-core = { path = "../upgit-core", version = "0.3.0-beta.1" }
+upgit-uploaders = { path = "../upgit-uploaders", version = "0.3.0-beta.1" }
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }

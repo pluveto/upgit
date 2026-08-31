@@ -1,0 +1,25 @@
+# upgit — edit this file. GitHub is the default uploader.
+# Full list of other hosts: https://github.com/pluveto/upgit/blob/next/config.sample.toml
+
+# Which uploader table to use.
+default = "github"
+
+# Remote object key template. Placeholders: {year} {month} {day} {unix} {stem} {ext} {hmac}.
+naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
+
+# Optional HMAC secret for the {hmac} placeholder in naming. Any random string works.
+# hmac_key = "YOUR_HMAC_KEY"
+# Template whose interpolation is HMAC-SHA256 hashed to produce {hmac}.
+# hmac_format = "{year}_{month}_{day}_{unix}{ext}"
+# Truncate the hex digest to this many characters. Omit for the full hash.
+# hmac_len = 31
+
+[uploaders.github]
+# Personal access token with "repo" scope. Create: https://github.com/settings/tokens
+pat = "ghp_..."
+# GitHub username that owns the repo.
+username = "..."
+# Public repository name. Private repos make raw URLs 404.
+repo = "..."
+# Branch to commit into (often main or master).
+branch = "master"

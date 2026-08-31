@@ -1,7 +1,9 @@
 //! Unsigned HTTP image hosts are recipes: interpolate a request, then pull a URL
 //! from a JSON path or a template. Recipes do not mint signatures.
 
-use upgit_uploaders::recipe::{HttpRecipe, RecipeContext};
+use std::collections::HashMap;
+
+use upgit_uploaders::recipe::{HttpRecipe, HttpRecipeUploader, RecipeContext};
 
 fn smms_recipe() -> HttpRecipe {
     HttpRecipe::from_toml(
@@ -115,4 +117,36 @@ fn header_placeholder_is_plain_string_interpolation() {
             .map(|(_, v)| v.as_str()),
         Some("smms_secret")
     );
+}
+
+fn smms_uploader() -> HttpRecipeUploader {
+    let mut config = HashMap::new();
+    config.insert("token".into(), "secret".into());
+    HttpRecipeUploader::new(smms_recipe(), config)
+}
+
+#[test]
+fn explain_401_points_at_config_keys_not_json() {
+    let err = smms_uploader().explain(
+        401,
+        r#"{"success":false,"message":"unauthorized","code":"unauthorized"}"#,
+    );
+    let s = err.to_string();
+    assert!(s.contains("401"), "got {s}");
+    assert!(
+        s.contains("token") || s.contains("uploaders.smms"),
+        "got {s}"
+    );
+    assert!(!s.contains("\"success\""), "dumped JSON: {s}");
+}
+
+#[test]
+fn explain_404_does_not_dump_body() {
+    let err = smms_uploader().explain(
+        404,
+        r#"{"message":"Not Found","documentation_url":"https://example"}"#,
+    );
+    let s = err.to_string();
+    assert!(s.contains("not found") || s.contains("404"), "got {s}");
+    assert!(!s.contains("documentation_url"), "dumped JSON: {s}");
 }
