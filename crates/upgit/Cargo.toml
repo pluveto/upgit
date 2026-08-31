@@ -1,16 +1,18 @@
 [package]
 name = "upgit"
-version = "0.1.0"
-edition = "2021"
-description = "Upload local files or clipboard images and print a public URL."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
 
 [dependencies]
 arboard = "3"
 clap = { version = "4", features = ["derive"] }
 png = "0.17"
 tempfile = "3"
-upgit-core = { path = "../upgit-core" }
-upgit-uploaders = { path = "../upgit-uploaders" }
+upgit-core = { path = "../upgit-core", version = "0.3.0-alpha.1" }
+upgit-uploaders = { path = "../upgit-uploaders", version = "0.3.0-alpha.1" }
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }

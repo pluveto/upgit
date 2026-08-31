@@ -1,136 +1,121 @@
 name: Release
+
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Version Tag (vX.X.X)"
-        type: string
-        required: true
-      prerelease:
-        type: boolean
-        required: false
-        default: true
-        
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PKG: upgit
+
+permissions:
+  contents: write
+
 jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --locked
+
   build:
-    name: Build
+    name: build (${{ matrix.asset }})
+    needs: test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-26]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: upgit_linux_amd64
+            bin: upgit
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            asset: upgit_linux_arm64
+            bin: upgit
+            linker: aarch64-linux-gnu-gcc
+            packages: gcc-aarch64-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: upgit_win_amd64.exe
+            bin: upgit.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset: upgit_macos_amd64
+            bin: upgit
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset: upgit_macos_arm64
+            bin: upgit
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.25.6
-          stable: true
+      - uses: actions/checkout@v4
 
+      - name: Install cross linker
+        if: matrix.packages != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.packages }}
 
-      - name: Install and run dependencies (xvfb libx11-dev)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
+        run: cargo build --release --locked --target ${{ matrix.target }} -p upgit
+
+      - name: Stage asset
+        shell: bash
         run: |
-          sudo apt update
-          sudo apt install -y xvfb libx11-dev x11-utils libegl1-mesa-dev libgles2-mesa-dev
+          mkdir -p dist
+          src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
+          cp "$src" "dist/${{ matrix.asset }}"
 
-      - name: Install dependencies on macOS
-        if: matrix.os == 'macos-26'
-        run: |
-          # brew install filosottile/musl-cross/musl-cross
-          brew install libx11
-          # ln -s /opt/homebrew/include/X11 /usr/local/include/X11
-
-      - name: Go Test
-        run: go test
-
-      - name: Install dependencies on Windows
-        if: matrix.os == 'windows-latest'
-        run: choco install make
-
-      - name: Build on Ubuntu
-        if: matrix.os == 'ubuntu-latest'
-        run: make linux
-
-      - name: Build on Windows
-        if: matrix.os == 'windows-latest'
-        run: make windows
-
-      - name: Build on macOS
-        if: matrix.os == 'macos-26'
-        run: make macos
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}
-          path: dist/
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
 
-  tag_and_release:
+  publish:
+    name: github prerelease
     needs: build
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download build artifacts from Linux
-        uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v4
         with:
-          name: build-ubuntu-latest
-          path: dist/linux
+          path: dist
+          merge-multiple: true
 
-      - name: Download build artifacts from Windows
-        uses: actions/download-artifact@v7
+      - name: List assets
+        run: ls -la dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          name: build-windows-latest
-          path: dist/windows
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.3.0-alpha.1' }}
+          name: upgit ${{ github.ref_type == 'tag' && github.ref_name || 'v0.3.0-alpha.1' }}
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            First **0.3 alpha** of the Rust rewrite.
 
-      - name: Download build artifacts from macOS
-        uses: actions/download-artifact@v7
-        with:
-          name: build-macos-26
-          path: dist/macos
+            Breaking vs 0.2: new TOML config, no JSONC extensions, no `:clipboard` placeholder.
+            Use `--clipboard` / `--clipboard-files`. Qiniu takes AK/SK (not a static upload token).
 
-      - name: Create Tag
-        uses: negz/create-tag@v1
-        with:
-          version: ${{ github.event.inputs.tag }}
-          message: "create tag"
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create changelog text
-        id: changelog
-        uses: loopwerk/tag-changelog@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Print changelog
-        run: |
-          cat <<EOF
-          ${{ steps.changelog.outputs.changes }}
-          EOF
-
-      - name: Release & Assets
-        uses: Hs1r1us/Release-AIO@v2.0.0
-        env: 
+            This is a prerelease. Do not use as a drop-in replacement for v0.2 without reading the flags.
+          files: dist/*
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name:  ${{ github.event.inputs.tag }} 
-          release_name: ${{ github.event.inputs.tag }} 
-          body: ${{ steps.changelog.outputs.changes }}
-          draft: false
-          prerelease: ${{ github.event.inputs.prerelease }}
-
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/**/*
-          tag: ${{ github.event.inputs.tag }}
-          overwrite: true
-          file_glob: true

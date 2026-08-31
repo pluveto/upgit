@@ -1,7 +1,10 @@
 [package]
 name = "upgit-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Domain objects for upgit: artifacts, keys, publisher, registry."
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std"] }
