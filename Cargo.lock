@@ -1166,7 +1166,7 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "upgit"
-version = "0.3.0-beta.3"
+version = "0.3.0"
 dependencies = [
  "arboard",
  "chrono",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "upgit-core"
-version = "0.3.0-beta.3"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "hmac",
@@ -1192,7 +1192,7 @@ dependencies = [
 
 [[package]]
 name = "upgit-uploaders"
-version = "0.3.0-beta.3"
+version = "0.3.0"
 dependencies = [
  "base64",
  "hmac",
