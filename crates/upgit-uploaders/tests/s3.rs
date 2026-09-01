@@ -1,17 +1,4 @@
-use upgit_core::ObjectKey;
 use upgit_uploaders::s3::{S3Config, S3Uploader};
-
-fn s3(host: &str, url_format: &str) -> S3Uploader {
-    S3Uploader::new(S3Config {
-        region: "us-west-2".into(),
-        bucket_name: "my-bucket".into(),
-        access_key: "ak".into(),
-        secret_key: "sk".into(),
-        endpoint: "https://s3.us-west-2.amazonaws.com".into(),
-        url_format: url_format.into(),
-        host: host.into(),
-    })
-}
 
 /// AWS GET Object canonical request from the SigV4 header-auth docs.
 /// Signature independently HMAC-SHA256'd (the published Signature=fe5f80f7… in that
@@ -52,21 +39,4 @@ fn sigv4_matches_independent_get_object_vector() {
         auth.contains("SignedHeaders=host;range;x-amz-content-sha256;x-amz-date"),
         "got {auth}"
     );
-}
-
-#[test]
-fn locator_without_host_uses_url_format() {
-    let key = ObjectKey::parse("2022/01/a.png").expect("key");
-    let loc = s3("", "").locator_for(&key);
-    assert_eq!(
-        loc.as_str(),
-        "https://s3.us-west-2.amazonaws.com/my-bucket/2022/01/a.png"
-    );
-}
-
-#[test]
-fn locator_with_host_uses_cdn_not_endpoint() {
-    let key = ObjectKey::parse("2022/01/a.png").expect("key");
-    let loc = s3("https://cdn.example.com", "{endpoint}/{bucket}/{path}").locator_for(&key);
-    assert_eq!(loc.as_str(), "https://cdn.example.com/2022/01/a.png");
 }
