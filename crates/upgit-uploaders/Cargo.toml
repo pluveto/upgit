@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
-description = "Uploader objects for upgit: GitHub, S3, OSS, COS, Upyun, Qiniu, HTTP recipes."
+description = "Uploader objects for upgit: GitHub, GitLab, S3, OSS, COS, Upyun, Qiniu, HTTP recipes."
 
 [dependencies]
 base64 = "0.22"

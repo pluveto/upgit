@@ -20,6 +20,10 @@ impl HostCatalog {
                 title: "GitHub",
             },
             Host {
+                id: "gitlab",
+                title: "GitLab",
+            },
+            Host {
                 id: "s3",
                 title: "Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces / Ceph / Flexify.IO / IBM Cloud Object Storage)",
             },

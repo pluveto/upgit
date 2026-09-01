@@ -29,6 +29,7 @@
 ### 上传扩展
 
 + Github
++ GitLab
 + S3 兼容存储
    + AWS S3
    + MinIO

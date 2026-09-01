@@ -9,6 +9,7 @@ use upgit_core::{KeyPolicy, KeyPolicyError, Registry};
 use crate::catalog::RecipeCatalog;
 use crate::cos::{CosConfig, CosUploader};
 use crate::github::{GithubConfig, GithubUploader};
+use crate::gitlab::{GitlabConfig, GitlabUploader};
 use crate::oss::{OssConfig, OssUploader};
 use crate::qiniu::{QiniuConfig, QiniuUploader};
 use crate::recipe::{HttpRecipe, HttpRecipeUploader, RecipeError};
@@ -27,7 +28,7 @@ pub enum InstallError {
     MissingField { id: String, field: String },
     #[error("uploader `{id}` still has a static Qiniu upload token, which expires. Set access_key, secret_key, bucket, and public_base instead.")]
     ExpiredQiniuToken { id: String },
-    #[error("unknown uploader type `{kind}` for `{id}`. Built-in types: github, s3, aliyunoss, qcloudcos, upyun, qiniu.")]
+    #[error("unknown uploader type `{kind}` for `{id}`. Built-in types: github, gitlab, s3, aliyunoss, qcloudcos, upyun, qiniu.")]
     UnknownKind { id: String, kind: String },
     #[error("unknown http recipe `{recipe}` for `{id}`")]
     UnknownRecipe { id: String, recipe: String },
@@ -220,6 +221,10 @@ impl AppConfig {
                     let uploader = github_from_profile(id, profile)?;
                     registry.register(id.clone(), Box::new(uploader));
                 }
+                "gitlab" => {
+                    let uploader = gitlab_from_profile(id, profile)?;
+                    registry.register(id.clone(), Box::new(uploader));
+                }
                 "s3" => {
                     let uploader = s3_from_profile(id, profile)?;
                     registry.register(id.clone(), Box::new(uploader));
@@ -318,6 +323,12 @@ fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallE
     if id == "github" || github_keys {
         return Ok("github".to_string());
     }
+    let gitlab_keys = has_field(profile, "token")
+        && has_field(profile, "project")
+        && (has_field(profile, "url") || has_field(profile, "host"));
+    if id == "gitlab" || gitlab_keys {
+        return Ok("gitlab".to_string());
+    }
     // Qiniu uses `bucket` (not bucket_name) and has no endpoint. Check before S3.
     let qiniu_keys = has_field(profile, "access_key")
         && has_field(profile, "secret_key")
@@ -372,6 +383,39 @@ fn github_from_profile(
         username: require_string(id, profile, "username")?,
         repo: require_string(id, profile, "repo")?,
         branch: optional_string(profile, "branch").unwrap_or_default(),
+    }))
+}
+
+fn gitlab_from_profile(
+    id: &str,
+    profile: &UploaderProfile,
+) -> Result<GitlabUploader, InstallError> {
+    let url = optional_string(profile, "url")
+        .filter(|s| !is_placeholder(s))
+        .or_else(|| optional_string(profile, "host").filter(|s| !is_placeholder(s)))
+        .ok_or_else(|| InstallError::MissingField {
+            id: id.to_string(),
+            field: "url".to_string(),
+        })?;
+    let public_base = optional_string(profile, "public_base")
+        .filter(|s| !is_placeholder(s))
+        .or_else(|| {
+            // `host` is the printed URL only when `url` already names the instance.
+            if optional_string(profile, "url")
+                .filter(|s| !is_placeholder(s))
+                .is_some()
+            {
+                optional_string(profile, "host").filter(|s| !is_placeholder(s))
+            } else {
+                None
+            }
+        });
+    Ok(GitlabUploader::new(GitlabConfig {
+        url,
+        project: require_string(id, profile, "project")?,
+        token: require_string(id, profile, "token")?,
+        branch: optional_string(profile, "branch").unwrap_or_default(),
+        public_base,
     }))
 }
 
