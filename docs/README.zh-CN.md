@@ -87,7 +87,7 @@
 
 解压后将其重命名为 `upgit`（对于 Windows 用户，`upgit.exe`），保存到某处。若要从任何地方访问它，请将其目录添加到 `PATH` 环境变量中。
 
-**提醒：** 此程序不会自动检查更新。如果你关心本程序的新功能，可以点右上角的 ⭐star 收藏。
+运行 `upgit update` 可把本程序更新到最新正式版。`upgit update --beta` / `--alpha` 分别允许 beta / alpha 通道。不会覆盖 `config.toml` 和你改过的 recipes。
 
 ### 配置
 
@@ -127,6 +127,7 @@ Usage: upgit [OPTIONS] [FILE]...
 
 Commands:
   init       Write a GitHub config.toml
+  update     Replace this binary with a GitHub release (does not overwrite config.toml)
   uploaders  List built-in uploaders
   help       Print this message or the help of the given subcommand(s)
 
@@ -179,7 +180,7 @@ Uploaders (pass --uploader ID, or set default in config.toml):
   sougou      Sogou
   upload_cc   upload.cc
 
-Create a config with `upgit init`. List ids with `upgit uploaders`.
+Create a config with `upgit init`. Update with `upgit update`. List ids with `upgit uploaders`.
 https://github.com/pluveto/upgit
 ```
 

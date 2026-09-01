@@ -35,6 +35,18 @@ fn dispatch(cli: Cli) -> Result<(), Box<dyn Error>> {
             }
             Ok(())
         }
+        Some(Command::Update {
+            beta,
+            alpha,
+            dry_run,
+            force,
+            apply_migrations,
+        }) => upgit::update::run(upgit::update::Opts {
+            channel: upgit::update::Channel::from_flags(*beta, *alpha),
+            dry_run: *dry_run,
+            force: *force,
+            apply_migrations: *apply_migrations,
+        }),
         None if cli.files.is_empty() && !cli.clipboard && !cli.clipboard_files => {
             let mut cmd = Cli::command_with_hosts();
             cmd.print_help()?;
