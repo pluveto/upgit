@@ -26,16 +26,18 @@ pub struct Publisher {
     linker: LinkPolicy,
 }
 
-/// At most this many `upload` messages are in flight. 183 files must not spawn 183 threads.
-const DEFAULT_UPLOAD_CONCURRENCY: usize = 8;
+/// Default is serial: many uploaders (GitHub Contents especially) forbid or
+/// rate-limit concurrent PUTs. Callers opt in with [`BatchPublisher::with_concurrency`].
+const DEFAULT_UPLOAD_CONCURRENCY: usize = 1;
 
 type Slot = Mutex<Option<Result<(Locator, PublicUrl), PublishError>>>;
 
-/// Sends one `upload` message per artifact, with a bound on in-flight work.
+/// Sends one `upload` message per artifact.
 ///
-/// Results stay in input order. After the first failure, further artifacts are
-/// not started; in-flight messages still finish. The error is the failed
-/// artifact with the lowest input index.
+/// Default concurrency is 1 (serial). `with_concurrency(n)` with n > 1 bounds
+/// in-flight work. Results stay in input order. After the first failure, further
+/// artifacts are not started; in-flight messages still finish. The error is the
+/// failed artifact with the lowest input index.
 pub struct BatchPublisher<'a> {
     publisher: &'a Publisher,
     concurrency: usize,
@@ -90,12 +92,34 @@ impl<'a> BatchPublisher<'a> {
         artifacts: &[Artifact],
         at: SystemTime,
     ) -> Result<Vec<(Locator, PublicUrl)>, PublishError> {
-        match artifacts {
-            [] => return Ok(Vec::new()),
-            [one] => return Ok(vec![self.publisher.publish_with_raw(uploader, one, at)?]),
-            _ => {}
+        if artifacts.is_empty() {
+            return Ok(Vec::new());
         }
+        if self.concurrency <= 1 || artifacts.len() == 1 {
+            return self.publish_serial(uploader, artifacts, at);
+        }
+        self.publish_parallel(uploader, artifacts, at)
+    }
 
+    fn publish_serial(
+        &self,
+        uploader: &dyn Uploader,
+        artifacts: &[Artifact],
+        at: SystemTime,
+    ) -> Result<Vec<(Locator, PublicUrl)>, PublishError> {
+        let mut out = Vec::with_capacity(artifacts.len());
+        for artifact in artifacts {
+            out.push(self.publisher.publish_with_raw(uploader, artifact, at)?);
+        }
+        Ok(out)
+    }
+
+    fn publish_parallel(
+        &self,
+        uploader: &dyn Uploader,
+        artifacts: &[Artifact],
+        at: SystemTime,
+    ) -> Result<Vec<(Locator, PublicUrl)>, PublishError> {
         let n = artifacts.len();
         let workers = self.concurrency.min(n);
         let next = AtomicUsize::new(0);
@@ -119,40 +143,40 @@ impl<'a> BatchPublisher<'a> {
                     if result.is_err() {
                         failed.store(true, Ordering::Relaxed);
                     }
-                    *slots[i].lock().expect("slot") = Some(result);
+                    *slots[i].lock().unwrap_or_else(|e| e.into_inner()) = Some(result);
                 });
             }
         });
 
-        collect_slots(slots)
+        Self::collect_slots(slots)
     }
-}
 
-fn collect_slots(slots: Vec<Slot>) -> Result<Vec<(Locator, PublicUrl)>, PublishError> {
-    let n = slots.len();
-    let mut out = Vec::with_capacity(n);
-    let mut first_err = None;
-    let mut missing = false;
-    for slot in slots {
-        match slot.into_inner().expect("slot") {
-            Some(Ok(value)) => {
-                if first_err.is_none() {
-                    out.push(value);
+    fn collect_slots(slots: Vec<Slot>) -> Result<Vec<(Locator, PublicUrl)>, PublishError> {
+        let n = slots.len();
+        let mut out = Vec::with_capacity(n);
+        let mut first_err = None;
+        let mut missing = false;
+        for slot in slots {
+            match slot.into_inner().unwrap_or_else(|e| e.into_inner()) {
+                Some(Ok(value)) => {
+                    if first_err.is_none() {
+                        out.push(value);
+                    }
                 }
-            }
-            Some(Err(err)) => {
-                if first_err.is_none() {
-                    first_err = Some(err);
+                Some(Err(err)) => {
+                    if first_err.is_none() {
+                        first_err = Some(err);
+                    }
                 }
+                None => missing = true,
             }
-            None => missing = true,
         }
+        if let Some(err) = first_err {
+            return Err(err);
+        }
+        if missing {
+            return Err(UploadError::message("upload did not finish").into());
+        }
+        Ok(out)
     }
-    if let Some(err) = first_err {
-        return Err(err);
-    }
-    if missing {
-        return Err(UploadError::message("upload did not finish").into());
-    }
-    Ok(out)
 }

@@ -92,6 +92,10 @@ pub struct Cli {
     #[arg(short = 'n', long = "no-log")]
     pub no_log: bool,
 
+    /// Concurrent uploads (1 = serial)
+    #[arg(short = 'j', long = "jobs", default_value_t = 1, value_name = "N")]
+    pub jobs: usize,
+
     /// Directory that owns config.toml / upgit.toml, history.log, and upgit.log
     #[arg(long = "application-path", value_name = "PATH")]
     pub application_path: Option<PathBuf>,

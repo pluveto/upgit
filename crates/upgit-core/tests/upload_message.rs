@@ -126,6 +126,25 @@ impl Uploader for FailOn {
 }
 
 #[test]
+fn batch_publisher_defaults_to_serial() {
+    let artifacts = pngs(8);
+    let uploader = FailOn {
+        name: "f0.png".to_string(),
+        seen: Mutex::new(Vec::new()),
+    };
+    let publisher = Publisher::new(KeyPolicy::keep_original_in("x"), LinkPolicy::identity());
+    let err = BatchPublisher::new(&publisher)
+        .run(&uploader, &artifacts, noon())
+        .expect_err("must fail");
+    assert!(err.to_string().contains("boom"));
+    assert_eq!(
+        *uploader.seen.lock().expect("lock"),
+        vec!["f0.png".to_string()],
+        "default concurrency is 1: stop at the first error without starting the rest"
+    );
+}
+
+#[test]
 fn batch_publisher_fails_the_run_on_first_error() {
     let artifacts = pngs(20);
     let uploader = FailOn {

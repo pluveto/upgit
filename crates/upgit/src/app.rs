@@ -78,7 +78,9 @@ impl App {
                 &self.uploader_id,
             )
         };
-        let published = BatchPublisher::new(&self.publisher).run(uploader, &artifacts, now)?;
+        let published = BatchPublisher::new(&self.publisher)
+            .with_concurrency(cli.jobs)
+            .run(uploader, &artifacts, now)?;
         let mut items = Vec::with_capacity(published.len());
         for (artifact, (raw, replaced)) in artifacts.iter().zip(published) {
             let shown = if cli.raw {
