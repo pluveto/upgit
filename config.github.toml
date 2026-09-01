@@ -11,7 +11,7 @@
 # Which uploader table to use.
 default = "github"
 
-# Remote object key template. Placeholders: {year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8} {content_hash} {content_hash4} {content_hash8}.
+# Remote object key template. Placeholders: {year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8} {content_hash} {content_hash4} {content_hash8}. {fname_hash} and {content_hash} are xxHash32 (seed 0); {hmac} is HMAC-SHA256.
 naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
 
 # Optional HMAC secret for the {hmac} placeholder in naming. Any random string works.

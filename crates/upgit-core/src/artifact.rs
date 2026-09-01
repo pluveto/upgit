@@ -1,25 +1,14 @@
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
 
-use md5::{Digest, Md5};
 use thiserror::Error;
 
 /// A local file that has already passed size checks. Name + size, optional path.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Artifact {
     name: String,
     size: u64,
     path: Option<PathBuf>,
-    content_digest: OnceLock<String>,
 }
-
-impl PartialEq for Artifact {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.size == other.size && self.path == other.path
-    }
-}
-
-impl Eq for Artifact {}
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ArtifactError {
@@ -29,8 +18,6 @@ pub enum ArtifactError {
     OverLimit { size: u64, limit: u64 },
     #[error("cannot read artifact: {0}")]
     Io(String),
-    #[error("artifact has no readable bytes")]
-    NoContent,
 }
 
 impl Artifact {
@@ -51,7 +38,6 @@ impl Artifact {
             name: name.to_string(),
             size,
             path: None,
-            content_digest: OnceLock::new(),
         })
     }
 
@@ -70,12 +56,21 @@ impl Artifact {
 
     pub fn with_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.path = Some(path.into());
-        self.content_digest = OnceLock::new();
         self
     }
 
     pub fn path(&self) -> Option<&Path> {
         self.path.as_deref()
+    }
+
+    /// File bytes when this artifact has a path. `Ok(None)` if there is no path.
+    pub fn bytes(&self) -> Result<Option<Vec<u8>>, ArtifactError> {
+        let Some(path) = self.path.as_deref() else {
+            return Ok(None);
+        };
+        std::fs::read(path)
+            .map(Some)
+            .map_err(|e| ArtifactError::Io(e.to_string()))
     }
 
     pub fn file_name(&self) -> &str {
@@ -101,18 +96,6 @@ impl Artifact {
     pub fn size(&self) -> u64 {
         self.size
     }
-
-    /// MD5 hex of the file bytes. Same algorithm as `{fname_hash}`.
-    pub fn content_digest(&self) -> Result<String, ArtifactError> {
-        if let Some(hex) = self.content_digest.get() {
-            return Ok(hex.clone());
-        }
-        let path = self.path.as_deref().ok_or(ArtifactError::NoContent)?;
-        let bytes = std::fs::read(path).map_err(|e| ArtifactError::Io(e.to_string()))?;
-        let hex = hex_lower(&Md5::digest(bytes));
-        let _ = self.content_digest.set(hex.clone());
-        Ok(hex)
-    }
 }
 
 fn dot_index(name: &str) -> Option<usize> {
@@ -120,14 +103,4 @@ fn dot_index(name: &str) -> Option<usize> {
         Some(i) if i > 0 => Some(i),
         _ => None,
     }
-}
-
-pub(crate) fn hex_lower(bytes: &[u8]) -> String {
-    const LUT: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        out.push(LUT[(b >> 4) as usize] as char);
-        out.push(LUT[(b & 0x0f) as usize] as char);
-    }
-    out
 }

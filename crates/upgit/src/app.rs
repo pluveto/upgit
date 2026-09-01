@@ -73,13 +73,21 @@ impl App {
         let app_dir = application_dir(cli.application_path.as_deref());
         let mut items = Vec::new();
         for artifact in &artifacts {
-            let (raw, replaced) = self.publisher.publish_with_raw(uploader, artifact, now)?;
+            let content_hash_fallback = artifact.stem();
+            let (raw, replaced) = self.publisher.publish_with_raw(
+                uploader,
+                artifact,
+                now,
+                Some(content_hash_fallback),
+            )?;
             let shown = if cli.raw {
                 raw.as_str().to_string()
             } else {
                 replaced.as_str().to_string()
             };
-            let key = self.namer.apply(artifact, now)?;
+            let key = self
+                .namer
+                .apply(artifact, now, Some(content_hash_fallback))?;
             if self.verbose {
                 eprintln!("key: {} url: {shown}", key.as_str());
             }

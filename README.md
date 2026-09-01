@@ -290,12 +290,12 @@ For Windows user:
 | -- `{unix_tsms}`        | -- Unix timestamp in millisecond. Like `1644212979622`.              |
 | --- `{ext}`           | -- Extension like `.png`, and empty when the original file has no extension |
 | -- `{fname}`      | -- Original file base name like `demo` (without extension)   |
-| -- `{fname_hash}` | -- MD5 Hash in hex of `{fname}` (name without extension)                          |
-| -- `{fname_hash4}` | -- MD5 Hash in hex of `{fname}`, first 4 digits                          |
-| -- `{fname_hash8}` | -- MD5 Hash in hex of `{fname}`, first 8 digits                          |
-| -- `{content_hash}` | -- MD5 Hash in hex of the file contents                          |
-| -- `{content_hash4}` | -- MD5 Hash in hex of the file contents, first 4 digits                          |
-| -- `{content_hash8}` | -- MD5 Hash in hex of the file contents, first 8 digits                          |
+| -- `{fname_hash}` | -- xxHash32 (seed 0) hex of `{fname}` (name without extension)                          |
+| -- `{fname_hash4}` | -- xxHash32 hex of `{fname}`, first 4 digits                          |
+| -- `{fname_hash8}` | -- xxHash32 hex of `{fname}` (full 8-digit digest)                          |
+| -- `{content_hash}` | -- xxHash32 (seed 0) hex of the file contents                          |
+| -- `{content_hash4}` | -- xxHash32 hex of the file contents, first 4 digits                          |
+| -- `{content_hash8}` | -- xxHash32 hex of the file contents (full 8-digit digest)                          |
 | -- `{hmac}`        | -- HMAC-SHA256 hash of `hmac_format`, truncated to `hmac_len`            |
 | hmac_key           | Secret key for calculation `{hmac}`                                          |
 | hmac_format        | Format string for `{hmac}` calculation. Supporting all above placeholders.   |

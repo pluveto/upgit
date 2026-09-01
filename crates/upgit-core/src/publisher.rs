@@ -33,8 +33,11 @@ impl Publisher {
         uploader: &dyn Uploader,
         artifact: &Artifact,
         at: SystemTime,
+        content_hash_fallback: Option<&str>,
     ) -> Result<PublicUrl, PublishError> {
-        Ok(self.publish_with_raw(uploader, artifact, at)?.1)
+        Ok(self
+            .publish_with_raw(uploader, artifact, at, content_hash_fallback)?
+            .1)
     }
 
     /// Locator before `[link]` replacements, and the rewritten public URL.
@@ -43,8 +46,9 @@ impl Publisher {
         uploader: &dyn Uploader,
         artifact: &Artifact,
         at: SystemTime,
+        content_hash_fallback: Option<&str>,
     ) -> Result<(Locator, PublicUrl), PublishError> {
-        let key = self.namer.apply(artifact, at)?;
+        let key = self.namer.apply(artifact, at, content_hash_fallback)?;
         let locator = uploader.upload(artifact, &key)?;
         let url = self.linker.apply(&locator);
         Ok((locator, url))
