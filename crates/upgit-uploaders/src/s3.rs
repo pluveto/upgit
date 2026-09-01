@@ -4,7 +4,8 @@ use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
     amz_date, collapse_slash_runs, content_type_for, could_not_reach, hex_lower, host_of, hostname,
-    looks_like_missing_bucket, looks_like_signature_error, read_bytes, xml_error_summary,
+    join_host_path, looks_like_missing_bucket, looks_like_signature_error, read_bytes,
+    xml_error_summary,
 };
 
 type HmacSha256 = Hmac<Sha256>;
@@ -19,6 +20,8 @@ pub struct S3Config {
     pub secret_key: String,
     pub endpoint: String,
     pub url_format: String,
+    /// Public URL prefix (CDN). Empty: `locator_for` uses `url_format`. PUT still uses `endpoint`.
+    pub host: String,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +38,10 @@ impl S3Uploader {
     }
 
     pub fn locator_for(&self, key: &ObjectKey) -> Locator {
+        let host = self.config.host.trim();
+        if !host.is_empty() {
+            return Locator::new(join_host_path(host, key.as_str()));
+        }
         let endpoint = self.config.endpoint.trim().trim_end_matches('/');
         let raw = self
             .config
