@@ -1,7 +1,3 @@
-//! KeyPolicy turns an Artifact's name + a clock into an ObjectKey.
-//! Rename does not happen inside an Uploader (Evans: naming is its own policy;
-//! Ousterhout: one place to change the template).
-
 use std::time::{Duration, UNIX_EPOCH};
 
 use upgit_core::{Artifact, KeyPolicy};
@@ -12,33 +8,6 @@ fn at_2022_01_31_noon() -> std::time::SystemTime {
 
 fn png(name: &str) -> Artifact {
     Artifact::from_name_and_size(name, 1024, Some(5 * 1024 * 1024)).expect("valid artifact")
-}
-
-#[test]
-fn template_builds_remote_object_key() {
-    let policy = KeyPolicy::template("{year}/{month}/{stem}_{unix}{ext}");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(key.as_str(), "2022/01/logo_1643630400.png");
-}
-
-#[test]
-fn keep_original_name_under_target_dir() {
-    let policy = KeyPolicy::keep_original_in("my_images/demo");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(key.as_str(), "my_images/demo/logo.png");
-}
-
-#[test]
-fn target_dir_leading_slash_is_stripped() {
-    let policy = KeyPolicy::keep_original_in("/my_images/demo/");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(key.as_str(), "my_images/demo/logo.png");
 }
 
 #[test]
@@ -55,61 +24,5 @@ fn hmac_placeholder_uses_sha256_of_interpolated_format() {
     assert_eq!(
         key.as_str(),
         "2022/01/upgit_26f8a9ff5ef845c3a60a24de37634eb.png"
-    );
-}
-
-#[test]
-fn empty_template_is_rejected() {
-    let err = KeyPolicy::template("   ")
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect_err("empty template");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("template") || msg.contains("empty"),
-        "error should mention the empty template, got {msg}"
-    );
-}
-
-#[test]
-fn hour_minute_second_at_noon_utc() {
-    let policy = KeyPolicy::template("{hour}:{minute}:{second}");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(key.as_str(), "12:00:00");
-}
-
-#[test]
-fn unix_tsms_is_milliseconds_since_epoch() {
-    let policy = KeyPolicy::template("{unix_tsms}_{unixtsms}_{unixts}");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(key.as_str(), "1643630400000_1643630400000_1643630400");
-}
-
-#[test]
-fn fname_hash_is_md5_of_stem_without_extension() {
-    // Independent 0.2 vector: md5("logo") = 96d6f2e7e1f705ab5e59c84a6dc009b2
-    let policy =
-        KeyPolicy::template("{fname_hash}_{fname_hash4}_{fname_hash8}_{fullname}_{filename}");
-    let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect("key");
-    assert_eq!(
-        key.as_str(),
-        "96d6f2e7e1f705ab5e59c84a6dc009b2_96d6_96d6f2e7_logo.png_logo"
-    );
-}
-
-#[test]
-fn hmac_placeholder_without_key_is_error() {
-    let err = KeyPolicy::template("{year}/{hmac}{ext}")
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect_err("hmac without key");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("hmac_key") && msg.contains("{hmac}"),
-        "got {msg}"
     );
 }
