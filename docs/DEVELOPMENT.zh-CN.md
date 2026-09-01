@@ -1,249 +1,165 @@
 # upgit 开发手册
 
-给第一次进仓库的人和被拉来改代码的 AI。读完应能：把环境搭到和 CI 同一套门槛、在 `next` 上提交、用 `cargo-release` 发版。
+产品用法在仓库根目录的 [README.md](../README.md) 和 [docs/README.zh-CN.md](README.zh-CN.md)。下面只写怎么在这棵树上开发，以及怎么把一版软件交到 GitHub Releases。
 
-用户怎么用产品：仓库根目录 [README.md](../README.md) / [docs/README.zh-CN.md](README.zh-CN.md)。本手册不讲产品教程。
+默认分支叫 `next`。clone 下来就在这根线上。发版也只允许从这里推 tag。
 
-## 1. 仓库与分支
+版本号只有一处：根目录 `Cargo.toml` 里 `[workspace.package]` 的 `version`。三个成员 crate 写 `version.workspace = true`，彼此用 `path` 依赖，不要再抄一遍数字。`publish = false`，我们不往 crates.io 上传。用户拿到的是 Release 页面上的 zip。
 
-- 默认分支是 **`next`**。日常开发、PR、发版都在这里。
-- 版本号只写在根目录 `Cargo.toml` 的 `[workspace.package] version`。成员 crate 用 `version.workspace = true`，crate 之间用 `path` 依赖，不要再写一遍版本。
-- 不往 crates.io 发（`publish = false`）。产物是 GitHub Release 上的 zip。
+`crates/upgit-core` 里是领域对象。一个本地文件进门之后叫 `Artifact`，远端路径叫 `ObjectKey`，谁来命名由 `KeyPolicy` 决定，谁来改写展示用的 URL 由 `LinkPolicy` 决定，真正把字节送走的是实现了 `Uploader` 的对象。`Publisher` 按顺序问这几位要结果。报给用户的失败形状是 `UploadError`。
 
-Workspace 三个成员：
+`crates/upgit-uploaders` 认识各家图床。它把一份 TOML 配成具体的上传器对象，塞进 `Registry`。HTTP 图床的请求模板在 `recipes/`，编译时编进二进制。`HostCatalog` 是给 `--help` 和 `upgit uploaders` 看的名单。
 
-| Crate | 职责 |
-| --- | --- |
-| `crates/upgit-core` | 领域对象：`Artifact`、`ObjectKey`、`KeyPolicy`、`LinkPolicy`、`Uploader`、`Publisher`、`Registry`、`UploadError` |
-| `crates/upgit-uploaders` | 各图床对象、HTTP 配方、`AppConfig`（解析 / 环境变量 / `install_into`）、`HostCatalog` |
-| `crates/upgit` | CLI：`clap` 子命令、`App`、`Intake`/`Source`、`Emitter`、`init`、history |
+`crates/upgit` 是命令行。clap 解析参数，`Intake` 从磁盘或剪贴板取出 `Artifact`，`App` 找到上传器并调用 `Publisher`，`Emitter` 把 URL 打到 stdout 或剪贴板。`upgit init` 是 clap 子命令，写一份 GitHub 用的 `config.toml`。
 
-其它位置：`recipes/*.toml`（编进二进制的 HTTP 配方）、`config.github.toml`（init / 发布 zip 用的 GitHub 模板）、`config.sample.toml`（完整目录，不打进 zip）、`.githooks/`、`.github/workflows/`、`release.toml`、`rust-toolchain.toml`。
+发布 zip 用的模板是 `config.github.toml`。仓库里的 `config.sample.toml` 是完整图床目录，打 zip 时不要带上它。钩子在 `.githooks/`，工作流在 `.github/workflows/`，发版工具的配置在 `release.toml`，Rust 版本钉在 `rust-toolchain.toml`。
 
-## 2. 三巨头约束
+## 三巨头
 
-本仓库的设计与评审以 **Eric Evans、John Ousterhout、Alan Kay** 三人的观点为硬约束，不是装饰。改架构、加模块、写错误信息、写测试之前，先对照下面三条。做设计讨论或合并前审核时，三人必须全出场、互相质疑至少一轮，结论落到具体路径 / API / 不变量上；证据不足就写「无法核实」。
+设计和评审跟 Eric Evans、John Ousterhout、Alan Kay 走。这不是装饰。改 `Uploader`、改错误文案、改测试门槛之前，先用他们的标准看一遍。讨论方案时三人都要到场，互相质疑至少一轮，话要落到文件路径、函数名、不变量上。看不清就写「无法核实」，不要编。
 
-出处：Evans《领域驱动设计》；Ousterhout《软件设计哲学》；Kay，《The Early History of Smalltalk》与关于 OOP 的公开论述。
+Evans 的书是《领域驱动设计》。Ousterhout 的书是《软件设计哲学》。Kay 没有对应的那一本专著，依据是 *The Early History of Smalltalk* 和他公开谈 OOP 的文字。
 
-### Eric Evans：领域与边界
+### Evans
 
-- **统一语言**：用户、文档、代码用同一套词。用户说「上传器」「配置」「直链」，代码里就是 `Uploader`、`AppConfig`、`Locator`/`PublicUrl`。不要在用户可见表面写内部词：`registry`、`recipe id`、`first-class`、`JSONC`、`extensions/`。
-- **限界上下文**：`upgit-core` 是领域层，不知道 HTTP 客户端、不知道 clap。`upgit-uploaders` 把配置翻译成上传器对象。`upgit` 是应用层：收集本地文件、调 Publisher、把 URL 打出去。不要为了省事把 ureq / clap 拖进 core。
-- **模型驱动**：远程对象键是 `KeyPolicy` 的事，不是某个 Uploader 里私自改名；CDN 替换是 `LinkPolicy`；上传是 `Uploader::upload(artifact, key)`。新行为优先落到已有对象上，而不是再开一条平行流程。
+用户说「上传器」，代码里的类型就叫 `Uploader`。用户说「配置」，解析结果叫 `AppConfig`。用户要的那条能打开的地址，上传刚结束时叫 `Locator`，经过 `LinkPolicy` 之后叫 `PublicUrl`。这套词要写进文档和错误信息。`--help`、`init` 打到屏幕上的字、zip 里 `config.toml` 的注释，都不要出现 `registry`、`recipe id`、`first-class`、`JSONC`、`extensions/`。那些是实现细节。有人把未知上传器的报错写成「没有 extensions 文件夹」再贴一段七牛 TOML，等于逼用户学两套语言。正确做法是：`Registry::get` 只报已经装进表里的 id；完整能用的 id 由 `HostCatalog` 提供；提示去改 `config.toml` 的 `default` 或传 `--uploader`。
 
-落到本仓库：
+`upgit-core` 不准认识 ureq，也不准认识 clap。它只知道文件、键、上传这条消息。把 HTTP 客户端或参数解析塞进 core，以后换客户端就要改领域层。`upgit-uploaders` 负责读 TOML、认出这是 GitHub 还是一份 HTTP 配方，然后 `new` 出对象、`register` 进表。`upgit` 负责从用户那儿收文件，把 URL 打回去。
 
-- `Registry` 只按 id 查找已经 `install_into` 的对象。CLI 报「未知上传器」时，可用列表来自 `HostCatalog`，不要在 `App` 里硬编码 GitHub/七牛示例块。
-- 用户可见错误用 `UploadError { what, hint, status }`，禁止把远端 JSON/XML 原文倒给用户。
+命名发生在 `KeyPolicy`。某个 Uploader 自己改远程文件名，别的 Uploader 就对不齐，`-t` 也就没地方接。CDN 替换发生在 `LinkPolicy`。`Uploader::upload` 的参数是 `&Artifact` 和 `&ObjectKey`，返回 `Locator`。GitHub 的 Contents API 把 JSON 倒给用户，是把基础设施的形状泄漏出了领域。`UploadError` 的 `what` 写发生了什么，`hint` 写下一步改配置的哪一项，`status` 在有 HTTP 码时带上。`documentation_url` 这类字段不准出现在 `to_string()` 里。
 
-### John Ousterhout：复杂度与完成标准
+### Ousterhout
 
-- **复杂度 = 让以后更难改**。接口短、实现厚（深模块）。`Publisher::publish` 藏命名 + 上传 + 替换；调用方不要自己拼这三步。
-- **错误消灭在定义阶段**。HTTP 配方缺 `token` 在 `install_into` 时失败，不要发出去再报 `invalid json response`。`naming` 含 `{hmac}` 但没有 `hmac_key`，在 `namer()` 时失败。占位 PAT（`...`、`PASTE_`、`YOUR_`）当缺字段。
-- **信息隐藏**：`init` 必须是 clap 子命令，禁止在 `main` 里拦截 `args[1] == "init"`（否则 `init --help` 会写成文件）。
-- **怎样算做完**：文档写了但代码没到、删测试、把失败标成「已知债」都不算完成。测试必须打到真正发出去的函数，禁止在测试里再实现一份算法然后断言两边相等。
+复杂度的意思是：下一次改动变难了。`Publisher::publish` 已经把「取键、upload、改写 URL」收在一个调用里。调用方再自己 `apply` 一遍 `KeyPolicy` 再 `upload`，就是把实现细节摊开，以后改顺序要改很多处。
 
-落到本仓库：
+缺字段要在装配置时失败。SM.MS 的配方里有 `{config.token}`，空表 `[uploaders.smms]` 必须在 `install_into` 报缺少 `token`。若放行，请求会打到 sm.ms，把 HTML 当 JSON 解析，用户看到 `invalid json response`。`naming` 里有 `{hmac}` 而 `hmac_key` 为空，必须在 `AppConfig::namer()` 失败。以前 `interpolate` 会把 `{hmac}` 原样留在对象键里，文件上传「成功」，路径却是字面量。zip 里的 `pat = "PASTE_YOUR_TOKEN"` 含 `PASTE_` 或 `...`，按缺字段处理，否则 GitHub 返回 401，用户以为自己填过了。
 
-- CI 与 git hook 同一套门槛：`cargo fmt --all -- --check`，`RUSTFLAGS=-D warnings cargo clippy --workspace --all-targets --locked`，`cargo test --workspace --locked`。
-- README 不要写死版本号。版本只出现在 git tag 和 `upgit --version`。
+`init` 必须走 clap 子命令。曾经在 `main` 里判断 `args[1] == "init"`，把 `args[2]` 当路径，于是 `upgit init --help` 在当前目录写出一个名叫 `--help` 的文件。那是接口把非法输入收成了合法路径。
 
-### Alan Kay：对象、状态、消息
+测试要调用将要上线的那个函数。在测试里再写一遍 HMAC 再和实现比，两边一起错也会绿。文档写了「支持 `-t`」而 CLI 从未调用 `KeyPolicy::keep_original_in`，这件事不算做完。把失败改成注释里的「已知问题」也不算做完。
 
-- **对象是自治单元**，不是「全局配置结构体 + 一堆函数」。`GithubUploader`、`QiniuUploader`、`HttpRecipeUploader` 各自持有自己的配置，只收 `upload` 消息。
-- **消息传递**：`Intake` 产出 `Artifact`；`Publisher` 问 `KeyPolicy` 要键，把 `(artifact, key)` 发给 `Uploader`，再问 `LinkPolicy` 要展示 URL。调用方不打开对方的肚子改字段。
-- **延迟绑定**：表名对上配方 id 或内置 kind 就不必写 `type`。换图床是换 Registry 里的对象，不是改 `match` 上传路径。
-- **简单的事保持简单**：加一种 HTTP 图床，优先新配方对象（`recipes/*.toml` + catalog），不要为每家网站复制一套客户端。
+CI 和 git hook 用同一组命令：`cargo fmt --all -- --check`；`RUSTFLAGS=-D warnings cargo clippy --workspace --all-targets --locked`；`cargo test --workspace --locked`。Clippy 的 warning 在这里就是 error。README 里不要出现 `v0.3.0-alpha.2` 这种会过期的 tag。用户问版本，看 `upgit --version` 或 git tag。
 
-反面（禁止）：
+### Kay
 
-- 把上传写成 `match id { "github" => http_put_github(), ... }` 的过程式总线。
-- 用大量纯函数管道代替对象上的方法，把状态拆到调用方去拼。
-- 为了「函数式一点」把 `Uploader` 收成闭包或自由函数。
+`GithubUploader` 自己带着 pat、username、repo、branch。你对它只发 `upload`。不要把这些字段拆到一个全局 `Config` 再写 `fn github_put(cfg, file)`。`QiniuUploader` 每次 put 自己用 AK/SK 签发 token。`HttpRecipeUploader` 拿着配方和一张 `config` 表，自己做插值和 HTTP。
 
-### 评审时怎么用
+一次上传的顺序是：`Intake` 给出 `Artifact`；`Publisher` 向 `KeyPolicy` 要 `ObjectKey`；把这两样发给 `Uploader`；拿到 `Locator` 再交给 `LinkPolicy`，得到给用户看的 URL。中间不要去读 `GithubUploader` 的私有字段来拼 raw.githubusercontent.com。
 
-改核心抽象或用户可见行为时，用讨论（deliberate）把选项收敛；声称「做完了 / 可以发」时用审核（audit）。总判取三人中更严的一侧。主 Agent 主持判断，实现交给单独的实现回合。
+配置表名叫 `smms` 且 catalog 里有这个 id，就不必写 `type = "http"`。换图床是 `Registry` 里换成另一个对象。按 id 写 `match "github" => { ureq::put(...) }` 会让每家图床都把签名、重试、错误翻译写进同一条总线，无法替换。
 
-## 3. 环境搭建（重点）
+HTTP 图床用 `recipes/*.toml` 描述请求。为每一家再抄一套客户端，是为特例发明特例。签名、分块、和 Contents API 强相关的存储，才各自做一个 Uploader 类型。
 
-目标：你机器上的检查命令和 GitHub Actions `CI` job 一致。差一条，就会出现「本地绿、CI 红」。
+不要把 `Uploader` 收成闭包来「函数式一点」。闭包把状态藏进捕获列表，错误翻译和测试夹具都失去对象边界。
 
-### 3.1 克隆
+讨论方案时用 deliberate：把选项写清楚，写若选 A 就要放弃 B。声称做完了、可以打 tag 时用 audit：拿代码当证据。两人通过、一人不通过，听更严的那个。主持判断的人和写代码的人不要是同一回合。
+
+## 环境
+
+你本机跑过的检查，必须和 `.github/workflows/ci.yml` 里 `CI` 这一份 job 相同。少一条，就会本地绿、GitHub 红。CI 在 `next` 的 push 和 pull request 上跑，操作系统是 ubuntu-latest、windows-latest、macos-latest。
 
 ```bash
 git clone https://github.com/pluveto/upgit.git
 cd upgit
 ```
 
-默认就是 `next`。不要从别的长期分支开日常工作。
+此时 `git status` 应显示 `next`。
 
-### 3.2 Rust 工具链
+根目录的 `rust-toolchain.toml` 写了 `channel = "stable"`，以及 `components = ["rustfmt", "clippy"]`。先装 [rustup](https://rustup.rs/)。进入这个目录之后，rustup 会按文件下载对应的 stable，并把 rustfmt、clippy 装上。跑 `rustc --version`、`cargo --version`。再跑 `rustup component list --installed`，输出里要有 rustfmt 和 clippy。缺了就 `rustup component add rustfmt clippy`。
 
-仓库根目录有 `rust-toolchain.toml`：
+从中国大陆拉 crates.io 经常超时。可以先 `export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse`。仍慢就按 rsproxy 或你常用的镜像站文档改 `config.toml`。镜像只影响下载，不改变 `--locked` 的含义。
 
-```toml
-[toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-```
+部分 crate 会编 C 代码。Linux 上要有 gcc（Debian/Ubuntu 的包名是 `build-essential`）。macOS 上要有 Command Line Tools：`xcode-select --install`。Windows 上本仓库的发布目标是 `*-pc-windows-msvc`，需要 Visual Studio Build Tools，工作负载选「使用 C++ 的桌面开发」。缺 MSVC 时 `ring` 这类依赖会在编译期失败，报错看起来像 Rust 的，根因是链接器。
 
-安装 [rustup](https://rustup.rs/)，进目录后 rustup 会按该文件拉 **stable**，并装上 `rustfmt` 和 `clippy`。确认：
+`--clipboard` 在 Linux 上还依赖运行时的剪贴板程序。X11 用 xclip，Wayland 用 wl-clipboard。没装时 `upgit --clipboard` 会失败，并在错误里写出要装哪个。这和能不能 `cargo build` 无关。
 
-```bash
-rustc --version
-cargo --version
-rustup component list --installed   # 应有 rustfmt、clippy
-```
-
-国内拉 crates.io 慢，可：
-
-```bash
-export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-# 或配镜像，例如 rsproxy，按镜像站文档设置
-```
-
-需要系统 C 工具链才能编部分依赖（尤其 Windows 上的 `ring` 等）：
-
-- Linux：发行版的 `build-essential` / `gcc` 即可。
-- macOS：Xcode Command Line Tools（`xcode-select --install`）。
-- Windows：MSVC 工具链（Visual Studio Build Tools，勾选「使用 C++ 的桌面开发」），不要混用缺失的 GNU 环境去编 `*-pc-windows-msvc`。
-
-Linux 上剪贴板集成测 `--clipboard` 时，X11 需要 `xclip`，Wayland 需要 `wl-clipboard`。没有它们，程序会报错并提示安装，不是编译失败。
-
-### 3.3 第一次编过
+第一次编译：
 
 ```bash
 cargo build -p upgit --locked
 cargo run -p upgit --locked -- --version
-cargo run -p upgit --locked -- --help
-cargo run -p upgit --locked -- uploaders
 ```
 
-`--locked` 必须带：与 CI 一样，禁止顺手改 `Cargo.lock`。只有你有意升级依赖时才去掉 `--locked` 并提交新的 lock。
+`--locked` 让 cargo 严格按现有 `Cargo.lock` 取版本。CI 带这个旗标。你若忘了带，cargo 可能悄悄改 lock，diff 里出现一堆无关升级。只有在你确实要升依赖时才去掉 `--locked`，并把新的 `Cargo.lock` 一并提交。
 
-### 3.4 Git hook（与 CI 同门槛）
+`cargo run -p upgit --locked -- --help` 应打印用法，底部有上传器名单和 `https://github.com/pluveto/upgit`。不带参数的 `upgit` 也打印帮助，进程退出码是 2。它不得先去读 `config.toml` 再报「没有配置上传器」。`cargo run -p upgit --locked -- uploaders` 应列出 `github`、`smms` 这些 id。`cargo run -p upgit --locked -- init --help` 必须是 clap 的帮助文本，当前目录不得出现名为 `--help` 的文件。
 
-钩子在仓库的 `.githooks/`，**不会**在 clone 后自动生效。每个克隆执行一次：
+钩子文件在 `.githooks/`，clone 下来不会自动启用。每个新的工作副本执行一次：
 
 ```bash
 ./scripts/install-git-hooks.sh
 ```
 
-它会 `git config core.hooksPath .githooks`。之后：
+脚本里是 `git config core.hooksPath .githooks`。之后，往暂存区放 `.rs`、`.toml` 或 `Cargo.lock` 再 `git commit`，pre-commit 会跑 `cargo fmt --all -- --check`，以及 `RUSTFLAGS=-D warnings` 下的 `cargo clippy --workspace --all-targets --locked`。`git push` 时 pre-push 无条件再跑同一组。fmt 的 `--check` 只报告，不会替你改文件。先 `cargo fmt --all`，再 add、commit。
 
-- **pre-commit**：暂存区里有 `.rs` / `.toml` / `Cargo.lock` 时，跑 `cargo fmt --all -- --check` 和 `cargo clippy --workspace --all-targets --locked`（`RUSTFLAGS=-D warnings`）。
-- **pre-push**：无条件跑同样的 fmt + clippy。
+不要用 `--no-verify`。钩子挡住的东西，CI 同样会挡，只是更晚、且挡住所有人的合并。
 
-Clippy 的警告在本仓库等于错误。`cargo fmt` 只检查、不代你改；先本地 `cargo fmt --all` 再提交。
+你在 Linux 或 macOS 上提交时，钩子编译的是当前目标。`#[cfg(windows)]` 里多出来、从未调用的函数，这边的 clippy 看不见。`windows-latest` 上 `RUSTFLAGS=-D warnings` 会把它当成 dead_code 判失败。`decode_path` 和 `from_hex` 只给非 Windows 的剪贴板文本路径用，必须标 `#[cfg(not(windows))]`。动了 `source.rs` 里 Windows 分支，不能只靠本机钩子签字。
 
-绕过钩子（`--no-verify`）会把红的 CI 留给所有人，不要用。
-
-本机是 Linux/macOS 时，钩子**看不到** `#[cfg(windows)]` 下的死代码。Windows 专有代码必须等 CI 的 `windows-latest`，或自己交叉/在 Windows 上再 clippy 一次。曾经因此挂过：仅非 Windows 使用的函数没加 `cfg(not(windows))`。
-
-### 3.5 日常检查命令（与 CI 逐步对齐）
+日常在提交前自己跑一遍（和 CI 相同）：
 
 ```bash
 cargo fmt --all -- --check
 RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets --locked
 cargo test --workspace --locked
-cargo run -p upgit --locked -- --help
-cargo run -p upgit --locked -- uploaders
 ```
 
-`CI` workflow（`.github/workflows/ci.yml`）在 `next` 的 push / PR 上于 ubuntu、windows、macos 各跑一遍以上步骤。
-
-### 3.6 Git 提交签名
-
-本仓库开发机若开了 `commit.gpgsign=true`，在没有 pinentry 的环境（常见于自动化/远程会话）会 `gpg: signing failed: Inappropriate ioctl for device`。`cargo-release` 内部调 `git commit`，一样会炸。
-
-这个克隆可以：
+若本机 git 开了 `commit.gpgsign=true`，而当前会话没有可用的 pinentry（SSH 进来的环境、CI 里的 agent、部分 IDE 集成终端），`git commit` 会报 `gpg: signing failed: Inappropriate ioctl for device`。`cargo-release` 内部调用 `git commit`，同一处失败。`release.toml` 里的 `sign-commit = false` 只关掉 cargo-release 自己的签名开关，挡不住 git 全局配置。在这个仓库的克隆上执行：
 
 ```bash
 git config --local commit.gpgsign false
+git config --show-origin commit.gpgsign
 ```
 
-`release.toml` 里 `sign-commit = false`、`sign-tag = false`，但 **挡不住** 全局 `commit.gpgsign=true`。发版前确认 `git config --show-origin commit.gpgsign`。
+第二条用来确认生效的是 local 而不是 global。
 
-### 3.7 发版额外工具
-
-发版用 [cargo-release](https://github.com/crate-ci/cargo-release)，不是手改 toml。
+发版还要装 [cargo-release](https://github.com/crate-ci/cargo-release)：
 
 ```bash
 cargo install cargo-release --locked
 cargo release -V
 ```
 
-推送 tag / 改 GitHub 默认分支需要能写这个仓库的凭据。用 GitHub CLI 时确认当前用户是有权限的那一个（`gh auth status`）。
+推 tag 需要写这个 GitHub 仓库的权限。`gh auth status` 里当前账号必须是有 `repo` 权限的那一个。曾经用错账号推 `next`，GitHub 返回 403。
 
-## 4. 提交说明
+## 提交说明
 
-使用 [Conventional Commits](https://www.conventionalcommits.org/)：
+提交标题用 [Conventional Commits](https://www.conventionalcommits.org/)。用户能察觉的新能力用 `feat:`。缺陷用 `fix:`。工作流用 `ci:`。cargo-release 自己写的版本提交是 `chore: bump version to {{version}}`。文档用 `docs:`。不改变对外行为的结构移动用 `refactor:`。
 
-- `feat:` 用户能感知的能力
-- `fix:` 缺陷
-- `ci:` 工作流
-- `chore:` 版本号、琐碎维护（`cargo-release` 自动提交是 `chore: bump version to {{version}}`）
-- `docs:` 文档
-- `refactor:` 不改变用户可见行为的结构变化
+标题一行说做成了什么。需要理由时，空一行再写正文。不要把「先改了 A 再改了 B」写进标题。
 
-主题一行，必要时正文空一行写原因。不要把实现过程写进主题。
+## 发版
 
-## 5. 发版
+`release.toml` 里 `allow-branch = ["next"]`。在别的分支上执行 cargo-release 会被拒绝。不加 `--execute` 时它只打印将要做的事，不改工作区。
 
-配置在 `release.toml`。只允许在 **`next`** 上发。默认是 dry-run，必须加 `--execute` 才会改文件、提交、打 tag、push。
+预发布号往前加一（`0.3.0-beta.3` 变成 `0.3.0-beta.4`）：
 
 ```bash
-# 预览（不改仓库）
-cargo release beta          # 0.3.0 -> 0.3.1-beta.1，或 0.3.0-beta.3 -> 0.3.0-beta.4
-cargo release release       # 去掉预发布：0.3.0-beta.3 -> 0.3.0
-
-# 真发
+cargo release beta
 cargo release beta --execute --no-confirm
+```
+
+去掉 `-beta.N`，得到正式号 `0.3.0`：
+
+```bash
+cargo release release
 cargo release release --execute --no-confirm
 ```
 
-注意：只写 `cargo release --execute` **不够**。不带 level 时 cargo-release 可能撞上已有 tag 直接失败。正式版请显式 `cargo release release --execute`。
+第二条命令必须写成 `cargo release release`。只写 `cargo release --execute` 时，cargo-release 可能认为当前版本对应的 tag 已经存在，直接退出。正式版发过一次，就是这样撞上 `v0.3.0-beta.3 already exists` 的。
 
-它会：
+`--execute` 之后它改根 `Cargo.toml` 的 `version`，改 `Cargo.lock` 里三处相同的数字，提交 `chore: bump version to …`，打 annotated tag `v` 加版本号，把 `next` 和这个 tag 推到 `origin`。不要自己改三个 crate 目录里的 version，也不要手打 `git tag` 来「节省步骤」。漏改 lockfile 时，CI 的 `--locked` 会失败。
 
-1. 只改 workspace 的 `version`（以及 lockfile 里对应的三行）
-2. 提交 `chore: bump version to …`
-3. 打 **annotated** tag `v{{version}}`（例如 `v0.3.0`、`v0.3.0-beta.4`）
-4. `git push` 分支和 tag
+tag 名字匹配 `v*` 时，`.github/workflows/release.yml` 开始跑。先在 ubuntu-latest 上 `cargo test --workspace --locked`。通过后按矩阵编 zip：
 
-**不要**手改三份 crate 的 version，**不要**自己 `git tag` 应付。
+- `upgit_linux_386.zip`、`upgit_linux_amd64.zip`、`upgit_linux_arm.zip`、`upgit_linux_arm64.zip`
+- `upgit_win_386.zip`、`upgit_win_amd64.zip`、`upgit_win_arm64.zip`
+- `upgit_macos_amd64.zip`、`upgit_macos_arm64.zip`
 
-推送 `v*` tag 之后，`.github/workflows/release.yml`：
+每个 zip 里有一份名为 `upgit` 的二进制（Windows 上是 `upgit.exe`）、一份从 `config.github.toml` 拷出来的 `config.toml`、以及 `recipes/` 目录。Unix 上名为 `upgit` 的文件在 zip 里的 `external_attr` 是 `0o755`，否则解压后不可执行。断言会拒绝任何文件名里带 `config.sample` 的条目。
 
-1. ubuntu 上 `cargo test --workspace --locked`
-2. 矩阵交叉编译 zip（linux 386/amd64/arm/arm64，windows 386/amd64/arm64，macOS amd64/arm64）
-3. 每个 zip：`upgit`（Unix 可执行位 `0755`）+ `config.toml`（来自 `config.github.toml`）+ `recipes/`
-4. **不**打 `config.sample.toml`
-5. 创建 GitHub Release。tag 名里带 `-` 的标成 prerelease（`v0.3.0-beta.1`），`v0.3.0` 是正式版
+创建 GitHub Release 时，若 tag 含 `-`（如 `v0.3.0-beta.4`），`prerelease` 为 true；`v0.3.0` 为 false。`workflow_dispatch` 若跑在普通分支上，`github.ref_type` 不是 `tag`，publish job 被 `if` 跳过，避免用分支名当 tag 发一版空的 release。
 
-`workflow_dispatch` 在非 tag 上跑 **不会** 发 Release（`if: github.ref_type == 'tag'`）。
+发完打开 https://github.com/pluveto/upgit/releases ，看 tag 名字、prerelease 开关、上面九个 zip 是否都在。把解出来的二进制跑 `--version`，应等于 tag 去掉前缀 `v`。
 
-发完核对：
-
-- https://github.com/pluveto/upgit/releases 上 tag、prerelease 开关、九个 zip
-- `upgit --version` 与 tag 去掉 `v` 一致
-
-## 6. 用户可见表面（发版前扫一眼）
-
-这些词不要出现在 README、`--help`、`init` 的 stdout、错误信息、zip 内 `config.toml` 注释、Release body（升级专页除外）：
-
-`JSONC`、`extensions/`、`registry`、`first-class`、`recipe id`、`20 bundled`
-
-无参数的 `upgit` 必须打印帮助并以退出码 2 离开，不能先去加载配置再报「没配上传器」。`upgit init --help` 必须是帮助，不能写出名叫 `--help` 的文件。
-
-## 7. 给 AI 的收工检查
-
-- 领域逻辑在 `upgit-core`，没有把 clap/ureq 引进 core。
-- 新上传能力是对象上的 `upload` 消息，不是按 id 的过程式 `match`。
-- 用户错误有 `what`/`hint`，没有远端 JSON/XML。
-- `cargo fmt --check`、`RUSTFLAGS=-D warnings clippy`、`cargo test --locked` 全过。
-- 若动了 Windows 专用代码，不能只靠 Linux 钩子签字。
-- 没在 README 里写死版本号。
-- 没手改 version；发版走 `cargo-release`。
+README、`--help`、`init` 打印的那几行、zip 里 `config.toml` 的注释、Release 说明正文里，不要出现 `JSONC`、`extensions/`、`registry`、`first-class`、`recipe id`、`20 bundled`。
