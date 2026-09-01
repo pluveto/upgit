@@ -63,6 +63,16 @@ impl Artifact {
         self.path.as_deref()
     }
 
+    /// File bytes when this artifact has a path. `Ok(None)` if there is no path.
+    pub fn bytes(&self) -> Result<Option<Vec<u8>>, ArtifactError> {
+        let Some(path) = self.path.as_deref() else {
+            return Ok(None);
+        };
+        std::fs::read(path)
+            .map(Some)
+            .map_err(|e| ArtifactError::Io(e.to_string()))
+    }
+
     pub fn file_name(&self) -> &str {
         &self.name
     }

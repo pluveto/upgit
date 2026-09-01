@@ -1208,9 +1208,9 @@ version = "0.3.1-beta.1"
 dependencies = [
  "chrono",
  "hmac",
- "md-5",
  "sha2",
  "thiserror",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -1426,6 +1426,12 @@ name = "x11rb-protocol"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6fc2961e4ef194dcbfe56bb845534d0dc8098940c7e5c012a258bfec6701bd"
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aee1b19627c7c60102ab80d3a9cbe18de90bfe03bfa6c3715447681f0e8c8af6"
 
 [[package]]
 name = "yoke"

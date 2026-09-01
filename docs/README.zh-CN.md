@@ -293,9 +293,12 @@ upgit logo.png --output clipboard -f markdown
 | -- `{unix_tsms}`        | -- 以毫秒计的 Unix 时间戳，如 `1644212979622`. |
 | --- `{ext}`           | -- 扩展名，如 `.png`，若文件无扩展名，则为空串 |
 | -- `{fname}`      | -- 原始文件名，如 `logo` （不含扩展名） |
-| -- `{fname_hash}` | -- `{fname}`（不含扩展名）的 MD5 散列值               |
-| -- `{fname_hash4}` | -- `{fname}` 的 MD5 散列值，取前 4 位               |
-| -- `{fname_hash8}` | -- `{fname}` 的 MD5 散列值，取前 8 位               |
+| -- `{fname_hash}` | -- `{fname}`（不含扩展名）的 xxHash32（种子 0）十六进制散列               |
+| -- `{fname_hash4}` | -- `{fname}` 的 xxHash32 散列，取前 4 位               |
+| -- `{fname_hash8}` | -- `{fname}` 的 xxHash32 散列（完整 8 位）               |
+| -- `{content_hash}` | -- 文件内容的 xxHash32（种子 0）十六进制散列               |
+| -- `{content_hash4}` | -- 文件内容的 xxHash32 散列，取前 4 位               |
+| -- `{content_hash8}` | -- 文件内容的 xxHash32 散列（完整 8 位）               |
 | -- `{hmac}`        | -- 对 `hmac_format` 做 HMAC-SHA256，截断到 `hmac_len`            |
 | hmac_key           | 计算 `{hmac}` 所用的密钥                                          |
 | hmac_format        | `{hmac}` 的格式字符串。支持上面全部占位符。   |

@@ -2,11 +2,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::DateTime;
 use hmac::{Hmac, Mac};
-use md5::{Digest, Md5};
 use sha2::Sha256;
 use thiserror::Error;
+use xxhash_rust::xxh32::xxh32;
 
-use crate::artifact::Artifact;
+use crate::artifact::{Artifact, ArtifactError};
 use crate::object_key::{ObjectKey, ObjectKeyError};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -36,11 +36,21 @@ impl HmacSpec {
         let mut mac = HmacSha256::new_from_slice(self.key.as_bytes())
             .map_err(|_| KeyPolicyError::InvalidHmacKey)?;
         mac.update(material.as_bytes());
-        let mut hex = hex_lower(&mac.finalize().into_bytes());
+        let mut hex = Self::hex_lower(&mac.finalize().into_bytes());
         if let Some(n) = self.len {
             hex.truncate(n.min(hex.len()));
         }
         Ok(hex)
+    }
+
+    fn hex_lower(bytes: &[u8]) -> String {
+        const LUT: &[u8; 16] = b"0123456789abcdef";
+        let mut out = String::with_capacity(bytes.len() * 2);
+        for &b in bytes {
+            out.push(LUT[(b >> 4) as usize] as char);
+            out.push(LUT[(b & 0x0f) as usize] as char);
+        }
+        out
     }
 }
 
@@ -56,6 +66,10 @@ pub enum KeyPolicyError {
     InvalidHmacKey,
     #[error("naming template uses `{{hmac}}` but `hmac_key` is not set")]
     MissingHmacKey,
+    #[error("naming template uses `{{content_hash}}` but the artifact has no readable bytes")]
+    MissingContent,
+    #[error("cannot read artifact content: {0}")]
+    ContentIo(String),
 }
 
 impl KeyPolicy {
@@ -87,7 +101,15 @@ impl KeyPolicy {
         }
     }
 
-    pub fn apply(&self, artifact: &Artifact, at: SystemTime) -> Result<ObjectKey, KeyPolicyError> {
+    /// `content_hash_fallback` is inserted as `{content_hash*}` when the artifact
+    /// has no readable bytes. It is never hashed. Required if the template (or
+    /// `hmac_format`) uses those placeholders and content is missing.
+    pub fn apply(
+        &self,
+        artifact: &Artifact,
+        at: SystemTime,
+        content_hash_fallback: Option<&str>,
+    ) -> Result<ObjectKey, KeyPolicyError> {
         match &self.kind {
             KeyKind::KeepOriginal { dir } => {
                 let dir = dir.trim().trim_matches('/');
@@ -106,7 +128,14 @@ impl KeyPolicy {
                 if self.hmac.is_none() && template.contains("{hmac}") {
                     return Err(KeyPolicyError::MissingHmacKey);
                 }
-                let fields = Fields::from_artifact(artifact, at)?;
+                let xxh32_hex = |data: &[u8]| format!("{:08x}", xxh32(data, 0));
+                let content_hash = self.resolve_content_hash(
+                    artifact,
+                    template,
+                    content_hash_fallback,
+                    xxh32_hex,
+                )?;
+                let fields = Fields::from_artifact(artifact, at, xxh32_hex, content_hash)?;
                 let hmac = match &self.hmac {
                     Some(spec) => {
                         let material = fields.interpolate(&spec.format, None);
@@ -117,6 +146,33 @@ impl KeyPolicy {
                 let rendered = fields.interpolate(template, hmac.as_deref());
                 Ok(ObjectKey::parse(&rendered)?)
             }
+        }
+    }
+
+    fn resolve_content_hash(
+        &self,
+        artifact: &Artifact,
+        template: &str,
+        fallback: Option<&str>,
+        xxh32_hex: impl Fn(&[u8]) -> String,
+    ) -> Result<Option<String>, KeyPolicyError> {
+        let uses_content_hash = |s: &str| s.contains("{content_hash") || s.contains("{contenthash");
+        let needs_content = uses_content_hash(template)
+            || self
+                .hmac
+                .as_ref()
+                .is_some_and(|spec| uses_content_hash(&spec.format));
+        if !needs_content {
+            return Ok(None);
+        }
+        match artifact.bytes() {
+            Ok(Some(bytes)) if !bytes.is_empty() => Ok(Some(xxh32_hex(&bytes))),
+            Ok(_) => match fallback {
+                Some(fb) => Ok(Some(fb.to_string())),
+                None => Err(KeyPolicyError::MissingContent),
+            },
+            Err(ArtifactError::Io(msg)) => Err(KeyPolicyError::ContentIo(msg)),
+            Err(other) => Err(KeyPolicyError::ContentIo(other.to_string())),
         }
     }
 }
@@ -134,16 +190,22 @@ struct Fields<'a> {
     ext: &'a str,
     fullname: &'a str,
     fname_hash: String,
+    content_hash: Option<String>,
 }
 
 impl<'a> Fields<'a> {
-    fn from_artifact(artifact: &'a Artifact, at: SystemTime) -> Result<Self, KeyPolicyError> {
+    fn from_artifact(
+        artifact: &'a Artifact,
+        at: SystemTime,
+        xxh32_hex: impl Fn(&[u8]) -> String,
+        content_hash: Option<String>,
+    ) -> Result<Self, KeyPolicyError> {
         let duration = at
             .duration_since(UNIX_EPOCH)
             .map_err(|_| KeyPolicyError::InvalidTime)?;
         let datetime = DateTime::from_timestamp(duration.as_secs() as i64, 0)
             .ok_or(KeyPolicyError::InvalidTime)?;
-        let fname_hash = hex_lower(&Md5::digest(artifact.stem().as_bytes()));
+        let fname_hash = xxh32_hex(artifact.stem().as_bytes());
         Ok(Self {
             year: datetime.format("%Y").to_string(),
             month: datetime.format("%m").to_string(),
@@ -157,6 +219,7 @@ impl<'a> Fields<'a> {
             ext: artifact.ext(),
             fullname: artifact.file_name(),
             fname_hash,
+            content_hash,
         })
     }
 
@@ -187,19 +250,20 @@ impl<'a> Fields<'a> {
             .replace("{stem}", self.stem)
             .replace("{fname}", self.stem)
             .replace("{ext}", self.ext);
+        if let Some(content_hash) = &self.content_hash {
+            let content4 = &content_hash[..content_hash.len().min(4)];
+            let content8 = &content_hash[..content_hash.len().min(8)];
+            out = out
+                .replace("{content_hash4}", content4)
+                .replace("{contenthash4}", content4)
+                .replace("{content_hash8}", content8)
+                .replace("{contenthash8}", content8)
+                .replace("{content_hash}", content_hash)
+                .replace("{contenthash}", content_hash);
+        }
         if let Some(hmac) = hmac {
             out = out.replace("{hmac}", hmac);
         }
         out
     }
-}
-
-fn hex_lower(bytes: &[u8]) -> String {
-    const LUT: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        out.push(LUT[(b >> 4) as usize] as char);
-        out.push(LUT[(b & 0x0f) as usize] as char);
-    }
-    out
 }

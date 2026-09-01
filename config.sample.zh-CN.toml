@@ -8,7 +8,7 @@
 # 使用哪一张上传器表（必须对应下面某个 [uploaders.*]）。
 default = "github"
 
-# 远程对象键模板。占位符：{year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8}。
+# 远程对象键模板。占位符：{year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8} {content_hash} {content_hash4} {content_hash8}。{fname_hash} 与 {content_hash} 为 xxHash32（种子 0）；{hmac} 为 HMAC-SHA256。
 naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}_{hmac}{ext}"
 
 # 用于计算 {hmac} 的密钥（HMAC-SHA256）。仅当 naming 含 {hmac} 时需要。
