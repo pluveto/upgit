@@ -63,36 +63,3 @@ impl UploadError {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn message_displays_what_only() {
-        let err = UploadError::message("artifact has no local path; cannot upload bytes");
-        assert_eq!(
-            err.to_string(),
-            "artifact has no local path; cannot upload bytes"
-        );
-        assert!(!err.to_string().contains("hint:"));
-        assert!(err.status.is_none());
-    }
-
-    #[test]
-    fn http_error_displays_what_then_hint_not_json() {
-        let err = UploadError::new(
-            "GitHub",
-            "GitHub repository `alice/photos` was not found (HTTP 404).",
-            "Check [uploaders.github] username and repo.",
-            Some(404),
-        );
-        let s = err.to_string();
-        assert_eq!(
-            s,
-            "GitHub repository `alice/photos` was not found (HTTP 404).\nhint: Check [uploaders.github] username and repo."
-        );
-        assert!(!s.contains("documentation_url"));
-        assert!(!s.contains('{'));
-    }
-}

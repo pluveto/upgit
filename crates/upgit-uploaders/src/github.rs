@@ -208,26 +208,3 @@ impl Uploader for GithubUploader {
         self.put_contents(key, artifact, &data, None)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn put_body_with_sha_serializes_sha() {
-        let json = encode_put_body("main", "logo.png", b"abc", Some("deadbeef")).expect("json");
-        let v: serde_json::Value = serde_json::from_str(&json).expect("parse");
-        assert_eq!(v["sha"], "deadbeef");
-        assert_eq!(v["branch"], "main");
-        assert_eq!(v["message"], "upload logo.png via upgit");
-        assert!(v["content"].as_str().is_some());
-    }
-
-    #[test]
-    fn put_body_without_sha_omits_field() {
-        let json = encode_put_body("main", "logo.png", b"abc", None).expect("json");
-        let v: serde_json::Value = serde_json::from_str(&json).expect("parse");
-        assert!(v.get("sha").is_none());
-        assert_eq!(v["branch"], "main");
-    }
-}

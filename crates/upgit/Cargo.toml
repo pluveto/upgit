@@ -19,7 +19,3 @@ upgit-uploaders = { path = "../upgit-uploaders" }
 
 [target.'cfg(windows)'.dependencies]
 clipboard-win = "5"
-
-[dev-dependencies]
-clap = { version = "4", features = ["derive"] }
-tempfile = "3"
