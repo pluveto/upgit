@@ -147,7 +147,7 @@ Options:
   -C, --clean                    Delete local files after a successful upload
   -V, --verbose                  Print uploader, object key, and URL to stderr
   -w, --wait                     Do not exit after upload until the user presses a key
-  -n, --no-log                   Disable writing upgit.log (history.log is still written)
+  -n, --no-log                   Disable writing upgit.log and history.log
       --application-path <PATH>  Directory that owns config.toml / upgit.toml, history.log, and upgit.log
       --version                  Print version
   -h, --help                     Print help
@@ -318,7 +318,7 @@ The config file is searched in this order:
 5. `~/.config/upgitrc`
 6. `config.toml` and `upgit.toml` next to the binary
 
-`--application-path` changes the binary-dir lookup. After each upload, `history.log` (and `upgit.log` unless `--no-log`) is written in that directory.
+`--application-path` changes the binary-dir lookup. After each upload, `history.log` and `upgit.log` are written in that directory unless `--no-log`.
 
 ### Config via Environment Variables
 

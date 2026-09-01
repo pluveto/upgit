@@ -147,7 +147,7 @@ Options:
   -C, --clean                    Delete local files after a successful upload
   -V, --verbose                  Print uploader, object key, and URL to stderr
   -w, --wait                     Do not exit after upload until the user presses a key
-  -n, --no-log                   Disable writing upgit.log (history.log is still written)
+  -n, --no-log                   Disable writing upgit.log and history.log
       --application-path <PATH>  Directory that owns config.toml / upgit.toml, history.log, and upgit.log
       --version                  Print version
   -h, --help                     Print help
@@ -317,7 +317,7 @@ branch = "main"
 5. `~/.config/upgitrc`
 6. 可执行文件同目录下的 `config.toml` 和 `upgit.toml`
 
-`--application-path` 会改变可执行文件同目录的查找位置。每次上传后会在该目录写入 `history.log`（除非 `--no-log`，否则还有 `upgit.log`）。
+`--application-path` 会改变可执行文件同目录的查找位置。每次上传后会在该目录写入 `history.log` 和 `upgit.log`（`--no-log` 时两者都不写）。
 
 ### 通过环境变量配置
 

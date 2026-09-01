@@ -7,7 +7,7 @@ use crate::uploader::Uploader;
 /// Runtime lookup of uploaders by id. The binary must not `match` on id.
 #[derive(Default)]
 pub struct Registry {
-    uploaders: HashMap<String, Box<dyn Uploader>>,
+    uploaders: HashMap<String, Box<dyn Uploader + Send + Sync>>,
 }
 
 #[derive(Debug, Error)]
@@ -21,7 +21,7 @@ impl Registry {
         Self::default()
     }
 
-    pub fn register(&mut self, id: impl Into<String>, uploader: Box<dyn Uploader>) {
+    pub fn register(&mut self, id: impl Into<String>, uploader: Box<dyn Uploader + Send + Sync>) {
         self.uploaders.insert(id.into(), uploader);
     }
 

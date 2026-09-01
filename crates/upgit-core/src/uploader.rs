@@ -5,7 +5,9 @@ use crate::locator::Locator;
 use crate::object_key::ObjectKey;
 
 /// An object that accepts one message: put this artifact at this key.
-pub trait Uploader {
+///
+/// `Send + Sync` so a batch sender can deliver that message from several threads.
+pub trait Uploader: Send + Sync {
     fn upload(&self, artifact: &Artifact, key: &ObjectKey) -> Result<Locator, UploadError>;
 }
 
