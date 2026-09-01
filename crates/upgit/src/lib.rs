@@ -10,7 +10,7 @@ mod output;
 mod paths;
 pub mod update;
 
-pub use history::{record_history, record_upload_log};
+pub use history::History;
 pub use output::render_output;
 pub use paths::{
     application_dir, config_search_paths, env_config_search_paths, platform_config_file,
@@ -88,9 +88,13 @@ pub struct Cli {
     #[arg(short = 'w', long)]
     pub wait: bool,
 
-    /// Disable writing upgit.log (history.log is still written)
+    /// Disable writing upgit.log and history.log
     #[arg(short = 'n', long = "no-log")]
     pub no_log: bool,
+
+    /// Concurrent uploads (1 = serial)
+    #[arg(short = 'j', long = "jobs", default_value_t = 1, value_name = "N")]
+    pub jobs: usize,
 
     /// Directory that owns config.toml / upgit.toml, history.log, and upgit.log
     #[arg(long = "application-path", value_name = "PATH")]

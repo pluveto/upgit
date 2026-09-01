@@ -2,8 +2,8 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use upgit::{application_dir, record_history, record_upload_log, Cli};
-use upgit_core::{KeyPolicy, Publisher, Registry, RegistryError};
+use upgit::{application_dir, Cli, History};
+use upgit_core::{BatchPublisher, KeyPolicy, Publisher, Registry, RegistryError};
 use upgit_uploaders::{AppConfig, HostCatalog};
 
 use crate::emitter::Emitter;
@@ -70,10 +70,19 @@ impl App {
         let mut intake = Intake::from_cli(cli, self.size_limit)?;
         let artifacts = intake.collect()?;
         let now = SystemTime::now();
-        let app_dir = application_dir(cli.application_path.as_deref());
-        let mut items = Vec::new();
-        for artifact in &artifacts {
-            let (raw, replaced) = self.publisher.publish_with_raw(uploader, artifact, now)?;
+        let history = if cli.no_log {
+            History::silent()
+        } else {
+            History::files(
+                application_dir(cli.application_path.as_deref()),
+                &self.uploader_id,
+            )
+        };
+        let published = BatchPublisher::new(&self.publisher)
+            .with_concurrency(cli.jobs)
+            .run(uploader, &artifacts, now)?;
+        let mut items = Vec::with_capacity(published.len());
+        for (artifact, (raw, replaced)) in artifacts.iter().zip(published) {
             let shown = if cli.raw {
                 raw.as_str().to_string()
             } else {
@@ -83,15 +92,7 @@ impl App {
             if self.verbose {
                 eprintln!("key: {} url: {shown}", key.as_str());
             }
-            record_history(app_dir.join("history.log"), raw.as_str(), replaced.as_str())?;
-            if !cli.no_log {
-                record_upload_log(
-                    app_dir.join("upgit.log"),
-                    &self.uploader_id,
-                    key.as_str(),
-                    &shown,
-                )?;
-            }
+            history.record(raw.as_str(), replaced.as_str(), key.as_str(), &shown)?;
             items.push((shown, artifact.file_name().to_string()));
         }
         self.emitter.send(&items)?;
