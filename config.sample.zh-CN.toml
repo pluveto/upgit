@@ -116,8 +116,10 @@ access_key = "你的 S3 AccessKey"
 secret_key = "你的 S3 SecretKey"
 # S3 API 端点（AWS 区域 URL 或兼容端点）。
 endpoint = "https://s3.us-west-2.amazonaws.com"
-# 公开 URL 模板。占位符：{endpoint} {bucket} {path}。
+# 公开 URL 模板，例如 {endpoint}/{bucket}/{path} → https://s3.us-west-2.amazonaws.com/my-bucket/2024/a.png
 url_format = "{endpoint}/{bucket}/{path}"
+# 可选 CDN。若设置（例如 https://cdn.example.com），打印的 URL 为该 host 加上对象路径（https://cdn.example.com/2024/a.png），url_format 被忽略。PUT 仍走 endpoint。
+# host = "https://cdn.example.com"
 
 # 阿里云 OSS。密钥：https://ram.console.aliyun.com/manage/ak
 [uploaders.aliyunoss]

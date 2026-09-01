@@ -383,6 +383,9 @@ fn s3_from_profile(id: &str, profile: &UploaderProfile) -> Result<S3Uploader, In
         secret_key: require_string(id, profile, "secret_key")?,
         endpoint: require_string(id, profile, "endpoint")?,
         url_format: optional_string(profile, "url_format").unwrap_or_default(),
+        host: optional_string(profile, "host")
+            .or_else(|| optional_string(profile, "public_base"))
+            .unwrap_or_default(),
     }))
 }
 

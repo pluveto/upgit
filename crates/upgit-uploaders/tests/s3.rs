@@ -12,6 +12,7 @@ fn sigv4_matches_independent_get_object_vector() {
         secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".into(),
         endpoint: "https://examplebucket.s3.amazonaws.com".into(),
         url_format: String::new(),
+        host: String::new(),
     });
     let payload_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     let auth = uploader.sign_request(

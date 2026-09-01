@@ -117,8 +117,10 @@ access_key = "YOUR_S3_ACCESS_KEY"
 secret_key = "YOUR_S3_SECRET_KEY"
 # S3 API endpoint (AWS regional URL or a compatible endpoint).
 endpoint = "https://s3.us-west-2.amazonaws.com"
-# Public URL template. Placeholders: {endpoint} {bucket} {path}.
+# Public URL template, e.g. {endpoint}/{bucket}/{path} → https://s3.us-west-2.amazonaws.com/my-bucket/2024/a.png
 url_format = "{endpoint}/{bucket}/{path}"
+# Optional CDN. If set (e.g. https://cdn.example.com), the printed URL is that host plus the object path (https://cdn.example.com/2024/a.png) and url_format is ignored. PUT still uses endpoint.
+# host = "https://cdn.example.com"
 
 # Aliyun OSS. Keys: https://ram.console.aliyun.com/manage/ak
 [uploaders.aliyunoss]
