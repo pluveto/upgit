@@ -1,4 +1,4 @@
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -242,7 +242,7 @@ impl Package {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&binary, fs::Permissions::from_mode(0o755))?;
+            std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755))?;
         }
         Ok(Self { binary, recipes })
     }
