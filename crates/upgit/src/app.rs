@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use upgit::{application_dir, config_search_paths, record_history, record_upload_log, Cli};
+use upgit::{application_dir, record_history, record_upload_log, Cli};
 use upgit_core::{KeyPolicy, Publisher, Registry, RegistryError};
 use upgit_uploaders::{AppConfig, HostCatalog};
 
@@ -125,35 +125,17 @@ impl App {
     fn read_config(path: &Path) -> Result<AppConfig, Box<dyn Error>> {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("cannot read config {}: {e}", path.display()))?;
-        Ok(AppConfig::from_toml(&text)?)
+        let outcome = upgit::migrate::apply_to_text(&text)?;
+        if outcome.changed {
+            std::fs::write(path, &outcome.text)
+                .map_err(|e| format!("cannot write migrated config {}: {e}", path.display()))?;
+        }
+        Ok(AppConfig::from_toml(&outcome.text)?)
     }
 
     fn config_candidates(cli: &Cli) -> Vec<PathBuf> {
-        let home = nonempty_env("HOME");
-        let xdg = nonempty_env("XDG_CONFIG_HOME");
-        let appdata = if cfg!(windows) {
-            nonempty_env("APPDATA")
-        } else {
-            None
-        };
-        let profile = nonempty_env("USERPROFILE");
-        let appdir = application_dir(cli.application_path.as_deref());
-        let exe_dir = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(Path::to_path_buf));
-        config_search_paths(
-            home.as_deref().map(Path::new),
-            Some(appdir.as_path()),
-            xdg.as_deref().map(Path::new),
-            appdata.as_deref().map(Path::new),
-            profile.as_deref().map(Path::new),
-            exe_dir.as_deref(),
-        )
+        upgit::env_config_search_paths(cli.application_path.as_deref())
     }
-}
-
-fn nonempty_env(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|s| !s.is_empty())
 }
 
 /// `Some(0)` from the user means unlimited (`None` to Artifact). Unset → 5MiB.

@@ -5,12 +5,16 @@ use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use upgit_uploaders::HostCatalog;
 
 mod history;
+pub mod migrate;
 mod output;
 mod paths;
+pub mod update;
 
 pub use history::{record_history, record_upload_log};
 pub use output::render_output;
-pub use paths::{application_dir, config_search_paths};
+pub use paths::{
+    application_dir, config_search_paths, env_config_search_paths, platform_config_file,
+};
 
 /// Upload anything to github repo or other remote storages and then get its link.
 #[derive(Parser, Debug)]
@@ -19,7 +23,7 @@ pub use paths::{application_dir, config_search_paths};
     version,
     disable_version_flag = true,
     about = "Upload anything to github repo or other remote storages and then get its link.",
-    after_help = "Create a config with `upgit init`. List ids with `upgit uploaders`.\nhttps://github.com/pluveto/upgit",
+    after_help = "Create a config with `upgit init`. Update with `upgit update`. List ids with `upgit uploaders`.\nhttps://github.com/pluveto/upgit",
     args_conflicts_with_subcommands = true
 )]
 pub struct Cli {
@@ -100,6 +104,24 @@ pub enum Command {
         /// Path to write. Default: platform config directory
         dest: Option<PathBuf>,
     },
+    /// Replace this binary with a GitHub release (does not overwrite config.toml)
+    Update {
+        /// Allow beta (and newer stable) releases
+        #[arg(long, conflicts_with = "alpha")]
+        beta: bool,
+        /// Allow alpha and other prereleases
+        #[arg(long, conflicts_with = "beta")]
+        alpha: bool,
+        /// Print what would be installed without replacing the binary
+        #[arg(long)]
+        dry_run: bool,
+        /// Reinstall if already at the selected release
+        #[arg(long)]
+        force: bool,
+        /// Apply pending config migrations and exit
+        #[arg(long = "apply-migrations", hide = true)]
+        apply_migrations: bool,
+    },
     /// List built-in uploaders
     Uploaders,
 }
@@ -120,7 +142,9 @@ pub fn after_help() -> String {
         let _ = writeln!(text, "  {:width$}  {}", host.id, host.title, width = width);
     }
     text.push('\n');
-    text.push_str("Create a config with `upgit init`. List ids with `upgit uploaders`.\n");
+    text.push_str(
+        "Create a config with `upgit init`. Update with `upgit update`. List ids with `upgit uploaders`.\n",
+    );
     text.push_str("https://github.com/pluveto/upgit\n");
     text
 }

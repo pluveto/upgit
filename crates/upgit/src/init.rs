@@ -34,41 +34,6 @@ pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
 }
 
 fn default_config_path() -> Result<PathBuf, Box<dyn Error>> {
-    let path = if cfg!(windows) {
-        nonempty_env("APPDATA")
-            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
-            .or_else(|| {
-                nonempty_env("USERPROFILE").map(|p| {
-                    PathBuf::from(p)
-                        .join("AppData")
-                        .join("Roaming")
-                        .join("upgit")
-                        .join("config.toml")
-                })
-            })
-    } else {
-        nonempty_env("XDG_CONFIG_HOME")
-            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
-            .or_else(|| {
-                nonempty_env("HOME").map(|p| {
-                    PathBuf::from(p)
-                        .join(".config")
-                        .join("upgit")
-                        .join("config.toml")
-                })
-            })
-            .or_else(|| {
-                nonempty_env("USERPROFILE").map(|p| {
-                    PathBuf::from(p)
-                        .join(".config")
-                        .join("upgit")
-                        .join("config.toml")
-                })
-            })
-    };
-    path.ok_or_else(|| "cannot determine config directory; pass a path: upgit init PATH".into())
-}
-
-fn nonempty_env(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|s| !s.is_empty())
+    upgit::platform_config_file()
+        .ok_or_else(|| "cannot determine config directory; pass a path: upgit init PATH".into())
 }

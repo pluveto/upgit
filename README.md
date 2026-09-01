@@ -85,7 +85,7 @@ Download the latest zip from [Releases](https://github.com/pluveto/upgit/release
 
 Unzip it, rename the binary to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like. To access it from anywhere, add its directory to the `PATH` environment variable.
 
-**Warning:** this program doesn't contain an auto-updater. If you need to keep updated, just give *upgit* a ⭐star.
+Run `upgit update` to replace this binary with the latest stable GitHub release. `upgit update --beta` / `--alpha` opt into those channels. `config.toml` and customized recipes are left in place.
 
 ### Config
 
@@ -127,6 +127,7 @@ Usage: upgit [OPTIONS] [FILE]...
 
 Commands:
   init       Write a GitHub config.toml
+  update     Replace this binary with a GitHub release (does not overwrite config.toml)
   uploaders  List built-in uploaders
   help       Print this message or the help of the given subcommand(s)
 
@@ -179,7 +180,7 @@ Uploaders (pass --uploader ID, or set default in config.toml):
   sougou      Sogou
   upload_cc   upload.cc
 
-Create a config with `upgit init`. List ids with `upgit uploaders`.
+Create a config with `upgit init`. Update with `upgit update`. List ids with `upgit uploaders`.
 https://github.com/pluveto/upgit
 ```
 

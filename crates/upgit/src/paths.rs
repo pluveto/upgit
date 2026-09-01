@@ -83,3 +83,70 @@ pub fn config_search_paths(
     }
     out
 }
+
+fn nonempty_env(key: &str) -> Option<String> {
+    std::env::var(key).ok().filter(|s| !s.is_empty())
+}
+
+/// Config search paths from the process environment.
+///
+/// Same order as runtime upload: `--application-path` (or the exe directory)
+/// plus XDG / APPDATA / `$HOME` fallbacks.
+pub fn env_config_search_paths(application_path: Option<&Path>) -> Vec<PathBuf> {
+    let home = nonempty_env("HOME");
+    let xdg = nonempty_env("XDG_CONFIG_HOME");
+    let appdata = if cfg!(windows) {
+        nonempty_env("APPDATA")
+    } else {
+        None
+    };
+    let profile = nonempty_env("USERPROFILE");
+    let appdir = application_dir(application_path);
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(Path::to_path_buf));
+    config_search_paths(
+        home.as_deref().map(Path::new),
+        Some(appdir.as_path()),
+        xdg.as_deref().map(Path::new),
+        appdata.as_deref().map(Path::new),
+        profile.as_deref().map(Path::new),
+        exe_dir.as_deref(),
+    )
+}
+
+/// Default `config.toml` written by `upgit init` with no dest argument.
+pub fn platform_config_file() -> Option<PathBuf> {
+    if cfg!(windows) {
+        nonempty_env("APPDATA")
+            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
+            .or_else(|| {
+                nonempty_env("USERPROFILE").map(|p| {
+                    PathBuf::from(p)
+                        .join("AppData")
+                        .join("Roaming")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+    } else {
+        nonempty_env("XDG_CONFIG_HOME")
+            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
+            .or_else(|| {
+                nonempty_env("HOME").map(|p| {
+                    PathBuf::from(p)
+                        .join(".config")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+            .or_else(|| {
+                nonempty_env("USERPROFILE").map(|p| {
+                    PathBuf::from(p)
+                        .join(".config")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+    }
+}
