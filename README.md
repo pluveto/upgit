@@ -115,6 +115,8 @@ To upload file `logo.png` to remote folder `/my_images/demo`, execute:
 # for Windows: .\upgit.exe logo.png -t /my_images/demo
 ```
 
+FILE can be a local path or an `http://` / `https://` URL (downloaded, then uploaded). Typora can pass a remote image URL the same way.
+
 ---
 
 For more help, type `-h` argument
