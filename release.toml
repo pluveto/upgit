@@ -6,7 +6,7 @@
 # That bumps the single workspace.package.version, commits, tags v{{version}},
 # and pushes. GitHub Actions Release then builds the zips. Not crates.io.
 
-allow-branch = ["next"]
+allow-branch = ["main"]
 publish = false
 push = true
 sign-commit = false

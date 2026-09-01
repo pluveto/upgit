@@ -14,8 +14,8 @@ fn handbook_covers_environment_three_giants_and_release() {
         "cargo-release",
         "cargo release release",
         "RUSTFLAGS",
-        "next",
-        "publish = false",
+        "main",
+        "v0.2-main",
     ] {
         assert!(
             DEV.contains(needle),

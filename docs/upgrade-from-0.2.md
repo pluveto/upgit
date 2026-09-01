@@ -92,7 +92,7 @@ export UPGIT_NAMING='{year}/{month}/{fname}_{unix}{ext}'
 
 ## GitHub default branch
 
-The repository default branch is `next` (0.3). The Go 0.2 tree is archived on `v0.2-main`.
+The repository default branch is `main` (0.3). The 0.2 tree is archived on `v0.2-main`.
 
 The packed / `init` template now uses `branch = "main"` for **your image-bed GitHub repo**. 0.2 samples often said `master`. That value must match *that* repository's default branch, or the upload 404s / conflicts.
 
