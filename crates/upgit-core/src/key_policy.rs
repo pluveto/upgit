@@ -2,11 +2,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::DateTime;
 use hmac::{Hmac, Mac};
-use md5::{Digest, Md5};
 use sha2::Sha256;
 use thiserror::Error;
+use xxhash_rust::xxh32::xxh32;
 
-use crate::artifact::{hex_lower, Artifact, ArtifactError};
+use crate::artifact::{Artifact, ArtifactError};
 use crate::object_key::{ObjectKey, ObjectKeyError};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -91,7 +91,15 @@ impl KeyPolicy {
         }
     }
 
-    pub fn apply(&self, artifact: &Artifact, at: SystemTime) -> Result<ObjectKey, KeyPolicyError> {
+    /// `content_hash_fallback` is inserted as `{content_hash*}` when the artifact
+    /// has no readable bytes. It is never hashed. Required if the template (or
+    /// `hmac_format`) uses those placeholders and content is missing.
+    pub fn apply(
+        &self,
+        artifact: &Artifact,
+        at: SystemTime,
+        content_hash_fallback: Option<&str>,
+    ) -> Result<ObjectKey, KeyPolicyError> {
         match &self.kind {
             KeyKind::KeepOriginal { dir } => {
                 let dir = dir.trim().trim_matches('/');
@@ -110,17 +118,24 @@ impl KeyPolicy {
                 if self.hmac.is_none() && template.contains("{hmac}") {
                     return Err(KeyPolicyError::MissingHmacKey);
                 }
+                let uses_content_hash =
+                    |s: &str| s.contains("{content_hash") || s.contains("{contenthash");
                 let needs_content = uses_content_hash(template)
                     || self
                         .hmac
                         .as_ref()
                         .is_some_and(|spec| uses_content_hash(&spec.format));
+                let xxh32_hex = |data: &[u8]| format!("{:08x}", xxh32(data, 0));
                 let content_hash = if needs_content {
-                    Some(artifact.content_digest().map_err(map_content_err)?)
+                    Some(resolve_content_hash(
+                        artifact,
+                        content_hash_fallback,
+                        xxh32_hex,
+                    )?)
                 } else {
                     None
                 };
-                let fields = Fields::from_artifact(artifact, at, content_hash)?;
+                let fields = Fields::from_artifact(artifact, at, xxh32_hex, content_hash)?;
                 let hmac = match &self.hmac {
                     Some(spec) => {
                         let material = fields.interpolate(&spec.format, None);
@@ -132,6 +147,22 @@ impl KeyPolicy {
                 Ok(ObjectKey::parse(&rendered)?)
             }
         }
+    }
+}
+
+fn resolve_content_hash(
+    artifact: &Artifact,
+    fallback: Option<&str>,
+    xxh32_hex: impl Fn(&[u8]) -> String,
+) -> Result<String, KeyPolicyError> {
+    match artifact.bytes() {
+        Ok(Some(bytes)) if !bytes.is_empty() => Ok(xxh32_hex(&bytes)),
+        Ok(_) => match fallback {
+            Some(fb) => Ok(fb.to_string()),
+            None => Err(KeyPolicyError::MissingContent),
+        },
+        Err(ArtifactError::Io(msg)) => Err(KeyPolicyError::ContentIo(msg)),
+        Err(other) => Err(KeyPolicyError::ContentIo(other.to_string())),
     }
 }
 
@@ -155,6 +186,7 @@ impl<'a> Fields<'a> {
     fn from_artifact(
         artifact: &'a Artifact,
         at: SystemTime,
+        xxh32_hex: impl Fn(&[u8]) -> String,
         content_hash: Option<String>,
     ) -> Result<Self, KeyPolicyError> {
         let duration = at
@@ -162,7 +194,7 @@ impl<'a> Fields<'a> {
             .map_err(|_| KeyPolicyError::InvalidTime)?;
         let datetime = DateTime::from_timestamp(duration.as_secs() as i64, 0)
             .ok_or(KeyPolicyError::InvalidTime)?;
-        let fname_hash = hex_lower(&Md5::digest(artifact.stem().as_bytes()));
+        let fname_hash = xxh32_hex(artifact.stem().as_bytes());
         Ok(Self {
             year: datetime.format("%Y").to_string(),
             month: datetime.format("%m").to_string(),
@@ -225,14 +257,12 @@ impl<'a> Fields<'a> {
     }
 }
 
-fn uses_content_hash(s: &str) -> bool {
-    s.contains("{content_hash") || s.contains("{contenthash")
-}
-
-fn map_content_err(err: ArtifactError) -> KeyPolicyError {
-    match err {
-        ArtifactError::NoContent => KeyPolicyError::MissingContent,
-        ArtifactError::Io(msg) => KeyPolicyError::ContentIo(msg),
-        other => KeyPolicyError::ContentIo(other.to_string()),
+fn hex_lower(bytes: &[u8]) -> String {
+    const LUT: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        out.push(LUT[(b >> 4) as usize] as char);
+        out.push(LUT[(b & 0x0f) as usize] as char);
     }
+    out
 }

@@ -45,7 +45,7 @@ fn hmac_placeholder_uses_sha256_of_interpolated_format() {
         Some(31),
     );
     let key = policy
-        .apply(&png("logo.png"), at_2022_01_31_noon())
+        .apply(&png("logo.png"), at_2022_01_31_noon(), None)
         .expect("key");
     assert_eq!(
         key.as_str(),
@@ -59,10 +59,10 @@ fn content_hash_differs_for_same_stem_different_bytes() {
     let b = artifact_with_bytes("logo.png", b"bravo");
     let policy = KeyPolicy::template("{content_hash}{ext}");
     let ka = policy
-        .apply(&a.artifact, at_2022_01_31_noon())
+        .apply(&a.artifact, at_2022_01_31_noon(), None)
         .expect("key a");
     let kb = policy
-        .apply(&b.artifact, at_2022_01_31_noon())
+        .apply(&b.artifact, at_2022_01_31_noon(), None)
         .expect("key b");
     assert_ne!(ka.as_str(), kb.as_str());
 }
@@ -73,31 +73,44 @@ fn fname_hash_is_name_only() {
     let b = artifact_with_bytes("logo.png", b"bravo");
     let policy = KeyPolicy::template("{fname_hash}{ext}");
     let ka = policy
-        .apply(&a.artifact, at_2022_01_31_noon())
+        .apply(&a.artifact, at_2022_01_31_noon(), None)
         .expect("key a");
     let kb = policy
-        .apply(&b.artifact, at_2022_01_31_noon())
+        .apply(&b.artifact, at_2022_01_31_noon(), None)
         .expect("key b");
     assert_eq!(ka.as_str(), kb.as_str());
 }
 
 #[test]
-fn content_hash_errors_when_artifact_has_no_bytes() {
-    let err = KeyPolicy::template("{content_hash}{ext}")
-        .apply(&png("logo.png"), at_2022_01_31_noon())
-        .expect_err("missing content");
+fn missing_content_uses_caller_fallback_and_never_hashes_empty() {
+    let policy = KeyPolicy::template("{content_hash}{ext}");
+    let key = policy
+        .apply(&png("logo.png"), at_2022_01_31_noon(), Some("from-caller"))
+        .expect("fallback");
+    assert_eq!(key.as_str(), "from-caller.png");
+    let err = policy
+        .apply(&png("logo.png"), at_2022_01_31_noon(), None)
+        .expect_err("no fallback");
     assert_eq!(err, KeyPolicyError::MissingContent);
+
+    let empty = artifact_with_bytes("logo.png", b"x");
+    std::fs::write(empty.artifact.path().expect("path"), b"").expect("truncate");
+    let key = policy
+        .apply(&empty.artifact, at_2022_01_31_noon(), Some("from-caller"))
+        .expect("empty bytes use fallback");
+    assert_eq!(key.as_str(), "from-caller.png");
+    assert!(
+        !key.as_str().contains("02cc5d05"),
+        "must not xxHash32 empty bytes"
+    );
 }
 
 #[test]
-fn content_hash_is_md5_hex_of_file_bytes() {
-    // md5("hello") = 5d41402abc4b2a76b9719d911017c592
+fn content_hash_is_xxh32_hex_of_file_bytes() {
+    // xxh32("hello", 0) = 0xfb0077f9
     let file = artifact_with_bytes("logo.png", b"hello");
     let key = KeyPolicy::template("{content_hash4}/{content_hash8}/{contenthash}{ext}")
-        .apply(&file.artifact, at_2022_01_31_noon())
+        .apply(&file.artifact, at_2022_01_31_noon(), None)
         .expect("key");
-    assert_eq!(
-        key.as_str(),
-        "5d41/5d41402a/5d41402abc4b2a76b9719d911017c592.png"
-    );
+    assert_eq!(key.as_str(), "fb00/fb0077f9/fb0077f9.png");
 }

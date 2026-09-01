@@ -38,7 +38,7 @@ fn publisher_asks_uploader_with_the_computed_key() {
         LinkPolicy::identity(),
     );
     let url = publisher
-        .publish(&uploader, &artifact, noon())
+        .publish(&uploader, &artifact, noon(), None)
         .expect("publish");
 
     assert_eq!(
