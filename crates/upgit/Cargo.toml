@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description.workspace = true
+publish.workspace = true
 
 [dependencies]
 arboard = "3"
@@ -13,8 +14,8 @@ clap = { version = "4", features = ["derive"] }
 png = "0.17"
 serde_json = "1"
 tempfile = "3"
-upgit-core = { path = "../upgit-core", version = "0.3.0-beta.2" }
-upgit-uploaders = { path = "../upgit-uploaders", version = "0.3.0-beta.2" }
+upgit-core = { path = "../upgit-core" }
+upgit-uploaders = { path = "../upgit-uploaders" }
 
 [target.'cfg(windows)'.dependencies]
 clipboard-win = "5"

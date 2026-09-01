@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
 description = "Uploader objects for upgit: GitHub, S3, OSS, COS, Upyun, Qiniu, HTTP recipes."
 
 [dependencies]
@@ -17,5 +18,5 @@ sha1 = "0.10"
 sha2 = "0.10"
 thiserror = "2"
 toml = { version = "0.8", features = ["preserve_order"] }
-upgit-core = { path = "../upgit-core", version = "0.3.0-beta.2" }
+upgit-core = { path = "../upgit-core" }
 ureq = "2"

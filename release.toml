@@ -1,0 +1,21 @@
+# cargo-release: https://github.com/crate-ci/cargo-release
+# Next beta:  cargo release beta --execute
+# Stable:     cargo release --execute
+# Dry-run is the default (omit --execute).
+#
+# That bumps the single workspace.package.version, commits, tags v{{version}},
+# and pushes. GitHub Actions Release then builds the zips. Not crates.io.
+
+allow-branch = ["next", "main"]
+publish = false
+push = true
+sign-commit = false
+sign-tag = false
+shared-version = true
+consolidate-commits = true
+dependent-version = "upgrade"
+pre-release-commit-message = "chore: bump version to {{version}}"
+tag = true
+tag-prefix = ""
+tag-name = "v{{version}}"
+tag-message = "upgit {{version}}"
