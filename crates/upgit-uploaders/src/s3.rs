@@ -77,18 +77,18 @@ impl S3Uploader {
         payload_hash: &str,
         amz_date: &str,
     ) -> String {
-        sign_v4(
+        sign_v4(SignV4 {
             method,
             canonical_uri,
-            "",
+            query: "",
             headers,
             payload_hash,
             amz_date,
-            &self.config.region,
-            "s3",
-            &self.config.access_key,
-            &self.config.secret_key,
-        )
+            region: &self.config.region,
+            service: "s3",
+            access_key: &self.config.access_key,
+            secret_key: &self.config.secret_key,
+        })
     }
 
     /// Map an S3 HTTP status + body to a user-facing error. Never dumps XML.
@@ -181,19 +181,22 @@ impl Uploader for S3Uploader {
     }
 }
 
-fn sign_v4(
-    method: &str,
-    canonical_uri: &str,
-    query: &str,
-    headers: &[(&str, &str)],
-    payload_hash: &str,
-    amz_date: &str,
-    region: &str,
-    service: &str,
-    access_key: &str,
-    secret_key: &str,
-) -> String {
-    let mut hdrs: Vec<(String, String)> = headers
+struct SignV4<'a> {
+    method: &'a str,
+    canonical_uri: &'a str,
+    query: &'a str,
+    headers: &'a [(&'a str, &'a str)],
+    payload_hash: &'a str,
+    amz_date: &'a str,
+    region: &'a str,
+    service: &'a str,
+    access_key: &'a str,
+    secret_key: &'a str,
+}
+
+fn sign_v4(req: SignV4<'_>) -> String {
+    let mut hdrs: Vec<(String, String)> = req
+        .headers
         .iter()
         .map(|(k, v)| (k.to_ascii_lowercase(), v.trim().to_string()))
         .collect();
@@ -209,17 +212,21 @@ fn sign_v4(
     }
     let signed_headers = signed_names.join(";");
     let canonical_request = format!(
-        "{method}\n{canonical_uri}\n{query}\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        "{}\n{}\n{}\n{canonical_headers}\n{signed_headers}\n{}",
+        req.method, req.canonical_uri, req.query, req.payload_hash
     );
-    let datestamp = amz_date.get(..8).unwrap_or(amz_date);
-    let credential_scope = format!("{datestamp}/{region}/{service}/aws4_request");
+    let datestamp = req.amz_date.get(..8).unwrap_or(req.amz_date);
+    let credential_scope = format!("{datestamp}/{}/{}/aws4_request", req.region, req.service);
     let hashed_canonical = hex_lower(&Sha256::digest(canonical_request.as_bytes()));
-    let string_to_sign =
-        format!("AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n{hashed_canonical}");
-    let signing_key = signing_key(secret_key, datestamp, region, service);
+    let string_to_sign = format!(
+        "AWS4-HMAC-SHA256\n{}\n{credential_scope}\n{hashed_canonical}",
+        req.amz_date
+    );
+    let signing_key = signing_key(req.secret_key, datestamp, req.region, req.service);
     let signature = hex_lower(&hmac_sha256(&signing_key, string_to_sign.as_bytes()));
     format!(
-        "AWS4-HMAC-SHA256 Credential={access_key}/{credential_scope},SignedHeaders={signed_headers},Signature={signature}"
+        "AWS4-HMAC-SHA256 Credential={}/{credential_scope},SignedHeaders={signed_headers},Signature={signature}",
+        req.access_key
     )
 }
 

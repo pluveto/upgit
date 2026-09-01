@@ -203,10 +203,7 @@ impl AppConfig {
     }
 
     fn set_github_field(&mut self, key: &str, value: &str) {
-        let profile = self
-            .uploaders
-            .entry("github".to_string())
-            .or_insert_with(UploaderProfile::default);
+        let profile = self.uploaders.entry("github".to_string()).or_default();
         if profile.kind.is_empty() {
             profile.kind = "github".to_string();
         }

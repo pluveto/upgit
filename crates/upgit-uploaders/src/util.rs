@@ -120,7 +120,7 @@ pub(crate) fn join_host_path(host: &str, key: &str) -> String {
     format!("{host}/{key}")
 }
 
-pub(crate) fn hostname<'a>(host: &'a str) -> &'a str {
+pub(crate) fn hostname(host: &str) -> &str {
     host.trim()
         .trim_start_matches("https://")
         .trim_start_matches("http://")

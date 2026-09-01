@@ -1,0 +1,9 @@
+#!/bin/sh
+# Same gates as CI Format + Clippy. Enable: git config core.hooksPath .githooks
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+export RUSTFLAGS="${RUSTFLAGS:--D warnings}"
+echo "pre-push: cargo fmt --check"
+cargo fmt --all -- --check
+echo "pre-push: cargo clippy"
+cargo clippy --workspace --all-targets --locked

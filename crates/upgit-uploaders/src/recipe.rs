@@ -403,6 +403,23 @@ fn upload_err(e: RecipeError) -> UploadError {
     UploadError::message(e.to_string())
 }
 
+fn scan_config_keys(template: &str, out: &mut Vec<String>) {
+    let mut rest = template;
+    while let Some(start) = rest.find("{config.") {
+        rest = &rest[start + "{config.".len()..];
+        match rest.find('}') {
+            Some(end) => {
+                let key = &rest[..end];
+                if !key.is_empty() && !out.iter().any(|known| known == key) {
+                    out.push(key.to_string());
+                }
+                rest = &rest[end + 1..];
+            }
+            None => break,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,22 +468,5 @@ url = { from = "text" }
         let key = ObjectKey::parse("a.png").expect("key");
         let ctx = uploader.context(&key);
         assert_eq!(ctx.get("config.userhash"), Some("abc123"));
-    }
-}
-
-fn scan_config_keys(template: &str, out: &mut Vec<String>) {
-    let mut rest = template;
-    while let Some(start) = rest.find("{config.") {
-        rest = &rest[start + "{config.".len()..];
-        match rest.find('}') {
-            Some(end) => {
-                let key = &rest[..end];
-                if !key.is_empty() && !out.iter().any(|known| known == key) {
-                    out.push(key.to_string());
-                }
-                rest = &rest[end + 1..];
-            }
-            None => break,
-        }
     }
 }
