@@ -36,11 +36,21 @@ impl HmacSpec {
         let mut mac = HmacSha256::new_from_slice(self.key.as_bytes())
             .map_err(|_| KeyPolicyError::InvalidHmacKey)?;
         mac.update(material.as_bytes());
-        let mut hex = hex_lower(&mac.finalize().into_bytes());
+        let mut hex = Self::hex_lower(&mac.finalize().into_bytes());
         if let Some(n) = self.len {
             hex.truncate(n.min(hex.len()));
         }
         Ok(hex)
+    }
+
+    fn hex_lower(bytes: &[u8]) -> String {
+        const LUT: &[u8; 16] = b"0123456789abcdef";
+        let mut out = String::with_capacity(bytes.len() * 2);
+        for &b in bytes {
+            out.push(LUT[(b >> 4) as usize] as char);
+            out.push(LUT[(b & 0x0f) as usize] as char);
+        }
+        out
     }
 }
 
@@ -118,23 +128,13 @@ impl KeyPolicy {
                 if self.hmac.is_none() && template.contains("{hmac}") {
                     return Err(KeyPolicyError::MissingHmacKey);
                 }
-                let uses_content_hash =
-                    |s: &str| s.contains("{content_hash") || s.contains("{contenthash");
-                let needs_content = uses_content_hash(template)
-                    || self
-                        .hmac
-                        .as_ref()
-                        .is_some_and(|spec| uses_content_hash(&spec.format));
                 let xxh32_hex = |data: &[u8]| format!("{:08x}", xxh32(data, 0));
-                let content_hash = if needs_content {
-                    Some(resolve_content_hash(
-                        artifact,
-                        content_hash_fallback,
-                        xxh32_hex,
-                    )?)
-                } else {
-                    None
-                };
+                let content_hash = self.resolve_content_hash(
+                    artifact,
+                    template,
+                    content_hash_fallback,
+                    xxh32_hex,
+                )?;
                 let fields = Fields::from_artifact(artifact, at, xxh32_hex, content_hash)?;
                 let hmac = match &self.hmac {
                     Some(spec) => {
@@ -148,21 +148,32 @@ impl KeyPolicy {
             }
         }
     }
-}
 
-fn resolve_content_hash(
-    artifact: &Artifact,
-    fallback: Option<&str>,
-    xxh32_hex: impl Fn(&[u8]) -> String,
-) -> Result<String, KeyPolicyError> {
-    match artifact.bytes() {
-        Ok(Some(bytes)) if !bytes.is_empty() => Ok(xxh32_hex(&bytes)),
-        Ok(_) => match fallback {
-            Some(fb) => Ok(fb.to_string()),
-            None => Err(KeyPolicyError::MissingContent),
-        },
-        Err(ArtifactError::Io(msg)) => Err(KeyPolicyError::ContentIo(msg)),
-        Err(other) => Err(KeyPolicyError::ContentIo(other.to_string())),
+    fn resolve_content_hash(
+        &self,
+        artifact: &Artifact,
+        template: &str,
+        fallback: Option<&str>,
+        xxh32_hex: impl Fn(&[u8]) -> String,
+    ) -> Result<Option<String>, KeyPolicyError> {
+        let uses_content_hash = |s: &str| s.contains("{content_hash") || s.contains("{contenthash");
+        let needs_content = uses_content_hash(template)
+            || self
+                .hmac
+                .as_ref()
+                .is_some_and(|spec| uses_content_hash(&spec.format));
+        if !needs_content {
+            return Ok(None);
+        }
+        match artifact.bytes() {
+            Ok(Some(bytes)) if !bytes.is_empty() => Ok(Some(xxh32_hex(&bytes))),
+            Ok(_) => match fallback {
+                Some(fb) => Ok(Some(fb.to_string())),
+                None => Err(KeyPolicyError::MissingContent),
+            },
+            Err(ArtifactError::Io(msg)) => Err(KeyPolicyError::ContentIo(msg)),
+            Err(other) => Err(KeyPolicyError::ContentIo(other.to_string())),
+        }
     }
 }
 
@@ -255,14 +266,4 @@ impl<'a> Fields<'a> {
         }
         out
     }
-}
-
-fn hex_lower(bytes: &[u8]) -> String {
-    const LUT: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        out.push(LUT[(b >> 4) as usize] as char);
-        out.push(LUT[(b & 0x0f) as usize] as char);
-    }
-    out
 }

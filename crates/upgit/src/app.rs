@@ -88,9 +88,7 @@ impl App {
             } else {
                 replaced.as_str().to_string()
             };
-            let key = self
-                .namer
-                .apply(artifact, now, Some(artifact.stem()))?;
+            let key = self.namer.apply(artifact, now, Some(artifact.stem()))?;
             if self.verbose {
                 eprintln!("key: {} url: {shown}", key.as_str());
             }
