@@ -89,8 +89,8 @@ fn unix_tsms_is_milliseconds_since_epoch() {
 }
 
 #[test]
-fn fname_hash_is_md5_of_file_name_with_extension() {
-    // md5("logo.png") = 1bb87d41d15fe27b500a4bfcde01bb0e
+fn fname_hash_is_md5_of_stem_without_extension() {
+    // Independent 0.2 vector: md5("logo") = 96d6f2e7e1f705ab5e59c84a6dc009b2
     let policy =
         KeyPolicy::template("{fname_hash}_{fname_hash4}_{fname_hash8}_{fullname}_{filename}");
     let key = policy
@@ -98,7 +98,7 @@ fn fname_hash_is_md5_of_file_name_with_extension() {
         .expect("key");
     assert_eq!(
         key.as_str(),
-        "1bb87d41d15fe27b500a4bfcde01bb0e_1bb8_1bb87d41_logo.png_logo"
+        "96d6f2e7e1f705ab5e59c84a6dc009b2_96d6_96d6f2e7_logo.png_logo"
     );
 }
 

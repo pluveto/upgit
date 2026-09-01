@@ -8,11 +8,12 @@ This page is for people who already run the Go 0.2 `upgit`. New users can ignore
 
 | 0.2 | 0.3 |
 | --- | --- |
-| `--config-file` / `-c` | `--config` / `-c` |
-| `--output-type` / `-o` | `--output` / `-o` |
-| `--output-format` / `-f` | `--format` / `-f` |
+| `--config-file` / `-c` | `--config` / `-c` (alias `--config-file` still works) |
+| `--output-type` / `-o` | `--output` / `-o` (alias `--output-type` still works) |
+| `--output-format` / `-f` | `--format` / `-f` (alias `--output-format` still works) |
 | `:clipboard` as a file operand | `--clipboard` |
 | `:clipboard-files` / `:clipboard-file` | `--clipboard-files` |
+| `upgit ext ls` | `upgit uploaders` |
 
 Examples:
 
@@ -57,23 +58,20 @@ public_base = "https://cdn.example.com/"
 
 ## Environment variables
 
-Hardcoded `UPGIT_TOKEN`, `UPGIT_RENAME`, `UPGIT_USERNAME`, `UPGIT_REPO`, and `UPGIT_BRANCH` are gone.
+`UPGIT_TOKEN`, `UPGIT_RENAME`, `UPGIT_USERNAME`, `UPGIT_REPO`, and `UPGIT_BRANCH` still work (they fill the GitHub table / `naming`). `GITHUB_TOKEN` is also accepted as a PAT.
 
-Any config key can be set with `UPGIT_` and `__` for nesting:
+Any config key can also be set with `UPGIT_` and `__` for nesting:
 
 ```bash
-# 0.2
-export UPGIT_TOKEN=ghp_...
+# 0.2 names (still work)
+export UPGIT_TOKEN=PASTE_YOUR_TOKEN
 export UPGIT_USERNAME=your-user
 export UPGIT_REPO=your-repo
-export UPGIT_BRANCH=master
+export UPGIT_BRANCH=main
 
-# 0.3
+# nested form (any key)
 export UPGIT_DEFAULT=github
-export UPGIT_UPLOADERS__GITHUB__PAT=ghp_...
-export UPGIT_UPLOADERS__GITHUB__USERNAME=your-user
-export UPGIT_UPLOADERS__GITHUB__REPO=your-repo
-export UPGIT_UPLOADERS__GITHUB__BRANCH=main
+export UPGIT_UPLOADERS__GITHUB__PAT=PASTE_YOUR_TOKEN
 export UPGIT_NAMING='{year}/{month}/{fname}_{unix}{ext}'
 ```
 
@@ -87,9 +85,8 @@ export UPGIT_NAMING='{year}/{month}/{fname}_{unix}{ext}'
 2. `./config.toml`
 3. Unix: `$XDG_CONFIG_HOME/upgit/config.toml` or `~/.config/upgit/config.toml`
 4. Windows: `%APPDATA%\upgit\config.toml`, then `%USERPROFILE%`
-5. `config.toml` next to the binary
-
-`~/.upgit.config.toml` is **not** read. Copy that file to one of the paths above (or pass `--config`).
+5. `~/.upgit.config.toml` and `~/.config/upgitrc` (the 0.2 paths; still read)
+6. `config.toml` and `upgit.toml` next to the binary (`--application-path` overrides that directory)
 
 `upgit init` writes a GitHub-only `config.toml` to the platform config directory (Unix XDG / Windows `%APPDATA%\upgit`) unless you pass a path, and prints the full path.
 

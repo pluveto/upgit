@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use upgit::Output;
+use upgit::{render_output, Output};
 
 use crate::source::explain_clipboard;
 
@@ -27,10 +27,10 @@ impl Emitter {
         })
     }
 
-    pub fn send(&self, urls: &[String]) -> Result<(), Box<dyn Error>> {
-        let text = urls
+    pub fn send(&self, items: &[(String, String)]) -> Result<(), Box<dyn Error>> {
+        let text = items
             .iter()
-            .map(|url| self.format_url(url))
+            .map(|(url, fname)| self.format_url(url, fname))
             .collect::<Vec<_>>()
             .join("\n");
         match self.dest {
@@ -53,14 +53,11 @@ impl Emitter {
         Ok(())
     }
 
-    fn format_url(&self, url: &str) -> String {
-        let fname = url_fname(url);
+    fn format_url(&self, url: &str, fname: &str) -> String {
         match &self.format {
             Format::Url => url.to_string(),
-            Format::Markdown => format!("![{fname}]({url})"),
-            Format::Template(template) => {
-                template.replace("{url_fname}", fname).replace("{url}", url)
-            }
+            Format::Markdown => render_output("![{url_fname}]({url})", url, fname),
+            Format::Template(template) => render_output(template, url, fname),
         }
     }
 }
@@ -82,13 +79,4 @@ fn resolve_format(name: &str, configured: &[(String, String)]) -> Result<Format,
             Err(format!("unknown format `{other}` (available: {})", names.join(", ")).into())
         }
     }
-}
-
-/// Last path segment of the URL, query string stripped.
-fn url_fname(url: &str) -> &str {
-    let path = url.split(['?', '#']).next().unwrap_or(url);
-    path.rsplit('/')
-        .next()
-        .filter(|s| !s.is_empty())
-        .unwrap_or(path)
 }

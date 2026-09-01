@@ -1,266 +1,331 @@
 # ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
+<img align="right" src="https://img.shields.io/github/actions/workflow/status/pluveto/upgit/ci.yml?style=flat-square" />
+
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" /> <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=F0F0F0" />
 
 **Languages**: English / [简体中文](docs/README.zh-CN.md)
 
-*Upgit* is a native CLI: upload a file or the clipboard, and print a public URL.
+*Upgit* is a native & lightweight tool that helps you upload any file to your Github repository and then get a raw URL for it.
 
-It works as a [Typora](https://support.typora.io/Upload-Image/#image-uploaders) custom image uploader, and with the [VSCode extension](https://github.com/pluveto/upgit-vscode-extension).
+This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-uploaders) as an image uploader, and with the [VSCode extension](https://github.com/pluveto/upgit-vscode-extension).
 
-Run `upgit` or `upgit -h` for help.
+## Feature
 
-## Supported hosts
++ Integrate with VSCode via [extension](https://github.com/pluveto/upgit-vscode-extension)
++ Support for Linux, Windows and macOS
++ Upload any file to given remote github repo folder
++ Upload from **clipboard**
++ Custom auto **renaming** rules
++ **CDN** via replacing rules
++ Config via **Environment Variable**
++ Output URL to stdout/clipboard, supports markdown image format
 
-GitHub is one option among many. If you do not want a **public** GitHub repo, use SM.MS, S3, or OSS instead — private GitHub raw URLs 404.
+### Supported Upload Extensions
 
-- **GitHub** — public repository required
-- **Amazon S3** and S3-compatible storage: MinIO, Cloudflare R2, Backblaze, Wasabi, DigitalOcean Spaces
-- **Gitee** — unsuitable as a public image host; they block 图床 repositories
-- **Tencent Cloud COS**, **Qiniu Kodo**, **Upyun**, **Aliyun OSS**
-- **SM.MS**, **Imgur**, **ImgUrl.org**, **CatBox**, **Hello**, **Niupic**
-- **LSkyPro**, **Chevereto**, **ImgBB**, **Cloudinary**, **EasyImage**
-- **DALEXNI**, **img.tg**, **Juejin**, **Moetu**, **NetEase**, **Sogou Pic**, **upload.cc**
++ Github
++ S3 Compatible Storages
+   <!-- (AWS, MinIO, Cloudflare R2, etc.) -->
+   + AWS S3
+   + MinIO
+   + Cloudflare R2
+   + Ceph
+   + Backblaze
+   + Flexify.IO
+   + IBM Cloud Object Storage
+   + DigitalOcean Spaces
+   + Wasabi
++ Gitee (they block public image-bed repos; prefer SM.MS / S3 / OSS)
++ Tencent QcloudCOS
++ Qiniu Kodo
++ Upyun
++ AliyunOSS
++ Hello
++ Niupic
++ SM.MS
++ Imgur
++ ImgUrl.org
++ CatBox
++ LSkyPro
++ Chevereto
++ ImgBB
++ Cloudinary
++ EasyImage
++ DALEXNI
++ img.tg
++ Juejin
++ Moetu
++ NetEase
++ Sogou
++ upload.cc
++ Lsky Pro v2
 
-List ids on your machine: `upgit uploaders`. Copy a ready-made table from [`config.sample.toml`](config.sample.toml) in this repo (not packed in the zip).
+More: `upgit uploaders`
 
-## Download
+## Get started
 
-Get the latest zip from [Releases](https://github.com/pluveto/upgit/releases):
+### Download
 
-| You have | Download |
-| --- | --- |
-| Windows x64 | `upgit_win_amd64.zip` |
-| Windows ARM | `upgit_win_arm64.zip` |
-| Linux x64 | `upgit_linux_amd64.zip` |
-| Linux ARM | `upgit_linux_arm64.zip` |
-| macOS Intel | `upgit_macos_amd64.zip` |
-| macOS Apple Silicon | `upgit_macos_arm64.zip` |
+Download the latest zip from [Releases](https://github.com/pluveto/upgit/releases).
 
-Each zip contains the `upgit` binary, a GitHub `config.toml`, and `recipes/`. Unzip, rename the binary to `upgit` (Windows: `upgit.exe`) if needed, and add that folder to `PATH`. On Linux/macOS, run `chmod +x upgit` if the file is not already executable.
+> If you have no idea which to download:
+>
+> + For most Windows users, choose `upgit_win_amd64.zip`
+> + For Windows ARM, choose `upgit_win_arm64.zip`
+> + For Windows 32-bit, choose `upgit_win_386.zip`
+> + For Linux x64, choose `upgit_linux_amd64.zip`
+> + For Linux arm64, choose `upgit_linux_arm64.zip`
+> + For Linux 32-bit, choose `upgit_linux_386.zip`
+> + For Linux ARM, choose `upgit_linux_arm.zip`
+> + For most macOS users, choose `upgit_macos_arm64.zip`
+> + For macOS Intel, choose `upgit_macos_amd64.zip`
+> + Execute `chmod +x upgit` if permission is needed
 
-There is no auto-updater. Star the repo if you want to notice new releases.
+Unzip it, rename the binary to `upgit` (For Windows users, `upgit.exe`), save it to somewhere you like. To access it from anywhere, add its directory to the `PATH` environment variable.
 
-## Three steps (GitHub)
+**Warning:** this program doesn't contain an auto-updater. If you need to keep updated, just give *upgit* a ⭐star.
 
-1. Run `upgit init`. It writes a GitHub `config.toml` to the platform config directory and **prints the full path** (or pass a path: `upgit init ./config.toml`).
-2. Edit that file: `pat`, `username`, `repo`, `branch`. `branch` must match the repository default branch (usually `main`).
-3. Upload: `upgit logo.png`
+### Config
 
-```toml
-default = "github"
+Run `upgit init`. It writes a GitHub `config.toml` and prints the path. You can also create `config.toml` in the same directory of *upgit*.
 
-[uploaders.github]
-pat = "PASTE_YOUR_TOKEN"
-username = "your-user"
-repo = "your-public-repo"
-branch = "main"
-```
+Fill it in following [this sample config file](config.sample.toml).
 
 The repository **must be public**. Private repos make raw URLs 404.
 
-**PAT** — either:
+Personal Access Token (PAT): a classic token with the `repo` scope, or a fine-grained token with **Contents: Read and write** on that repository. Create a token at [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens).
 
-- a classic token with the `repo` scope, or
-- a fine-grained token with **Contents: Read and write** on that repository
+### Use it
 
-Create a token at [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens).
+To upload file `logo.png` with rename rules, execute:
 
-## Faster paths
-
-GitHub is fine if you already have a public repo. These are quicker if you only want a link.
-
-### SM.MS (one token)
-
-Create a token at [sm.ms/home/apitoken](https://sm.ms/home/apitoken):
-
-```toml
-default = "smms"
-
-[uploaders.smms]
-token = "YOUR_SMMS_TOKEN"
+```shell
+./upgit logo.png
+# for windows: .\upgit.exe logo.png
 ```
 
-### S3, OSS, COS, Qiniu (key + bucket + domain)
+Then you'll see a link to `logo.png`.
 
-Same idea for Amazon S3 (and MinIO / R2 / Backblaze / Wasabi / Spaces), Aliyun OSS, Tencent Cloud COS, and Qiniu Kodo: access key, secret, bucket, and the public URL you want printed.
+To upload file `logo.png` to remote folder `/my_images/demo`, execute:
 
-```toml
-default = "s3"
-
-[uploaders.s3]
-region = "us-west-2"
-bucket_name = "my-bucket"
-access_key = "..."
-secret_key = "..."
-endpoint = "https://s3.us-west-2.amazonaws.com"
-url_format = "{endpoint}/{bucket}/{path}"
+```shell
+./upgit logo.png -t /my_images/demo
+# for Windows: .\upgit.exe logo.png -t /my_images/demo
 ```
 
-```toml
-default = "aliyunoss"
+---
 
-[uploaders.aliyunoss]
-endpoint = "https://oss-cn-shanghai.aliyuncs.com"
-access_key_id = "..."
-access_key_secret = "..."
-bucket_name = "your-bucket"
-host = "https://cdn.example.com"
+For more help, type `-h` argument
+
+```
+Upload anything to github repo or other remote storages and then get its link.
+
+Usage: upgit [OPTIONS] [FILE]...
+       upgit <COMMAND>
+
+Commands:
+  init       Write a GitHub config.toml
+  uploaders  List built-in uploaders
+  help       Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [FILE]...  Local files to upload
+
+Options:
+      --clipboard                Upload the image currently on the clipboard
+      --clipboard-files          Upload files copied on the clipboard (file list)
+  -u, --uploader <UPLOADER>      Uploader id (see `upgit uploaders`)
+  -o, --output <OUTPUT>          stdout or clipboard (clipboard copies the URL) [default: stdout] [alias: --output-type] [possible values: stdout, clipboard]
+  -f, --format <FORMAT>          url | markdown | named [alias: --output-format]
+  -t, --target-dir <TARGET_DIR>  Keep the original filename under this remote directory
+  -s, --size-limit <SIZE_LIMIT>  Maximum file size in bytes (0 = unlimited)
+  -c, --config <CONFIG>          Path to a TOML config file [alias: --config-file]
+  -r, --raw                      Skip [link] replacements
+  -C, --clean                    Delete local files after a successful upload
+  -V, --verbose                  Print uploader, object key, and URL to stderr
+  -w, --wait                     Do not exit after upload until the user presses a key
+  -n, --no-log                   Disable writing upgit.log (history.log is still written)
+      --application-path <PATH>  Directory that owns config.toml / upgit.toml, history.log, and upgit.log
+      --version                  Print version
+  -h, --help                     Print help
+
+Uploaders (pass --uploader ID, or set default in config.toml):
+  github      GitHub
+  s3          Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces / Ceph / Flexify.IO / IBM Cloud Object Storage)
+  aliyunoss   Aliyun OSS
+  qcloudcos   Tencent Cloud COS
+  upyun       Upyun
+  qiniu       Qiniu Kodo
+  smms        SM.MS
+  imgur       Imgur
+  catbox      Catbox
+  cloudinary  Cloudinary
+  easyimage   EasyImage
+  lskypro     Lsky Pro
+  lskypro2    Lsky Pro v2
+  hello       Helloimg
+  niupic      Niupic
+  imgurlorg   ImgURL.org
+  imgbb       ImgBB
+  chevereto   Chevereto
+  gitee       Gitee
+  dalexni     DALEXNI
+  imgtg       img.tg
+  juejin      Juejin
+  moetu       Moetu
+  netease     NetEase
+  sougou      Sogou
+  upload_cc   upload.cc
+
+Create a config with `upgit init`. List ids with `upgit uploaders`.
+https://github.com/pluveto/upgit
 ```
 
-```toml
-default = "qcloudcos"
+### Use it for Typora
 
-[uploaders.qcloudcos]
-host = "xxx.cos.ap-chengdu.myqcloud.com"
-secret_id = "..."
-secret_key = "..."
+> Assuming your *upgit* program is saved at `"C:\repo\upgit\upgit.exe"`.
+
+Select *File > Preferences...*
+
+![image-20220128204217802](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373863.png)
+
+Move to *Image*. Choose *Custom Command* as your *Image Uploader*.
+
+Input *upgit* program location into *Command* textbox.
+
+> You can click *Test Uploader* button to make sure it works.
+
+![image-20220128204418723](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
+
+Now enjoy it!
+
+### Upload Clipboard Image
+
+Upload the clipboard image as **png**:
+
+```shell
+./upgit --clipboard
 ```
 
-```toml
-default = "qiniu"
+Shortcuts for screenshot:
 
-[uploaders.qiniu]
-access_key = "..."
-secret_key = "..."
-bucket = "..."
-public_base = "https://cdn.example.com/"
-```
-
-Set `default` to the table name, or pass `-u smms` / `-u s3` / … for one shot. More hosts: [`config.sample.toml`](config.sample.toml).
-
-## Everyday use
-
-```bash
-upgit logo.png
-upgit a.png b.png
-upgit logo.png -u github
-upgit logo.png -t /my_images/demo          # keep original filename under that remote directory
-upgit logo.png -o clipboard                # copy the URL
-upgit logo.png -o clipboard -f markdown    # ![logo.png](https://...)
-upgit --clipboard                          # screenshot on the clipboard
-upgit --clipboard-files                    # files copied on the clipboard
-```
-
-Default size limit is **5MiB**. Raise it with `-s` (bytes); `-s 0` means unlimited.
-
-`--raw` prints the URL before `[link]` replacements. `--clean` deletes the local file after a successful upload. `--verbose` prints extra detail.
-
-### Screenshot to URL
-
-1. Take a screenshot onto the clipboard:
-   - Windows: <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
-   - macOS: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>4</kbd>
-   - Linux: <kbd>PrintScreen</kbd>
-2. Run `upgit --clipboard`
++ On macOS, use `Ctrl+Shift+Cmd+4`
++ On Linux/Ubuntu, use `Ctrl+Shift+PrintScreen`
++ On Windows, use `Shift+Win+s`
 
 On Linux, clipboard access needs **xclip** (X11) or **wl-clipboard** (Wayland).
 
-`--clipboard-files` uploads copied files: on Windows, File Explorer copy (`CF_HDROP`); on Linux and macOS, a text list of paths.
+**Compatible with Snipaste** (Windows): Snipaste bitmap screenshots can be uploaded the same way.
 
-### Save the URL to the clipboard
+### Upload Clipboard Files
 
-```bash
+**Note:** This feature is only supported on Windows.
+
+Upload files copied in Explorer (`CF_HDROP`):
+
+```shell
+./upgit --clipboard-files
+```
+
+### Save URL to Clipboard
+
+Use `--output clipboard` (alias `--output-type`):
+
+```shell
 upgit logo.png --output clipboard
-upgit --clipboard -o clipboard -f markdown
+# or .\upgit.exe --clipboard -o clipboard
 ```
 
-Built-in `-f` values: `url` (default) and `markdown` (`![{url_fname}]({url})`). Add more names under `[output_formats]` in config.
+#### Copy as Markdown format
 
-### Typora
+Add argument `-f markdown` (alias `--output-format`):
 
-> Example Windows path: `C:\path\to\upgit.exe`
-
-**File → Preferences…**
-
-![Typora preferences](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373863.png)
-
-Open **Image**. Set **Image Uploader** to **Custom Command**, and put the full path to `upgit` in **Command**. Click **Test Uploader** to confirm it works.
-
-![Typora custom command](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
-
-### One-shot screenshot (AHK, Windows)
-
-1. Install AutoHotkey.
-2. Save `upload_clipboard.ahk` and run it:
-
-```ahk
-; Ctrl+F9 uploads the clipboard image and copies Markdown
-^F9::
-RunWait, "upgit.exe" --clipboard --output clipboard --format markdown
-return
+```shell
+upgit logo.png --output clipboard -f markdown
+# or .\upgit.exe --clipboard -o clipboard -f markdown
 ```
 
-3. <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> to snip, then <kbd>Ctrl</kbd>+<kbd>F9</kbd> to upload and copy the link.
+Then you'll get a markdown image link in your clipboard like:
 
-## Config
+```
+![logo.png](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
+```
 
-### Where the file is
+### Best practice with AHK
 
-`upgit init` (no path) writes:
+For Windows user:
 
-- Unix: `$XDG_CONFIG_HOME/upgit/config.toml`, or `~/.config/upgit/config.toml`
-- Windows: `%APPDATA%\upgit\config.toml`
+1. Install AHK
 
-Search order when you upload:
+2. Create this script `upload_clipboard.ahk` and run:
 
-1. `--config PATH` (`-c`)
-2. `./config.toml` in the current directory
-3. Unix: `$XDG_CONFIG_HOME/upgit/config.toml` or `~/.config/upgit/config.toml`
-4. Windows: `%APPDATA%\upgit\config.toml`, then `%USERPROFILE%`
-5. `config.toml` next to the `upgit` binary
+   ```ahk
+   ; Press Ctrl + F9 to upload clipboard image
+   ^F9::
+   RunWait, "upgit.exe" --clipboard --output clipboard --format markdown
+   return
+   ```
 
-### Rename placeholders
+3. Then press <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> to take screenshot. <kbd>Ctrl</kbd><kbd>F9</kbd> to upload it and get its link to your clipboard!
 
-`naming` (alias `rename`) is the remote object key. `/` creates directories.
+## Config Instructions
 
-| Placeholder | Meaning |
-| --- | --- |
-| `{year}` `{month}` `{day}` | UTC date from the timestamp, e.g. `2026` `09` `01` |
-| `{hour}` `{minute}` `{second}` | UTC time from the timestamp |
-| `{unix}` | Unix time in seconds |
-| `{unix_tsms}` | Unix time in milliseconds (better against collisions) |
-| `{stem}` `{fname}` | Original name without extension (`logo`) |
-| `{fullname}` | Original name with extension (`logo.png`) |
-| `{ext}` | Extension including the dot (`.png`), or empty |
-| `{hmac}` | HMAC-SHA256 of `hmac_format` (needs `hmac_key`) |
-| `{fname_hash}` | MD5 of the original file name with extension (`logo.png`) |
-| `{fname_hash4}` `{fname_hash8}` | First 4 / 8 hex digits of that MD5 |
+| Key                   | Desc                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| username              | Your Github username, like `pluveto`                         |
+| repo                  | Your Github repository name, like `upgit`                    |
+| branch                | The branch for saving files, like `master` or `main`         |
+| pat                   | Personal Access Token. Visit [GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for more info |
+| rename                | Renaming rule. Path separator `/` will create directories if not exists. Supporting: |
+| -- `{year}`           | -- Year like `2006`                                          |
+| -- `{month}`          | -- Month like `01`                                           |
+| -- `{day}`            | -- Day like `02`                                             |
+| -- `{hour}`            | -- Hours of current time                                              |
+| -- `{minute}`            | -- Minutes of current time  |
+| -- `{second}`            | -- Seconds of current time  |
+| -- `{unix_ts}`        | -- Unix timestamp in second. Like `1643373370`.              |
+| -- `{unix_tsms}`        | -- Unix timestamp in millisecond. Like `1644212979622`.              |
+| --- `{ext}`           | -- Extension like `.png`, and empty when the original file has no extension |
+| -- `{fname}`      | -- Original file base name like `demo` (without extension)   |
+| -- `{fname_hash}` | -- MD5 Hash in hex of `{fname}` (name without extension)                          |
+| -- `{fname_hash4}` | -- MD5 Hash in hex of `{fname}`, first 4 digits                          |
+| -- `{fname_hash8}` | -- MD5 Hash in hex of `{fname}`, first 8 digits                          |
+| -- `{hmac}`        | -- HMAC-SHA256 hash of `hmac_format`, truncated to `hmac_len`            |
+| hmac_key           | Secret key for calculation `{hmac}`                                          |
+| hmac_format        | Format string for `{hmac}` calculation. Supporting all above placeholders.   |
+| hmac_len           | Length of `{hmac}` hash. 0 means no truncation.                              |
+
+Here is a simplist sample config file:
 
 ```toml
-naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
+rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+[uploaders.github]
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+repo = "repo-name"
+username = "username"
+branch = "main"
 ```
 
-For `{hmac}` also set `hmac_key`, optionally `hmac_format` and `hmac_len`.
+The config file is searched in this order:
 
-### CDN / URL rewrite
+1. `--config` / `--config-file`
+2. `./config.toml`
+3. `$XDG_CONFIG_HOME/upgit/config.toml` or `%APPDATA%\upgit\config.toml`
+4. `~/.upgit.config.toml`
+5. `~/.config/upgitrc`
+6. `config.toml` and `upgit.toml` next to the binary
 
-After upload, substring replacements in `[link]`:
+`--application-path` changes the binary-dir lookup. After each upload, `history.log` (and `upgit.log` unless `--no-log`) is written in that directory.
 
-```toml
-[link]
-"raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
-"/main" = "@main"
-```
+### Config via Environment Variables
 
-### Output formats
++ `UPGIT_TOKEN`
++ `UPGIT_RENAME`
++ `UPGIT_USERNAME`
++ `UPGIT_REPO`
++ `UPGIT_BRANCH`
 
-```toml
-[output_formats]
-"bbcode" = "[img]{url}[/img]"
-"html" = '<img src="{url}" />'
-"markdown-simple" = "![]({url})"
-```
-
-Placeholders: `{url}`, `{url_fname}` (basename from the URL).
-
-```bash
-upgit --clipboard -o clipboard -f bbcode
-```
-
-### Environment variables
-
-Any config key can be set with `UPGIT_` and `__` for nesting (Kong-style):
+Any config key can also be set with `UPGIT_` and `__` for nesting (Kong-style):
 
 ```bash
 export UPGIT_DEFAULT=smms
@@ -269,24 +334,32 @@ export UPGIT_UPLOADERS__GITHUB__USERNAME=your-user
 export UPGIT_NAMING='{year}/{month}/{fname}_{unix}{ext}'
 ```
 
-### Size limit
+### Custom output format
 
-Default **5MiB**. Override with `size_limit` in config (bytes) or `-s`. `-s 0` disables the limit.
+In following way:
 
-## Build from source
-
-```bash
-cargo install --git https://github.com/pluveto/upgit --branch next
+```toml
+[output_formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
 ```
 
-Or clone this repo and:
+Placeholder:
 
-```bash
-cargo install --path crates/upgit
++ `{url}`: URL to image
++ `{fname}`: Original file basename
++ `{url_fname}`: File basename from url
+
+Example usage:
+
 ```
-
-If crates.io is slow, try `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse` or a mirror such as rsproxy.
+# Upload clipboard and save link to clipboard as bbcode format
+upgit --clipboard -o clipboard -f bbcode
+```
 
 ## Appendix: upgrading from 0.2
 
-If you used the previous Go release, flags, config paths, and Qiniu credentials changed. See [Upgrading from 0.2](docs/upgrade-from-0.2.md).
+If you used the previous Go 0.2 `upgit`, flags such as `:clipboard` and `--output-type`, config paths, and Qiniu credentials changed. There is no `extensions/` directory. See [Upgrading from 0.2](docs/upgrade-from-0.2.md).
+
+Optional: `cargo install --git https://github.com/pluveto/upgit --branch next`

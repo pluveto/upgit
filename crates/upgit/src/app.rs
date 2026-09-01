@@ -2,8 +2,8 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use upgit::Cli;
-use upgit_core::{KeyPolicy, LinkPolicy, Publisher, Registry, RegistryError};
+use upgit::{application_dir, config_search_paths, record_history, record_upload_log, Cli};
+use upgit_core::{KeyPolicy, Publisher, Registry, RegistryError};
 use upgit_uploaders::{AppConfig, HostCatalog};
 
 use crate::emitter::Emitter;
@@ -40,11 +40,7 @@ impl App {
             Some(dir) => KeyPolicy::keep_original_in(dir),
             None => config.namer()?,
         };
-        let linker = if cli.raw {
-            LinkPolicy::identity()
-        } else {
-            config.linker()
-        };
+        let linker = config.linker();
         let formats: Vec<(String, String)> = config
             .output_formats
             .iter()
@@ -74,20 +70,39 @@ impl App {
         let mut intake = Intake::from_cli(cli, self.size_limit)?;
         let artifacts = intake.collect()?;
         let now = SystemTime::now();
-        let mut urls = Vec::new();
+        let app_dir = application_dir(cli.application_path.as_deref());
+        let mut items = Vec::new();
         for artifact in &artifacts {
-            let url = self.publisher.publish(uploader, artifact, now)?;
+            let (raw, replaced) = self.publisher.publish_with_raw(uploader, artifact, now)?;
+            let shown = if cli.raw {
+                raw.as_str().to_string()
+            } else {
+                replaced.as_str().to_string()
+            };
+            let key = self.namer.apply(artifact, now)?;
             if self.verbose {
-                let key = self.namer.apply(artifact, now)?;
-                eprintln!("key: {} url: {}", key.as_str(), url.as_str());
+                eprintln!("key: {} url: {shown}", key.as_str());
             }
-            urls.push(url.as_str().to_string());
+            record_history(app_dir.join("history.log"), raw.as_str(), replaced.as_str())?;
+            if !cli.no_log {
+                record_upload_log(
+                    app_dir.join("upgit.log"),
+                    &self.uploader_id,
+                    key.as_str(),
+                    &shown,
+                )?;
+            }
+            items.push((shown, artifact.file_name().to_string()));
         }
-        self.emitter.send(&urls)?;
+        self.emitter.send(&items)?;
         if self.clean {
             for path in &cli.files {
                 std::fs::remove_file(path).map_err(|e| format!("cannot delete {path}: {e}"))?;
             }
+        }
+        if cli.wait {
+            let mut line = String::new();
+            let _ = std::io::stdin().read_line(&mut line);
         }
         Ok(())
     }
@@ -96,7 +111,7 @@ impl App {
         let mut config = if let Some(path) = cli.config.as_deref() {
             Self::read_config(Path::new(path))?
         } else {
-            Self::config_candidates()
+            Self::config_candidates(cli)
                 .into_iter()
                 .find(|path| path.is_file())
                 .map(|path| Self::read_config(&path))
@@ -113,54 +128,27 @@ impl App {
         Ok(AppConfig::from_toml(&text)?)
     }
 
-    fn config_candidates() -> Vec<PathBuf> {
-        let mut out = Vec::new();
-        let mut push_unique = |p: PathBuf| {
-            if !out.contains(&p) {
-                out.push(p);
-            }
+    fn config_candidates(cli: &Cli) -> Vec<PathBuf> {
+        let home = nonempty_env("HOME");
+        let xdg = nonempty_env("XDG_CONFIG_HOME");
+        let appdata = if cfg!(windows) {
+            nonempty_env("APPDATA")
+        } else {
+            None
         };
-        push_unique(PathBuf::from("config.toml"));
-        if let Some(xdg) = nonempty_env("XDG_CONFIG_HOME") {
-            push_unique(PathBuf::from(xdg).join("upgit").join("config.toml"));
-        }
-        if cfg!(windows) {
-            if let Some(appdata) = nonempty_env("APPDATA") {
-                push_unique(PathBuf::from(appdata).join("upgit").join("config.toml"));
-            }
-        }
-        if let Some(home) = nonempty_env("HOME") {
-            push_unique(
-                PathBuf::from(home)
-                    .join(".config")
-                    .join("upgit")
-                    .join("config.toml"),
-            );
-        }
-        if let Some(profile) = nonempty_env("USERPROFILE") {
-            push_unique(
-                PathBuf::from(&profile)
-                    .join(".config")
-                    .join("upgit")
-                    .join("config.toml"),
-            );
-            if cfg!(windows) {
-                push_unique(
-                    PathBuf::from(&profile)
-                        .join("AppData")
-                        .join("Roaming")
-                        .join("upgit")
-                        .join("config.toml"),
-                );
-            }
-        }
-        if let Some(exe_dir) = std::env::current_exe()
+        let profile = nonempty_env("USERPROFILE");
+        let appdir = application_dir(cli.application_path.as_deref());
+        let exe_dir = std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(Path::to_path_buf))
-        {
-            push_unique(exe_dir.join("config.toml"));
-        }
-        out
+            .and_then(|p| p.parent().map(Path::to_path_buf));
+        config_search_paths(
+            home.as_deref().map(Path::new),
+            Some(appdir.as_path()),
+            xdg.as_deref().map(Path::new),
+            appdata.as_deref().map(Path::new),
+            profile.as_deref().map(Path::new),
+            exe_dir.as_deref(),
+        )
     }
 }
 

@@ -1,266 +1,330 @@
 # ![upgit](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
 
+<img align="right" src="https://img.shields.io/github/actions/workflow/status/pluveto/upgit/ci.yml?style=flat-square" />
+
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /> <img src="https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" /> <img src="https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=apple&logoColor=F0F0F0" />
 
 **语言**: [English](../README.md) / 简体中文
 
-*Upgit* 是一个本地命令行工具：把文件或剪贴板传到远端，打印直链。
+*Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。简洁跨平台，不常驻内存。
 
-可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义图片上传器，也可配合 [VSCode 扩展](https://github.com/pluveto/upgit-vscode-extension) 使用。
+可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用，也可配合 [VSCode 扩展](https://github.com/pluveto/upgit-vscode-extension)。
 
-无参数运行 `upgit`，或 `upgit -h`，会打印帮助。
+**太长不看**：本程序用于快速上传。配合 AHK 可以帮助你一键完成截图、上传、复制链接的操作。
 
-## 支持的图床
+## 特点
 
-GitHub 只是其中一种。若不想把仓库设为**公开**，请改用 SM.MS、S3 或 OSS —— GitHub 私有仓库的 raw 直链会 404。
++ 通过 [VSCode 扩展](https://github.com/pluveto/upgit-vscode-extension) 集成 VSCode
++ 支持多平台，包括 Linux、Windows 和 macOS
++ 支持**多种上传器**，目前包括 Github 和 SMMS
++ 不限制文件类型
++ 支持从**剪贴板上传**
++ 自定义**自动重命名**规则（包括路径）
++ 可通过替换规则实现**CDN**加速
++ 可通过**环境变量**配置
++ 将 URL 输出到标准输出/**剪贴板**，支持 Markdown 格式
 
-- **GitHub** — 仓库必须公开
-- **Amazon S3** 及兼容存储：MinIO、Cloudflare R2、Backblaze、Wasabi、DigitalOcean Spaces
-- **码云 Gitee** — 不适合当公开图床，会拦截图床仓库
-- **腾讯云 COS**、**七牛云 Kodo**、**又拍云**、**阿里云 OSS**
-- **SM.MS**、**Imgur**、**ImgUrl.org**、**CatBox**、**Hello**、**牛图 Niupic**
-- **LSkyPro**、**Chevereto**、**ImgBB**、**Cloudinary**、**EasyImage**
-- **DALEXNI**、**img.tg**、**掘金**、**萌图 Moetu**、**网易**、**搜狗**、**upload.cc**
+### 上传扩展
 
-本机查看 id：`upgit uploaders`。完整配置表在仓库的 [`config.sample.toml`](../config.sample.toml)（**不会**打进 zip）。
++ Github
++ S3 兼容存储
+   + AWS S3
+   + MinIO
+   + Cloudflare R2
+   + Ceph
+   + Backblaze
+   + Flexify.IO
+   + IBM Cloud Object Storage
+   + DigitalOcean Spaces
+   + Wasabi
++ Gitee（会拦截公开图床仓库，建议改用 SM.MS / S3 / OSS）
++ 腾讯云 COS
++ 七牛云 Kodo
++ 又拍云
++ 阿里云 OSS
++ Hello
++ Niupic
++ SM.MS
++ Imgur
++ ImgUrl.org
++ CatBox
++ LSkyPro
++ Chevereto
++ ImgBB
++ Cloudinary
++ EasyImage
++ DALEXNI
++ img.tg
++ 掘金
++ 萌图 Moetu
++ 网易
++ 搜狗
++ upload.cc
++ Lsky Pro v2
 
-## 下载
+查看更多: `upgit uploaders`
 
-从 [Releases](https://github.com/pluveto/upgit/releases) 下载最新 zip：
+## 开始使用
 
-| 你的系统 | 下载 |
-| --- | --- |
-| Windows x64 | `upgit_win_amd64.zip` |
-| Windows ARM | `upgit_win_arm64.zip` |
-| Linux x64 | `upgit_linux_amd64.zip` |
-| Linux ARM | `upgit_linux_arm64.zip` |
-| macOS Intel | `upgit_macos_amd64.zip` |
-| macOS Apple Silicon | `upgit_macos_arm64.zip` |
+### 下载
 
-每个 zip 里是 `upgit` 可执行文件、一份 GitHub 用的 `config.toml`，以及 `recipes/`。解压后如有需要，把二进制改名为 `upgit`（Windows 为 `upgit.exe`），把该目录加入 `PATH`。Linux / macOS 若无法执行，再 `chmod +x upgit`。
+从 [Releases](https://github.com/pluveto/upgit/releases) 下载最新 zip。
 
-本程序不会自动检查更新。关心新版本可以点右上角 ⭐ star。
+> 如果不知道下载哪一个：
+>
+> + 对于大多数 Windows 用户，请选择 `upgit_win_amd64.zip`
+> + 对于 Windows ARM，请选择 `upgit_win_arm64.zip`
+> + 对于 Windows 32 位，请选择 `upgit_win_386.zip`
+> + 对于 Linux x64，请选择 `upgit_linux_amd64.zip`
+> + 对于 Linux arm64，请选择 `upgit_linux_arm64.zip`
+> + 对于 Linux 32 位，请选择 `upgit_linux_386.zip`
+> + 对于 Linux ARM，请选择 `upgit_linux_arm.zip`
+> + 对于大多数 macOS 用户，请选择 `upgit_macos_arm64.zip`
+> + 对于 macOS Intel，请选择 `upgit_macos_amd64.zip`
+> + 如需执行权限，请运行 `chmod +x upgit`
 
-## 三步上手（GitHub）
+解压后将其重命名为 `upgit`（对于 Windows 用户，`upgit.exe`），保存到某处。若要从任何地方访问它，请将其目录添加到 `PATH` 环境变量中。
 
-1. 运行 `upgit init`。它会把一份 GitHub 用的 `config.toml` 写到系统配置目录，并**打印完整路径**（也可指定路径：`upgit init ./config.toml`）。
-2. 打开该文件，填写 `pat`、`username`、`repo`、`branch`。`branch` 必须和仓库默认分支一致（一般是 `main`）。
-3. 上传：`upgit logo.png`
+**提醒：** 此程序不会自动检查更新。如果你关心本程序的新功能，可以点右上角的 ⭐star 收藏。
 
-```toml
-default = "github"
+### 配置
 
-[uploaders.github]
-pat = "PASTE_YOUR_TOKEN"
-username = "your-user"
-repo = "your-public-repo"
-branch = "main"
-```
+运行 `upgit init`。它会写入一份 GitHub 用的 `config.toml` 并打印路径。也可以在程序的同一目录创建 `config.toml`。
+
+内容按照 [此示例配置文件](../config.sample.zh-CN.toml) 填写即可。
 
 仓库**必须公开**。私有仓库的 raw 直链会 404。
 
-**PAT** 二选一：
+个人访问令牌（PAT）：经典 token 勾选 `repo` 权限，或 fine-grained token 对该仓库授予 **Contents: Read and write**。在 [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens) 创建。
 
-- 经典 token，勾选 `repo` 权限；或
-- fine-grained token，对该仓库授予 **Contents: Read and write**
+### 使用
 
-在 [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens) 创建。
+比如上传 `logo.png` 并自动使用重命名规则，执行：
 
-## 更快的几条路
-
-已经有公开 GitHub 仓库的话，上面即可。只想马上拿到链接，下面这些更快。
-
-### SM.MS（一个 token）
-
-在 [sm.ms/home/apitoken](https://sm.ms/home/apitoken) 创建 token：
-
-```toml
-default = "smms"
-
-[uploaders.smms]
-token = "YOUR_SMMS_TOKEN"
+```shell
+./upgit logo.png
+# for windows: .\upgit.exe logo.png
 ```
 
-### S3、OSS、COS、七牛（密钥 + 桶 + 域名）
+然后会看到一个指向  `logo.png` 的直链。
 
-Amazon S3（以及 MinIO / R2 / Backblaze / Wasabi / Spaces）、阿里云 OSS、腾讯云 COS、七牛云 Kodo 都是同一类：AccessKey、Secret、Bucket，再加你希望打印出来的公网域名。
+比如上传 `logo.png`  到远程文件夹 `/my_images/demo`，执行：
 
-```toml
-default = "s3"
-
-[uploaders.s3]
-region = "us-west-2"
-bucket_name = "my-bucket"
-access_key = "..."
-secret_key = "..."
-endpoint = "https://s3.us-west-2.amazonaws.com"
-url_format = "{endpoint}/{bucket}/{path}"
+```shell
+./upgit logo.png -t /my_images/demo
+# 对于 Windows: .\upgit.exe logo.png -t /my_images/demo
 ```
 
-```toml
-default = "aliyunoss"
+有关更多帮助，请键入 `-h` 参数
 
-[uploaders.aliyunoss]
-endpoint = "https://oss-cn-shanghai.aliyuncs.com"
-access_key_id = "..."
-access_key_secret = "..."
-bucket_name = "your-bucket"
-host = "https://cdn.example.com"
+```shell
+Upload anything to github repo or other remote storages and then get its link.
+
+Usage: upgit [OPTIONS] [FILE]...
+       upgit <COMMAND>
+
+Commands:
+  init       Write a GitHub config.toml
+  uploaders  List built-in uploaders
+  help       Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [FILE]...  Local files to upload
+
+Options:
+      --clipboard                Upload the image currently on the clipboard
+      --clipboard-files          Upload files copied on the clipboard (file list)
+  -u, --uploader <UPLOADER>      Uploader id (see `upgit uploaders`)
+  -o, --output <OUTPUT>          stdout or clipboard (clipboard copies the URL) [default: stdout] [alias: --output-type] [possible values: stdout, clipboard]
+  -f, --format <FORMAT>          url | markdown | named [alias: --output-format]
+  -t, --target-dir <TARGET_DIR>  Keep the original filename under this remote directory
+  -s, --size-limit <SIZE_LIMIT>  Maximum file size in bytes (0 = unlimited)
+  -c, --config <CONFIG>          Path to a TOML config file [alias: --config-file]
+  -r, --raw                      Skip [link] replacements
+  -C, --clean                    Delete local files after a successful upload
+  -V, --verbose                  Print uploader, object key, and URL to stderr
+  -w, --wait                     Do not exit after upload until the user presses a key
+  -n, --no-log                   Disable writing upgit.log (history.log is still written)
+      --application-path <PATH>  Directory that owns config.toml / upgit.toml, history.log, and upgit.log
+      --version                  Print version
+  -h, --help                     Print help
+
+Uploaders (pass --uploader ID, or set default in config.toml):
+  github      GitHub
+  s3          Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces / Ceph / Flexify.IO / IBM Cloud Object Storage)
+  aliyunoss   Aliyun OSS
+  qcloudcos   Tencent Cloud COS
+  upyun       Upyun
+  qiniu       Qiniu Kodo
+  smms        SM.MS
+  imgur       Imgur
+  catbox      Catbox
+  cloudinary  Cloudinary
+  easyimage   EasyImage
+  lskypro     Lsky Pro
+  lskypro2    Lsky Pro v2
+  hello       Helloimg
+  niupic      Niupic
+  imgurlorg   ImgURL.org
+  imgbb       ImgBB
+  chevereto   Chevereto
+  gitee       Gitee
+  dalexni     DALEXNI
+  imgtg       img.tg
+  juejin      Juejin
+  moetu       Moetu
+  netease     NetEase
+  sougou      Sogou
+  upload_cc   upload.cc
+
+Create a config with `upgit init`. List ids with `upgit uploaders`.
+https://github.com/pluveto/upgit
 ```
 
-```toml
-default = "qcloudcos"
+### 配合 Typora 使用
 
-[uploaders.qcloudcos]
-host = "xxx.cos.ap-chengdu.myqcloud.com"
-secret_id = "..."
-secret_key = "..."
+> 假设 *upgit* 程序保存在 `"C:\repo\upgit\upgit.exe"`。
+
+选择 *文件 > 首选项*
+
+![image-20220128204217802](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373863.png)
+
+转到 *Image*。选择 *自定义命令* 作为 *图像上传器*。
+
+在 *命令* 文本框中输入 *upgit* 程序位置。
+
+> 你可以点击 *测试上传*（Test Uploader）按钮来确保它工作正常。
+
+![image-20220128204418723](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
+
+然后就可以使用了。
+
+### 上传剪贴板图像
+
+上传剪贴板图像（仅支持 **png** 格式）：
+
+```shell
+./upgit --clipboard
 ```
 
-```toml
-default = "qiniu"
+截图快捷键：
 
-[uploaders.qiniu]
-access_key = "..."
-secret_key = "..."
-bucket = "..."
-public_base = "https://cdn.example.com/"
-```
-
-把 `default` 设成表名，或临时用 `-u smms` / `-u s3` / …。更多图床见 [`config.sample.toml`](../config.sample.toml)。
-
-## 日常用法
-
-```bash
-upgit logo.png
-upgit a.png b.png
-upgit logo.png -u github
-upgit logo.png -t /my_images/demo          # 保留原文件名，放到该远程目录
-upgit logo.png -o clipboard                # 把 URL 写入剪贴板
-upgit logo.png -o clipboard -f markdown    # ![logo.png](https://...)
-upgit --clipboard                          # 上传剪贴板里的截图
-upgit --clipboard-files                    # 上传剪贴板里复制的文件
-```
-
-默认大小限制 **5MiB**。用 `-s` 指定字节数；`-s 0` 表示不限制。
-
-`--raw` 输出未经 `[link]` 替换的原始 URL。`--clean` 上传成功后删除本地文件。`--verbose` 打印更多细节。
-
-### 截图上传
-
-1. 把截图放进剪贴板：
-   - Windows：<kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
-   - macOS：<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>4</kbd>
-   - Linux：<kbd>PrintScreen</kbd>
-2. 运行 `upgit --clipboard`
++ 在 macOS 上，使用 `Ctrl+Shift+Cmd+4`
++ 在 Linux/Ubuntu 上，使用 `Ctrl+Shift+PrintScreen`
++ 在 Windows 上，使用 `Shift+Win+s`
 
 Linux 上读写剪贴板需要 **xclip**（X11）或 **wl-clipboard**（Wayland）。
 
-`--clipboard-files` 上传已复制的文件：Windows 走资源管理器「复制文件」（`CF_HDROP`）；Linux / macOS 走文本路径列表。
+**兼容 Snipaste**（Windows）：Snipaste 的位图截图可以同样上传。
 
-### 把 URL 存进剪贴板
+### 上传剪贴板文件
 
-```bash
+**注意：**此功能仅在 Windows 上支持。
+
+上传资源管理器中复制的文件（`CF_HDROP`）：
+
+```shell
+./upgit --clipboard-files
+```
+
+### 将 URL 保存到剪贴板
+
+使用参数 `--output clipboard`（别名 `--output-type`）：
+
+```shell
 upgit logo.png --output clipboard
-upgit --clipboard -o clipboard -f markdown
+# or .\upgit.exe --clipboard -o clipboard
 ```
 
-内置 `-f`：`url`（默认）和 `markdown`（`![{url_fname}]({url})`）。可在配置的 `[output_formats]` 里增加命名格式。
+#### 复制为 Markdown 格式
 
-### 配合 Typora
+增加参数 `-f markdown`（别名 `--output-format`）：
 
-> 假设 Windows 路径为 `C:\path\to\upgit.exe`
-
-选择 **文件 → 偏好设置…**
-
-![Typora 偏好设置](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373863.png)
-
-转到 **图像**。将 **图像上传器** 设为 **自定义命令**，在 **命令** 里填入 `upgit` 的完整路径。点 **验证图片上传器**（Test Uploader）确认可用。
-
-![Typora 自定义命令](https://cdn.jsdelivr.net/gh/pluveto/0images@master/2022/01/upgit_20220128_1643373868.png)
-
-### AHK 一键截图上传（Windows）
-
-1. 安装 AutoHotkey。
-2. 保存并运行 `upload_clipboard.ahk`：
-
-```ahk
-; Ctrl+F9 上传剪贴板截图，并把 Markdown 写入剪贴板
-^F9::
-RunWait, "upgit.exe" --clipboard --output clipboard --format markdown
-return
+```shell
+upgit logo.png --output clipboard -f markdown
+# or .\upgit.exe --clipboard -o clipboard -f markdown
 ```
 
-3. 用 <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> 截图，再按 <kbd>Ctrl</kbd>+<kbd>F9</kbd> 上传并复制链接。
+然后会在剪贴板上得到一个 Markdown 图片链接，比如：
 
-## 配置
+```md
+![logo.png](https://cdn.jsdelivr.net/gh/pluveto/upgit/logo.png)
+```
 
-### 配置文件在哪
+### AHK 的最佳实践
 
-`upgit init`（不带路径）会写到：
+对于 Windows 用户：
 
-- Unix：`$XDG_CONFIG_HOME/upgit/config.toml`，否则 `~/.config/upgit/config.toml`
-- Windows：`%APPDATA%\upgit\config.toml`
+1. 安装 AHK
+2. 创建这个脚本 `upload_clipboard.ahk` 并运行：
 
-上传时的搜索顺序：
+   ```ahk
+   ; Press Ctrl + F9 to upload clipboard image
+   ^F9::
+   RunWait, "upgit.exe" --clipboard --output clipboard --format markdown
+   return
+   ```
 
-1. `--config PATH`（`-c`）
-2. 当前目录的 `./config.toml`
-3. Unix：`$XDG_CONFIG_HOME/upgit/config.toml` 或 `~/.config/upgit/config.toml`
-4. Windows：`%APPDATA%\upgit\config.toml`，然后 `%USERPROFILE%`
-5. `upgit` 可执行文件同目录下的 `config.toml`
+3. 然后按 <kbd>Win</kbd><kbd>Shift</kbd><kbd>S</kbd> 截图，按 <kbd>Ctrl</kbd><kbd>F9</kbd> 上传并将其链接复制到剪贴板
 
-### 重命名占位符
+## 配置文件说明
 
-`naming`（别名 `rename`）是远程对象键。路径里的 `/` 会创建目录。
+| 键                   | 说明                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| username              | 您的 Github 用户名，例如 `pluveto` |
+| repo                  | 您的 Github 存储库名称，例如 `upgit` |
+| branch                | 保存文件的分支，例如 `master` 或 `main` |
+| pat                   | 个人访问令牌。 访问 [GitHub 文档](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) 了解更多信息 |
+| rename                | 重命名规则。不存在的路径目录将被创建。 支持下列占位符： |
+| -- `{year}`           | -- 年份，如 `2006`                                       |
+| -- `{month}`          | -- 月，如 `01`                                       |
+| -- `{day}`            | -- 日，如 `02`                                         |
+| -- `{hour}`            | -- 时        |
+| -- `{minute}`            | -- 分  |
+| -- `{second}`            | -- 秒  |
+| -- `{unix_ts}`        | -- 以秒计的 Unix 时间戳，如 `1643373370`. |
+| -- `{unix_tsms}`        | -- 以毫秒计的 Unix 时间戳，如 `1644212979622`. |
+| --- `{ext}`           | -- 扩展名，如 `.png`，若文件无扩展名，则为空串 |
+| -- `{fname}`      | -- 原始文件名，如 `logo` （不含扩展名） |
+| -- `{fname_hash}` | -- `{fname}`（不含扩展名）的 MD5 散列值               |
+| -- `{fname_hash4}` | -- `{fname}` 的 MD5 散列值，取前 4 位               |
+| -- `{fname_hash8}` | -- `{fname}` 的 MD5 散列值，取前 8 位               |
+| -- `{hmac}`        | -- 对 `hmac_format` 做 HMAC-SHA256，截断到 `hmac_len`            |
+| hmac_key           | 计算 `{hmac}` 所用的密钥                                          |
+| hmac_format        | `{hmac}` 的格式字符串。支持上面全部占位符。   |
+| hmac_len           | `{hmac}` 散列长度。0 表示不截断。                              |
 
-| 占位符 | 含义 |
-| --- | --- |
-| `{year}` `{month}` `{day}` | UTC 日期（来自时间戳），如 `2026` `09` `01` |
-| `{hour}` `{minute}` `{second}` | UTC 时、分、秒（来自时间戳） |
-| `{unix}` | Unix 时间戳（秒） |
-| `{unix_tsms}` | Unix 时间戳（毫秒，高频上传更不容易撞名） |
-| `{stem}` `{fname}` | 原文件名，不含扩展名（`logo`） |
-| `{fullname}` | 原文件名，含扩展名（`logo.png`） |
-| `{ext}` | 扩展名，带点（`.png`）；没有则为空 |
-| `{hmac}` | 对 `hmac_format` 做 HMAC-SHA256（需要 `hmac_key`） |
-| `{fname_hash}` | 原文件名（含扩展名，如 `logo.png`）的 MD5（十六进制） |
-| `{fname_hash4}` `{fname_hash8}` | 上述 MD5 的前 4 / 8 位 |
+这是一个简单的示例配置文件：
 
 ```toml
-naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
+rename = "{year}/{month}/upgit_{year}{month}{day}_{unix_ts}{ext}"
+[uploaders.github]
+pat = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+repo = "repo-name"
+username = "username"
+branch = "main"
 ```
 
-使用 `{hmac}` 时还需设置 `hmac_key`，可选 `hmac_format`、`hmac_len`。
+配置文件按以下顺序查找：
 
-### CDN / URL 替换
+1. `--config` / `--config-file`
+2. `./config.toml`
+3. `$XDG_CONFIG_HOME/upgit/config.toml` 或 `%APPDATA%\upgit\config.toml`
+4. `~/.upgit.config.toml`
+5. `~/.config/upgitrc`
+6. 可执行文件同目录下的 `config.toml` 和 `upgit.toml`
 
-上传后按 `[link]` 做子串替换：
+`--application-path` 会改变可执行文件同目录的查找位置。每次上传后会在该目录写入 `history.log`（除非 `--no-log`，否则还有 `upgit.log`）。
 
-```toml
-[link]
-"raw.githubusercontent.com" = "cdn.jsdelivr.net/gh"
-"/main" = "@main"
-```
+### 通过环境变量配置
 
-### 输出格式
++ `UPGIT_TOKEN`
++ `UPGIT_RENAME`
++ `UPGIT_USERNAME`
++ `UPGIT_REPO`
++ `UPGIT_BRANCH`
 
-```toml
-[output_formats]
-"bbcode" = "[img]{url}[/img]"
-"html" = '<img src="{url}" />'
-"markdown-simple" = "![]({url})"
-```
-
-占位符：`{url}`、`{url_fname}`（URL 里的文件名）。
-
-```bash
-upgit --clipboard -o clipboard -f bbcode
-```
-
-### 环境变量
-
-任意配置项都可用 `UPGIT_` 设置，嵌套用 `__`（Kong 风格）：
+任意配置项也可用 `UPGIT_` 设置，嵌套用 `__`（Kong 风格）：
 
 ```bash
 export UPGIT_DEFAULT=smms
@@ -269,24 +333,31 @@ export UPGIT_UPLOADERS__GITHUB__USERNAME=your-user
 export UPGIT_NAMING='{year}/{month}/{fname}_{unix}{ext}'
 ```
 
-### 大小限制
+### 自定义输出格式
 
-默认 **5MiB**。可在配置里写 `size_limit`（字节），或用 `-s`。`-s 0` 表示不限制。
+可以通过如下方式自定义输出格式：
 
-## 从源码安装
-
-```bash
-cargo install --git https://github.com/pluveto/upgit --branch next
+```toml
+[output_formats]
+"bbcode" = "[img]{url}[/img]"
+"html" = '<img src="{url}" />'
+"markdown-simple" = "![]({url})"
 ```
 
-或克隆本仓库后：
+占位符：
 
-```bash
-cargo install --path crates/upgit
++ `{url}`：图片 URL
++ `{fname}`：原始文件名
++ `{url_fname}`：URL 里的文件名
+
+使用方法示例：
+
 ```
-
-若拉取 crates.io 较慢，可设 `CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse`，或使用 rsproxy 等镜像。
+upgit --clipboard -o clipboard -f bbcode
+```
 
 ## 附录：从 0.2 升级
 
-若你用过之前的 Go 版本，命令行参数、配置路径和七牛凭证有变化。见 [从 0.2 升级](upgrade-from-0.2.md)。
+若你用过之前的 Go 0.2 版本，`:clipboard`、`--output-type` 等参数、配置路径和七牛凭证有变化。没有 `extensions/` 目录。见 [从 0.2 升级](upgrade-from-0.2.md)。
+
+可选：`cargo install --git https://github.com/pluveto/upgit --branch next`

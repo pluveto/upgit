@@ -506,6 +506,13 @@ fn host_catalog_contains_github_and_smms() {
         "got {}",
         s3.title
     );
+    assert!(s3.title.contains("Ceph"), "got {}", s3.title);
+    assert!(s3.title.contains("Flexify.IO"), "got {}", s3.title);
+    assert!(
+        s3.title.contains("IBM Cloud Object Storage"),
+        "got {}",
+        s3.title
+    );
 }
 
 #[test]
@@ -542,6 +549,15 @@ repo = "pics"
             .and_then(|v| v.as_str()),
         Some("alice")
     );
+}
+
+#[test]
+fn overlay_from_iter_upgit_token_sets_github_pat() {
+    let mut cfg = AppConfig::default();
+    cfg.overlay_from_iter([("UPGIT_TOKEN", "ghp_from_env")]);
+    let github = cfg.uploaders.get("github").expect("github table");
+    let pat = github.fields.get("pat").and_then(|v| v.as_str());
+    assert_eq!(pat, Some("ghp_from_env"));
 }
 
 #[test]

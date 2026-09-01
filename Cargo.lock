@@ -1169,9 +1169,11 @@ name = "upgit"
 version = "0.3.0-beta.1"
 dependencies = [
  "arboard",
+ "chrono",
  "clap",
  "clipboard-win",
  "png 0.17.16",
+ "serde_json",
  "tempfile",
  "upgit-core",
  "upgit-uploaders",

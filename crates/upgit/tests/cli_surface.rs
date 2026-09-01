@@ -75,6 +75,32 @@ fn help_documents_files_clipboard_uploader_and_output() {
         help.contains("Uploaders") && help.contains("github"),
         "help must list uploaders:\n{help}"
     );
+    assert!(
+        help.contains(
+            "Upload anything to github repo or other remote storages and then get its link."
+        ),
+        "help about must match 0.2:\n{help}"
+    );
+    assert!(
+        help.contains("--wait"),
+        "help must document --wait:\n{help}"
+    );
+    assert!(
+        help.contains("--no-log"),
+        "help must document --no-log:\n{help}"
+    );
+    assert!(
+        help.contains("--application-path"),
+        "help must document --application-path:\n{help}"
+    );
+    assert!(
+        help.contains("--config-file"),
+        "help must document --config-file:\n{help}"
+    );
+    assert!(
+        help.contains("--output-type"),
+        "help must document --output-type:\n{help}"
+    );
 }
 
 #[test]
@@ -149,6 +175,38 @@ fn parses_clipboard_files_flag() {
 }
 
 #[test]
+fn parses_wait_no_log_application_path_and_aliases() {
+    let cli = Cli::try_parse_from([
+        "upgit",
+        "logo.png",
+        "--wait",
+        "--no-log",
+        "--application-path",
+        "/tmp/app",
+        "--config-file",
+        "my.toml",
+        "--output-type",
+        "clipboard",
+    ])
+    .expect("parse");
+    assert!(cli.wait);
+    assert!(cli.no_log);
+    assert_eq!(
+        cli.application_path.as_deref(),
+        Some(std::path::Path::new("/tmp/app"))
+    );
+    assert_eq!(cli.config.as_deref(), Some("my.toml"));
+    assert_eq!(cli.output, upgit::Output::Clipboard);
+}
+
+#[test]
+fn parses_short_wait_and_no_log() {
+    let cli = Cli::try_parse_from(["upgit", "logo.png", "-w", "-n"]).expect("parse");
+    assert!(cli.wait);
+    assert!(cli.no_log);
+}
+
+#[test]
 fn parses_init_subcommand() {
     let cli = Cli::try_parse_from(["upgit", "init"]).expect("parse");
     assert!(matches!(cli.command, Some(CliCommand::Init { dest: None })));
@@ -220,6 +278,35 @@ fn binary_init_help_does_not_create_a_file_named_help() {
     assert!(
         !dir.path().join("--help").exists(),
         "init --help must not write a file named --help"
+    );
+}
+
+#[test]
+fn binary_help_contains_wait_no_log_and_aliases() {
+    let output = Command::new(env!("CARGO_BIN_EXE_upgit"))
+        .arg("-h")
+        .output()
+        .expect("run upgit -h");
+    assert!(
+        output.status.success(),
+        "upgit -h should succeed, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = combined_output(&output);
+    for flag in [
+        "--wait",
+        "--no-log",
+        "--application-path",
+        "--config-file",
+        "--output-type",
+    ] {
+        assert!(text.contains(flag), "upgit -h must contain {flag}:\n{text}");
+    }
+    assert!(
+        text.contains(
+            "Upload anything to github repo or other remote storages and then get its link."
+        ),
+        "upgit -h about must match 0.2:\n{text}"
     );
 }
 

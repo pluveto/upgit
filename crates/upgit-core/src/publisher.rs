@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::artifact::Artifact;
 use crate::key_policy::{KeyPolicy, KeyPolicyError};
 use crate::link_policy::LinkPolicy;
-use crate::locator::PublicUrl;
+use crate::locator::{Locator, PublicUrl};
 use crate::uploader::{UploadError, Uploader};
 
 #[derive(Debug, Error)]
@@ -34,8 +34,19 @@ impl Publisher {
         artifact: &Artifact,
         at: SystemTime,
     ) -> Result<PublicUrl, PublishError> {
+        Ok(self.publish_with_raw(uploader, artifact, at)?.1)
+    }
+
+    /// Locator before `[link]` replacements, and the rewritten public URL.
+    pub fn publish_with_raw(
+        &self,
+        uploader: &dyn Uploader,
+        artifact: &Artifact,
+        at: SystemTime,
+    ) -> Result<(Locator, PublicUrl), PublishError> {
         let key = self.namer.apply(artifact, at)?;
         let locator = uploader.upload(artifact, &key)?;
-        Ok(self.linker.apply(&locator))
+        let url = self.linker.apply(&locator);
+        Ok((locator, url))
     }
 }

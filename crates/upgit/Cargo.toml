@@ -8,8 +8,10 @@ description.workspace = true
 
 [dependencies]
 arboard = "3"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 clap = { version = "4", features = ["derive"] }
 png = "0.17"
+serde_json = "1"
 tempfile = "3"
 upgit-core = { path = "../upgit-core", version = "0.3.0-beta.1" }
 upgit-uploaders = { path = "../upgit-uploaders", version = "0.3.0-beta.1" }
@@ -19,3 +21,4 @@ clipboard-win = "5"
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }
+tempfile = "3"

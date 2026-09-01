@@ -143,7 +143,7 @@ impl<'a> Fields<'a> {
             .map_err(|_| KeyPolicyError::InvalidTime)?;
         let datetime = DateTime::from_timestamp(duration.as_secs() as i64, 0)
             .ok_or(KeyPolicyError::InvalidTime)?;
-        let fname_hash = hex_lower(&Md5::digest(artifact.file_name().as_bytes()));
+        let fname_hash = hex_lower(&Md5::digest(artifact.stem().as_bytes()));
         Ok(Self {
             year: datetime.format("%Y").to_string(),
             month: datetime.format("%m").to_string(),

@@ -71,7 +71,7 @@ pub struct AppConfig {
     pub uploaders: IndexMap<String, UploaderProfile>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct UploaderProfile {
     #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
@@ -145,11 +145,16 @@ impl AppConfig {
         K: AsRef<str>,
         V: AsRef<str>,
     {
+        let pairs: Vec<(String, String)> = iter
+            .into_iter()
+            .map(|(k, v)| (k.as_ref().to_string(), v.as_ref().to_string()))
+            .collect();
+
         let mut value = toml::Value::try_from(&*self)
             .unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()));
         let mut any = false;
-        for (k, v) in iter {
-            let Some(rest) = k.as_ref().strip_prefix("UPGIT_") else {
+        for (k, v) in &pairs {
+            let Some(rest) = k.strip_prefix("UPGIT_") else {
                 continue;
             };
             let segments: Vec<String> = rest
@@ -160,15 +165,54 @@ impl AppConfig {
             if segments.is_empty() {
                 continue;
             }
-            insert_path(&mut value, &segments, env_to_value(v.as_ref()));
+            insert_path(&mut value, &segments, env_to_value(v));
             any = true;
         }
-        if !any {
-            return;
+        if any {
+            if let Ok(next) = Self::deserialize(value) {
+                *self = next;
+            }
         }
-        if let Ok(next) = Self::deserialize(value) {
-            *self = next;
+        self.apply_legacy_env(&pairs);
+    }
+
+    /// 0.2 aliases applied after the Kong-style `UPGIT_` / `__` overlay.
+    fn apply_legacy_env(&mut self, pairs: &[(String, String)]) {
+        let get = |name: &str| {
+            pairs
+                .iter()
+                .rev()
+                .find(|(k, _)| k == name)
+                .map(|(_, v)| v.as_str())
+        };
+        if let Some(pat) = get("UPGIT_TOKEN").or_else(|| get("GITHUB_TOKEN")) {
+            self.set_github_field("pat", pat);
         }
+        if let Some(username) = get("UPGIT_USERNAME") {
+            self.set_github_field("username", username);
+        }
+        if let Some(repo) = get("UPGIT_REPO") {
+            self.set_github_field("repo", repo);
+        }
+        if let Some(branch) = get("UPGIT_BRANCH") {
+            self.set_github_field("branch", branch);
+        }
+        if let Some(rename) = get("UPGIT_RENAME") {
+            self.naming = Some(rename.to_string());
+        }
+    }
+
+    fn set_github_field(&mut self, key: &str, value: &str) {
+        let profile = self
+            .uploaders
+            .entry("github".to_string())
+            .or_insert_with(UploaderProfile::default);
+        if profile.kind.is_empty() {
+            profile.kind = "github".to_string();
+        }
+        profile
+            .fields
+            .insert(key.to_string(), toml::Value::String(value.to_string()));
     }
 
     /// This config object fills a registry with uploader objects.

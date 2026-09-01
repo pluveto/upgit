@@ -40,9 +40,24 @@ jobs:
             bin: upgit
             linker: aarch64-linux-gnu-gcc
             packages: gcc-aarch64-linux-gnu
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            asset: upgit_linux_386.zip
+            bin: upgit
+            packages: gcc-multilib
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            asset: upgit_linux_arm.zip
+            bin: upgit
+            linker: arm-linux-gnueabihf-gcc
+            packages: gcc-arm-linux-gnueabihf
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset: upgit_win_amd64.zip
+            bin: upgit.exe
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            asset: upgit_win_386.zip
             bin: upgit.exe
           - os: windows-latest
             target: aarch64-pc-windows-msvc
@@ -75,6 +90,7 @@ jobs:
       - name: Build
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.linker }}
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: ${{ matrix.linker }}
         run: cargo build --release --locked --target ${{ matrix.target }} -p upgit
 
       - name: Stage zip (binary + config.toml + recipes)

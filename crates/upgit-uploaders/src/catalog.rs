@@ -21,8 +21,7 @@ impl HostCatalog {
             },
             Host {
                 id: "s3",
-                title:
-                    "Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces)",
+                title: "Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces / Ceph / Flexify.IO / IBM Cloud Object Storage)",
             },
             Host {
                 id: "aliyunoss",
