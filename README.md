@@ -297,6 +297,9 @@ For Windows user:
 | -- `{fname_hash}` | -- MD5 Hash in hex of `{fname}` (name without extension)                          |
 | -- `{fname_hash4}` | -- MD5 Hash in hex of `{fname}`, first 4 digits                          |
 | -- `{fname_hash8}` | -- MD5 Hash in hex of `{fname}`, first 8 digits                          |
+| -- `{content_hash}` | -- MD5 Hash in hex of the file contents                          |
+| -- `{content_hash4}` | -- MD5 Hash in hex of the file contents, first 4 digits                          |
+| -- `{content_hash8}` | -- MD5 Hash in hex of the file contents, first 8 digits                          |
 | -- `{hmac}`        | -- HMAC-SHA256 hash of `hmac_format`, truncated to `hmac_len`            |
 | hmac_key           | Secret key for calculation `{hmac}`                                          |
 | hmac_format        | Format string for `{hmac}` calculation. Supporting all above placeholders.   |
