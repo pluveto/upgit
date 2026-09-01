@@ -17,5 +17,5 @@ sha1 = "0.10"
 sha2 = "0.10"
 thiserror = "2"
 toml = { version = "0.8", features = ["preserve_order"] }
-upgit-core = { path = "../upgit-core", version = "0.3.0-beta.1" }
+upgit-core = { path = "../upgit-core", version = "0.3.0-beta.2" }
 ureq = "2"
