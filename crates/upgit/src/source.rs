@@ -35,6 +35,37 @@ impl Source for FileSource {
     }
 }
 
+/// MIME type from a Content-Type header. Answers its own image extension.
+struct ContentType<'a> {
+    essence: &'a str,
+}
+
+impl<'a> ContentType<'a> {
+    fn from_header(header: &'a str) -> Self {
+        Self {
+            essence: header.split(';').next().unwrap_or("").trim(),
+        }
+    }
+
+    fn image_extension(&self) -> Option<&'static str> {
+        if self.essence.eq_ignore_ascii_case("image/png") {
+            Some(".png")
+        } else if self.essence.eq_ignore_ascii_case("image/jpeg")
+            || self.essence.eq_ignore_ascii_case("image/jpg")
+        {
+            Some(".jpeg")
+        } else if self.essence.eq_ignore_ascii_case("image/gif") {
+            Some(".gif")
+        } else if self.essence.eq_ignore_ascii_case("image/webp") {
+            Some(".webp")
+        } else if self.essence.eq_ignore_ascii_case("image/svg+xml") {
+            Some(".svg")
+        } else {
+            None
+        }
+    }
+}
+
 /// Remote http(s) URL. The temp download is held so it outlives upload.
 pub struct UrlSource {
     url: String,
@@ -98,24 +129,10 @@ impl UrlSource {
             return name;
         }
         let mut name = String::from("download");
-        if let Some(ct) = content_type {
-            let mime = ct
-                .split(';')
-                .next()
-                .unwrap_or("")
-                .trim()
-                .to_ascii_lowercase();
-            let ext = match mime.as_str() {
-                "image/png" => Some(".png"),
-                "image/jpeg" | "image/jpg" => Some(".jpeg"),
-                "image/gif" => Some(".gif"),
-                "image/webp" => Some(".webp"),
-                "image/svg+xml" => Some(".svg"),
-                _ => None,
-            };
-            if let Some(ext) = ext {
-                name.push_str(ext);
-            }
+        if let Some(ext) =
+            content_type.and_then(|ct| ContentType::from_header(ct).image_extension())
+        {
+            name.push_str(ext);
         }
         name
     }
