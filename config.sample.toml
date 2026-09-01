@@ -2,7 +2,7 @@
 # GitHub is the default. Copy one table into config.toml and set `default` to its name.
 # Packed/init config is GitHub-only: config.github.toml in the upgit repository.
 # HTTP hosts: a table named after a file in recipes/ needs no `type = "http"`.
-# Built-in types (github, s3, aliyunoss, qcloudcos, upyun, qiniu) use their real fields.
+# Built-in types (github, gitlab, s3, aliyunoss, qcloudcos, upyun, qiniu) use their real fields.
 # `default_uploader` is an alias of `default`. `rename` is an alias of `naming`.
 # `prefix` is an alias of Qiniu `public_base`. `replacements` is an alias of `link`.
 
@@ -34,6 +34,20 @@ username = "username"
 repo = "repo-name"
 # Branch to commit into. Must match the repository default branch.
 branch = "main"
+
+# GitLab (self-hosted or gitlab.com). Private projects make raw URLs 404 unless public_base is set.
+[uploaders.gitlab]
+# GitLab instance origin (alias: host). No trailing slash; not the /api/v4 URL.
+url = "https://gitlab.example.com"
+# Project path with namespace (group/name). Encoded on the wire as group%2Fname.
+project = "group/name"
+# Personal access token with api or write_repository. Sent as PRIVATE-TOKEN.
+token = "YOUR_GITLAB_TOKEN"
+# Branch to commit into. Defaults to main if omitted.
+branch = "main"
+# Optional public URL prefix for printed links (CDN, reverse proxy, or a public project raw prefix).
+# Private GitLab `/-/raw/` URLs 404 without this.
+# public_base = "https://cdn.example.com/"
 
 # SM.MS image host. Token: https://sm.ms/home/apitoken
 [uploaders.smms]

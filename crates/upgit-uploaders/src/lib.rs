@@ -2,6 +2,7 @@ mod catalog;
 pub mod cos;
 mod form;
 pub mod github;
+pub mod gitlab;
 mod install;
 pub mod oss;
 pub mod qiniu;

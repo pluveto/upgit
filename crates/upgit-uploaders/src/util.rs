@@ -158,6 +158,40 @@ pub(crate) fn host_of(url: &str) -> &str {
     rest.trim_end_matches('/')
 }
 
+/// Absolute HTTP URL: add `https://` if no scheme, strip surrounding slashes.
+pub(crate) fn http_origin(url: &str) -> String {
+    let t = url.trim();
+    let (scheme, rest) = if let Some(rest) = t.strip_prefix("https://") {
+        ("https://", rest)
+    } else if let Some(rest) = t.strip_prefix("http://") {
+        ("http://", rest)
+    } else if t.is_empty() {
+        return String::new();
+    } else {
+        ("https://", t)
+    };
+    let rest = rest.trim_matches('/');
+    if rest.is_empty() {
+        String::new()
+    } else {
+        format!("{scheme}{rest}")
+    }
+}
+
+/// RFC 3986 unreserved stay literal; everything else is `%HH` (uppercase).
+pub(crate) fn percent_encode(s: &str) -> String {
+    let mut out = String::new();
+    for &b in s.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 pub(crate) fn one_line(s: &str, max: usize) -> String {
     let line = s.lines().next().unwrap_or("").trim();
     let n = line.chars().count();
