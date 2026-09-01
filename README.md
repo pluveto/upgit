@@ -362,4 +362,4 @@ upgit --clipboard -o clipboard -f bbcode
 
 If you used the previous Go 0.2 `upgit`, flags such as `:clipboard` and `--output-type`, config paths, and Qiniu credentials changed. There is no `extensions/` directory. See [Upgrading from 0.2](docs/upgrade-from-0.2.md).
 
-Optional: `cargo install --git https://github.com/pluveto/upgit --branch next`
+Optional: `cargo install --git https://github.com/pluveto/upgit`

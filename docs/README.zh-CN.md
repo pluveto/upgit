@@ -360,4 +360,4 @@ upgit --clipboard -o clipboard -f bbcode
 
 若你用过之前的 Go 0.2 版本，`:clipboard`、`--output-type` 等参数、配置路径和七牛凭证有变化。没有 `extensions/` 目录。见 [从 0.2 升级](upgrade-from-0.2.md)。
 
-可选：`cargo install --git https://github.com/pluveto/upgit --branch next`
+可选：`cargo install --git https://github.com/pluveto/upgit`
