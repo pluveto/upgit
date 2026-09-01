@@ -6,6 +6,8 @@
 
 **Languages**: English / [简体中文](docs/README.zh-CN.md)
 
+**Development**: [开发手册（中文）](docs/DEVELOPMENT.zh-CN.md)
+
 *Upgit* is a native & lightweight tool that helps you upload any file to your Github repository and then get a raw URL for it.
 
 This is also useful with [Typora](https://support.typora.io/Upload-Image/#image-uploaders) as an image uploader, and with the [VSCode extension](https://github.com/pluveto/upgit-vscode-extension).

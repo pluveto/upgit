@@ -6,6 +6,8 @@
 
 **语言**: [English](../README.md) / 简体中文
 
+**开发**: [开发手册](DEVELOPMENT.zh-CN.md)
+
 *Upgit* 可以快捷地将文件上传到 Github 仓库并得到其直链。简洁跨平台，不常驻内存。
 
 可作为 [Typora](https://support.typora.io/Upload-Image/#image-uploaders) 的自定义上传器使用，也可配合 [VSCode 扩展](https://github.com/pluveto/upgit-vscode-extension)。
