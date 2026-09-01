@@ -44,16 +44,6 @@ impl BinarySwap {
         })
     }
 
-    #[cfg(test)]
-    pub fn current(&self) -> &Path {
-        &self.current
-    }
-
-    #[cfg(test)]
-    pub fn backup(&self) -> &Path {
-        &self.backup
-    }
-
     pub fn restore(self) -> Result<(), UpdateError> {
         #[cfg(windows)]
         {

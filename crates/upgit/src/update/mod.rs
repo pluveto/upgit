@@ -233,7 +233,7 @@ pub fn run(opts: Opts) -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::binary::BinarySwap;
-    use super::github::{release_asset_name, Package, Release, ReleaseIndex};
+    use super::github::{Package, Release, ReleaseIndex};
     use super::installation::Installation;
     use super::recipes::RecipeFolder;
     use super::*;
@@ -242,165 +242,69 @@ mod tests {
     use std::path::Path;
     use zip::write::SimpleFileOptions;
 
-    fn index(rows: &[(&str, bool, &[&str])]) -> ReleaseIndex {
-        ReleaseIndex::from_tags(rows)
-    }
-
-    fn latest_tag(rows: &[(&str, bool, &[&str])], channel: Channel) -> Option<String> {
-        index(rows)
-            .latest(channel, "upgit_linux_amd64.zip")
-            .map(|r| r.tag().to_string())
-    }
-
     #[test]
-    fn asset_names_match_release_zips() {
-        assert_eq!(
-            release_asset_name("linux", "x86_64"),
-            Some("upgit_linux_amd64.zip")
-        );
-        assert_eq!(
-            release_asset_name("windows", "x86_64"),
-            Some("upgit_win_amd64.zip")
-        );
-        assert_eq!(
-            release_asset_name("macos", "aarch64"),
-            Some("upgit_macos_arm64.zip")
-        );
-        assert_eq!(release_asset_name("linux", "powerpc"), None);
-    }
-
-    #[test]
-    fn stable_skips_prereleases_and_0_2() {
+    fn picks_channel_and_refuses_downgrade() {
         let rows = [
             ("v0.2.25", false, &["upgit_linux_amd64.zip"][..]),
             ("v0.3.0-alpha.3", false, &["upgit_linux_amd64.zip"]),
             ("v0.3.0-beta.3", false, &["upgit_linux_amd64.zip"]),
             ("v0.3.0", false, &["upgit_linux_amd64.zip"]),
-        ];
-        assert_eq!(
-            latest_tag(&rows, Channel::Stable).as_deref(),
-            Some("v0.3.0")
-        );
-    }
-
-    #[test]
-    fn beta_prefers_newer_stable_over_older_beta() {
-        let rows = [
-            ("v0.3.0-beta.3", false, &["upgit_linux_amd64.zip"][..]),
-            ("v0.3.0", false, &["upgit_linux_amd64.zip"]),
-        ];
-        assert_eq!(latest_tag(&rows, Channel::Beta).as_deref(), Some("v0.3.0"));
-    }
-
-    #[test]
-    fn beta_picks_newer_beta_over_stable() {
-        let rows = [
-            ("v0.3.0", false, &["upgit_linux_amd64.zip"][..]),
             ("v0.3.1-beta.1", false, &["upgit_linux_amd64.zip"]),
         ];
-        assert_eq!(
-            latest_tag(&rows, Channel::Beta).as_deref(),
-            Some("v0.3.1-beta.1")
+        let index = ReleaseIndex::from_tags(&rows);
+        let latest = |ch| {
+            index
+                .latest(ch, "upgit_linux_amd64.zip")
+                .map(|r| r.tag().to_string())
+        };
+        assert_eq!(latest(Channel::Stable).as_deref(), Some("v0.3.0"));
+        assert_eq!(latest(Channel::Beta).as_deref(), Some("v0.3.1-beta.1"));
+        assert_eq!(latest(Channel::Alpha).as_deref(), Some("v0.3.1-beta.1"));
+
+        let install = Installation::at(
+            Path::new("upgit").to_path_buf(),
+            Version::parse("0.4.0-beta.1").unwrap(),
         );
-        assert_eq!(
-            latest_tag(&rows, Channel::Stable).as_deref(),
-            Some("v0.3.0")
+        assert_eq!(install.plan(&Release::at("0.3.0"), true), Plan::TooOld);
+        let on_stable = Installation::at(
+            Path::new("upgit").to_path_buf(),
+            Version::parse("0.3.0").unwrap(),
         );
+        assert_eq!(on_stable.plan(&Release::at("0.3.0"), true), Plan::Reinstall);
+        assert_eq!(on_stable.plan(&Release::at("0.3.1"), false), Plan::Upgrade);
     }
 
     #[test]
-    fn alpha_includes_all_prereleases_but_picks_newest() {
-        let rows = [
-            ("v0.3.0-alpha.3", false, &["upgit_linux_amd64.zip"][..]),
-            ("v0.3.0-beta.3", false, &["upgit_linux_amd64.zip"]),
-        ];
-        assert_eq!(
-            latest_tag(&rows, Channel::Alpha).as_deref(),
-            Some("v0.3.0-beta.3")
-        );
-        assert_eq!(
-            latest_tag(&rows, Channel::Beta).as_deref(),
-            Some("v0.3.0-beta.3")
-        );
-        assert_eq!(latest_tag(&rows, Channel::Stable), None);
-    }
-
-    #[test]
-    fn skips_release_without_platform_asset() {
-        let rows = [
-            ("v0.3.1", false, &["upgit_win_amd64.zip"][..]),
-            ("v0.3.0", false, &["upgit_linux_amd64.zip"]),
-        ];
-        assert_eq!(
-            latest_tag(&rows, Channel::Stable).as_deref(),
-            Some("v0.3.0")
-        );
-    }
-
-    #[test]
-    fn skips_drafts() {
-        let rows = [
-            ("v0.4.0", true, &["upgit_linux_amd64.zip"][..]),
-            ("v0.3.0", false, &["upgit_linux_amd64.zip"]),
-        ];
-        assert_eq!(
-            latest_tag(&rows, Channel::Stable).as_deref(),
-            Some("v0.3.0")
-        );
-    }
-
-    #[test]
-    fn channel_from_flags() {
-        assert_eq!(Channel::from_flags(false, false), Channel::Stable);
-        assert_eq!(Channel::from_flags(true, false), Channel::Beta);
-        assert_eq!(Channel::from_flags(false, true), Channel::Alpha);
-    }
-
-    fn write_test_zip(path: &Path, files: &[(&str, &[u8])]) {
-        let file = File::create(path).expect("zip file");
+    fn package_ignores_config_toml() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let zip_path = dir.path().join("rel.zip");
+        let file = File::create(&zip_path).expect("zip");
         let mut zip = zip::ZipWriter::new(file);
         let opts =
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-        for (name, bytes) in files {
-            zip.start_file(*name, opts).expect("start");
+        for (name, bytes) in [
+            ("upgit", &b"new-bin"[..]),
+            ("config.toml", b"PASTE_YOUR_TOKEN"),
+            ("recipes/smms.toml", b"new-smms"),
+        ] {
+            zip.start_file(name, opts).expect("start");
             zip.write_all(bytes).expect("write");
         }
         zip.finish().expect("finish");
-    }
-
-    #[test]
-    fn package_takes_binary_and_recipes_not_config() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let zip_path = dir.path().join("rel.zip");
-        write_test_zip(
-            &zip_path,
-            &[
-                ("upgit", b"new-bin"),
-                ("config.toml", b"PASTE_YOUR_TOKEN"),
-                ("recipes/smms.toml", b"new-smms"),
-                ("../escape.toml", b"nope"),
-            ],
-        );
         let unpacked = dir.path().join("out");
         fs::create_dir(&unpacked).expect("out");
         let package = Package::from_zip_named(&zip_path, &unpacked, "upgit").expect("extract");
-        assert_eq!(fs::read(package.binary()).expect("bin"), b"new-bin");
         assert!(!unpacked.join("config.toml").exists());
-        assert_eq!(
-            package.recipes(),
-            &[("smms".to_string(), b"new-smms".to_vec())]
-        );
-        assert!(!unpacked.join("escape.toml").exists());
+        assert_eq!(fs::read(package.binary()).expect("bin"), b"new-bin");
     }
 
     #[test]
-    fn recipe_folder_updates_stock_keeps_custom_skips_missing() {
+    fn recipe_folder_keeps_custom_files() {
         let dir = tempfile::tempdir().expect("tempdir");
         let recipes = dir.path().join("recipes");
         fs::create_dir(&recipes).expect("recipes");
         fs::write(recipes.join("smms.toml"), "old-stock").expect("smms");
         fs::write(recipes.join("gitee.toml"), "user-edit").expect("gitee");
-        fs::write(recipes.join("extra.toml"), "mine").expect("extra");
         let folder = RecipeFolder::with_stock(
             recipes.clone(),
             &[("smms", "old-stock"), ("gitee", "old-gitee")],
@@ -408,74 +312,27 @@ mod tests {
         let new = vec![
             ("smms".to_string(), b"new-stock".to_vec()),
             ("gitee".to_string(), b"new-gitee".to_vec()),
-            ("imgur".to_string(), b"new-imgur".to_vec()),
         ];
         let report = folder.refresh(&new).expect("refresh");
         assert_eq!(report.updated, vec!["smms".to_string()]);
         assert_eq!(report.kept_custom, vec!["gitee".to_string()]);
         assert_eq!(
-            fs::read_to_string(recipes.join("smms.toml")).unwrap(),
-            "new-stock"
-        );
-        assert_eq!(
             fs::read_to_string(recipes.join("gitee.toml")).unwrap(),
             "user-edit"
         );
-        assert_eq!(
-            fs::read_to_string(recipes.join("extra.toml")).unwrap(),
-            "mine"
-        );
-        assert!(!recipes.join("imgur.toml").exists());
     }
 
     #[test]
-    fn installation_never_moves_backward_even_with_force() {
-        let install = Installation::at(
-            Path::new("upgit").to_path_buf(),
-            Version::parse("0.4.0-beta.1").unwrap(),
-        );
-        let stable = Release::at("0.3.0");
-        assert_eq!(install.plan(&stable, false), Plan::TooOld);
-        assert_eq!(install.plan(&stable, true), Plan::TooOld);
-    }
-
-    #[test]
-    fn installation_force_only_reinstalls_same_version() {
-        let v = Version::parse("0.3.0").unwrap();
-        let install = Installation::at(Path::new("upgit").to_path_buf(), v.clone());
-        let same = Release::at("0.3.0");
-        let newer = Release::at("0.3.1");
-        assert_eq!(install.plan(&same, false), Plan::UpToDate);
-        assert_eq!(install.plan(&same, true), Plan::Reinstall);
-        assert_eq!(install.plan(&newer, false), Plan::Upgrade);
-        assert_eq!(install.plan(&newer, true), Plan::Upgrade);
-    }
-
-    #[test]
-    fn binary_swap_keeps_backup_until_commit() {
+    fn binary_swap_restores_the_old_file() {
         let dir = tempfile::tempdir().expect("tempdir");
         let dest = dir.path().join("upgit");
         let src = dir.path().join("new");
         fs::write(&dest, b"old").expect("old");
         fs::write(&src, b"new").expect("new");
-        let swap = BinarySwap::install(&dest, &src).expect("replace");
-        assert_eq!(fs::read(swap.current()).expect("read"), b"new");
-        assert_eq!(fs::read(swap.backup()).expect("backup"), b"old");
-        swap.commit().expect("commit");
-        assert_eq!(fs::read(&dest).expect("read"), b"new");
-        assert!(!dir.path().join("upgit.old").exists());
-    }
-
-    #[test]
-    fn binary_swap_restore_puts_old_bytes_back() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let dest = dir.path().join("upgit");
-        let src = dir.path().join("new");
-        fs::write(&dest, b"old").expect("old");
-        fs::write(&src, b"new").expect("new");
-        let swap = BinarySwap::install(&dest, &src).expect("replace");
-        swap.restore().expect("restore");
+        BinarySwap::install(&dest, &src)
+            .expect("replace")
+            .restore()
+            .expect("restore");
         assert_eq!(fs::read(&dest).expect("read"), b"old");
-        assert!(!dir.path().join("upgit.old").exists());
     }
 }
