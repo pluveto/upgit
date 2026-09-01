@@ -123,14 +123,11 @@ impl App {
     }
 
     fn read_config(path: &Path) -> Result<AppConfig, Box<dyn Error>> {
-        let text = std::fs::read_to_string(path)
-            .map_err(|e| format!("cannot read config {}: {e}", path.display()))?;
-        let outcome = upgit::migrate::apply_to_text(&text)?;
-        if outcome.changed {
-            std::fs::write(path, &outcome.text)
-                .map_err(|e| format!("cannot write migrated config {}: {e}", path.display()))?;
+        let mut config = upgit::migrate::ConfigFile::load(path)?;
+        if config.migrate()? {
+            config.save()?;
         }
-        Ok(AppConfig::from_toml(&outcome.text)?)
+        Ok(AppConfig::from_toml(config.text())?)
     }
 
     fn config_candidates(cli: &Cli) -> Vec<PathBuf> {
