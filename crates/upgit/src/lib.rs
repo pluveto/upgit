@@ -68,6 +68,10 @@ pub struct Cli {
     #[arg(short = 's', long = "size-limit")]
     pub size_limit: Option<u64>,
 
+    /// User-Agent for http(s) FILE downloads
+    #[arg(long = "user-agent", value_name = "UA")]
+    pub user_agent: Option<String>,
+
     /// Path to a TOML config file
     #[arg(short, long, visible_alias = "config-file")]
     pub config: Option<String>,
