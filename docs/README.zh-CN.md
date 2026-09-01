@@ -118,6 +118,8 @@
 # 对于 Windows: .\upgit.exe logo.png -t /my_images/demo
 ```
 
+FILE 可以是本地路径，也可以是 `http(s)` 地址（先下载再上传）。
+
 有关更多帮助，请键入 `-h` 参数
 
 ```shell
