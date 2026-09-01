@@ -10,5 +10,5 @@ pub mod s3;
 pub mod upyun;
 mod util;
 
-pub use catalog::RecipeCatalog;
+pub use catalog::{Host, HostCatalog, RecipeCatalog};
 pub use install::{AppConfig, ConfigError, InstallError, RecipeSpec, UploaderProfile};

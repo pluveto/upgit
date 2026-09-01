@@ -1,7 +1,8 @@
-use std::path::Path;
+use std::error::Error;
 
-use clap::Parser;
-use upgit::Cli;
+use clap::FromArgMatches;
+use upgit::{Cli, Command};
+use upgit_uploaders::HostCatalog;
 
 mod app;
 mod emitter;
@@ -9,19 +10,36 @@ mod init;
 mod source;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.get(1).map(String::as_str) == Some("init") {
-        let dest = args.get(2).map(Path::new);
-        if let Err(err) = init::run(dest) {
-            eprintln!("error: {err}");
-            std::process::exit(1);
-        }
-        return;
-    }
-
-    let cli = Cli::parse();
-    if let Err(err) = app::App::from_cli(&cli).and_then(|app| app.run(&cli)) {
+    let cli = parse_cli();
+    if let Err(err) = dispatch(cli) {
         eprintln!("error: {err}");
         std::process::exit(1);
+    }
+}
+
+fn parse_cli() -> Cli {
+    let matches = Cli::command_with_hosts().get_matches();
+    match Cli::from_arg_matches(&matches) {
+        Ok(cli) => cli,
+        Err(err) => err.exit(),
+    }
+}
+
+fn dispatch(cli: Cli) -> Result<(), Box<dyn Error>> {
+    match &cli.command {
+        Some(Command::Init { dest }) => init::run(dest.as_deref()),
+        Some(Command::Uploaders) => {
+            let width = HostCatalog::id_width();
+            for host in HostCatalog::all() {
+                println!("{:width$}  {}", host.id, host.title, width = width);
+            }
+            Ok(())
+        }
+        None if cli.files.is_empty() && !cli.clipboard && !cli.clipboard_files => {
+            let mut cmd = Cli::command_with_hosts();
+            cmd.print_help()?;
+            std::process::exit(2);
+        }
+        None => app::App::from_cli(&cli)?.run(&cli),
     }
 }

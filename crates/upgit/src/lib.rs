@@ -1,14 +1,23 @@
-use clap::{Parser, ValueEnum};
+use std::fmt::Write as _;
+use std::path::PathBuf;
 
-/// Upload local files, a clipboard image, or clipboard files and print a public URL.
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use upgit_uploaders::HostCatalog;
+
+/// Upload a file or the clipboard and print a public URL.
 #[derive(Parser, Debug)]
 #[command(
     name = "upgit",
     version,
-    about = "Upload local files, a clipboard image, or clipboard files and print a public URL.",
-    long_about = "Upload local files, a clipboard image, or clipboard files to a remote host and print the public URL.\n\nPass one or more file operands to upload those paths. Use --clipboard for the image currently on the clipboard, or --clipboard-files for a file list copied on the clipboard.\n\nChoose an uploader with --uploader (looked up in the registry) and where to write the resulting URL with --output.\n\nFirst run: upgit init writes config.toml. Qiniu uses access_key/secret_key (tokens expire). There is no extensions/ directory."
+    disable_version_flag = true,
+    about = "Upload a file or the clipboard and print a public URL.",
+    after_help = "Create a config with `upgit init`. List ids with `upgit uploaders`.\nhttps://github.com/pluveto/upgit",
+    args_conflicts_with_subcommands = true
 )]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
     /// Local files to upload
     #[arg(value_name = "FILE")]
     pub files: Vec<String>,
@@ -21,17 +30,52 @@ pub struct Cli {
     #[arg(long = "clipboard-files")]
     pub clipboard_files: bool,
 
-    /// Uploader id (looked up in the registry)
+    /// Uploader id (see `upgit uploaders`)
     #[arg(short, long)]
     pub uploader: Option<String>,
 
-    /// Where to write the resulting URL
+    /// stdout or clipboard (clipboard copies the URL)
     #[arg(short, long, value_enum, default_value = "stdout")]
     pub output: Output,
+
+    /// url | markdown | named
+    #[arg(short = 'f', long = "format", visible_alias = "output-format")]
+    pub format: Option<String>,
+
+    /// Keep the original filename under this remote directory
+    #[arg(short = 't', long = "target-dir")]
+    pub target_dir: Option<String>,
+
+    /// Maximum file size in bytes (0 = unlimited)
+    #[arg(short = 's', long = "size-limit")]
+    pub size_limit: Option<u64>,
 
     /// Path to a TOML config file
     #[arg(short, long)]
     pub config: Option<String>,
+
+    /// Skip [link] replacements
+    #[arg(short = 'r', long)]
+    pub raw: bool,
+
+    /// Delete local files after a successful upload
+    #[arg(short = 'C', long)]
+    pub clean: bool,
+
+    /// Print uploader, object key, and URL to stderr
+    #[arg(short = 'V', long)]
+    pub verbose: bool,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Write a GitHub config.toml
+    Init {
+        /// Path to write. Default: platform config directory
+        dest: Option<PathBuf>,
+    },
+    /// List built-in uploaders
+    Uploaders,
 }
 
 /// Destination for the public URL after upload.
@@ -40,4 +84,28 @@ pub enum Output {
     #[default]
     Stdout,
     Clipboard,
+}
+
+/// Help footer: every host id + title, plus init / uploaders / repo URL.
+pub fn after_help() -> String {
+    let mut text = String::from("Uploaders (pass --uploader ID, or set default in config.toml):\n");
+    let width = HostCatalog::id_width();
+    for host in HostCatalog::all() {
+        let _ = writeln!(text, "  {:width$}  {}", host.id, host.title, width = width);
+    }
+    text.push('\n');
+    text.push_str("Create a config with `upgit init`. List ids with `upgit uploaders`.\n");
+    text.push_str("https://github.com/pluveto/upgit\n");
+    text
+}
+
+impl Cli {
+    pub fn command_with_hosts() -> clap::Command {
+        Self::command().after_help(after_help()).arg(
+            clap::Arg::new("print_version")
+                .long("version")
+                .action(clap::ArgAction::Version)
+                .help("Print version"),
+        )
+    }
 }

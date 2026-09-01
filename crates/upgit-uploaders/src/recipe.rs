@@ -50,7 +50,6 @@ impl RecipeContext {
                     let key = &rest[..end];
                     let value = match self.get(key) {
                         Some(v) => v,
-                        None if key.starts_with("config.") => "",
                         None => {
                             return Err(RecipeError::MissingPlaceholder(key.to_string()));
                         }
@@ -80,6 +79,8 @@ pub struct HttpRecipe {
 #[derive(Debug, Clone, Deserialize)]
 struct Meta {
     id: String,
+    #[serde(default)]
+    optional: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -128,6 +129,31 @@ impl HttpRecipe {
 
     pub fn id(&self) -> &str {
         &self.meta.id
+    }
+
+    /// Unique `{config.FIELD}` names in url, headers, params, then body strings.
+    pub fn required_config_keys(&self) -> Vec<String> {
+        let mut keys = Vec::new();
+        scan_config_keys(&self.request.url, &mut keys);
+        let mut headers: Vec<_> = self.request.headers.iter().collect();
+        headers.sort_by(|a, b| a.0.cmp(b.0));
+        for (_, value) in headers {
+            scan_config_keys(value, &mut keys);
+        }
+        let mut params: Vec<_> = self.request.params.iter().collect();
+        params.sort_by(|a, b| a.0.cmp(b.0));
+        for (_, value) in params {
+            scan_config_keys(value, &mut keys);
+        }
+        let mut body: Vec<_> = self.request.body.iter().collect();
+        body.sort_by(|a, b| a.0.cmp(b.0));
+        for (_, field) in body {
+            if let BodyField::String { value } = field {
+                scan_config_keys(value, &mut keys);
+            }
+        }
+        keys.retain(|key| !self.meta.optional.iter().any(|opt| opt == key));
+        keys
     }
 
     pub fn extract_locator(
@@ -247,6 +273,12 @@ impl HttpRecipeUploader {
         ctx.put("key", key.as_str());
         for (k, v) in &self.config {
             ctx.put(&format!("config.{k}"), v);
+        }
+        for opt in &self.recipe.meta.optional {
+            let name = format!("config.{opt}");
+            if ctx.get(&name).is_none() {
+                ctx.put(&name, "");
+            }
         }
         ctx
     }
@@ -369,4 +401,72 @@ impl Uploader for HttpRecipeUploader {
 
 fn upload_err(e: RecipeError) -> UploadError {
     UploadError::message(e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn catbox_like() -> HttpRecipe {
+        HttpRecipe::from_toml(
+            r#"
+[meta]
+id = "catbox"
+optional = ["userhash"]
+
+[request]
+method = "POST"
+url = "https://example.invalid/"
+
+[request.body]
+userhash = { type = "string", value = "{config.userhash}" }
+fileToUpload = { type = "file" }
+
+[response]
+url = { from = "text" }
+"#,
+        )
+        .expect("parse")
+    }
+
+    #[test]
+    fn required_config_keys_omit_optional() {
+        assert!(catbox_like().required_config_keys().is_empty());
+    }
+
+    #[test]
+    fn context_fills_missing_optional_keys_with_empty_string() {
+        let uploader = HttpRecipeUploader::new(catbox_like(), HashMap::new());
+        let key = ObjectKey::parse("a.png").expect("key");
+        let ctx = uploader.context(&key);
+        assert_eq!(ctx.get("config.userhash"), Some(""));
+        assert_eq!(ctx.interpolate("{config.userhash}").expect("interp"), "");
+    }
+
+    #[test]
+    fn context_keeps_present_optional_keys() {
+        let mut config = HashMap::new();
+        config.insert("userhash".into(), "abc123".into());
+        let uploader = HttpRecipeUploader::new(catbox_like(), config);
+        let key = ObjectKey::parse("a.png").expect("key");
+        let ctx = uploader.context(&key);
+        assert_eq!(ctx.get("config.userhash"), Some("abc123"));
+    }
+}
+
+fn scan_config_keys(template: &str, out: &mut Vec<String>) {
+    let mut rest = template;
+    while let Some(start) = rest.find("{config.") {
+        rest = &rest[start + "{config.".len()..];
+        match rest.find('}') {
+            Some(end) => {
+                let key = &rest[..end];
+                if !key.is_empty() && !out.iter().any(|known| known == key) {
+                    out.push(key.to_string());
+                }
+                rest = &rest[end + 1..];
+            }
+            None => break,
+        }
+    }
 }

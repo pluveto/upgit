@@ -1,39 +1,74 @@
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use upgit_uploaders::RecipeCatalog;
 
 const TEMPLATE: &str = include_str!("../../../config.github.toml");
 
 pub fn run(dest: Option<&Path>) -> Result<(), Box<dyn Error>> {
-    let dest = dest.unwrap_or(Path::new("config.toml"));
+    let dest = match dest {
+        Some(path) => path.to_path_buf(),
+        None => default_config_path()?,
+    };
     if dest.exists() {
-        return Err(format!(
-            "{} already exists; edit it in place (recipes are in ./recipes or next to the binary)",
-            dest.display()
-        )
-        .into());
+        return Err(format!("{} already exists; edit it in place", dest.display()).into());
     }
     if let Some(parent) = dest.parent() {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent)?;
         }
     }
-    std::fs::write(dest, TEMPLATE)?;
+    std::fs::write(&dest, TEMPLATE)?;
     let recipes_dir = dest
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.join("recipes"))
-        .unwrap_or_else(|| Path::new("recipes").to_path_buf());
-    let extracted = RecipeCatalog::extract_to(&recipes_dir)?;
-    println!(
-        "Wrote {} and recipes/ ({} bundled, {} new files).",
-        dest.display(),
-        RecipeCatalog::ids().count(),
-        extracted
-    );
-    println!(
-        "GitHub is the default. Fill [uploaders.github] pat/username/repo/branch and run: upgit FILE"
-    );
+        .unwrap_or_else(|| PathBuf::from("recipes"));
+    RecipeCatalog::extract_to(&recipes_dir)?;
+    let shown = dest.canonicalize().unwrap_or(dest);
+    println!("Wrote {}", shown.display());
+    println!("Open that file and fill [uploaders.github]: pat, username, repo, branch.");
+    println!("The repository must be public. Create a PAT: https://github.com/settings/tokens");
+    println!("Then run: upgit FILE");
     Ok(())
+}
+
+fn default_config_path() -> Result<PathBuf, Box<dyn Error>> {
+    let path = if cfg!(windows) {
+        nonempty_env("APPDATA")
+            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
+            .or_else(|| {
+                nonempty_env("USERPROFILE").map(|p| {
+                    PathBuf::from(p)
+                        .join("AppData")
+                        .join("Roaming")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+    } else {
+        nonempty_env("XDG_CONFIG_HOME")
+            .map(|p| PathBuf::from(p).join("upgit").join("config.toml"))
+            .or_else(|| {
+                nonempty_env("HOME").map(|p| {
+                    PathBuf::from(p)
+                        .join(".config")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+            .or_else(|| {
+                nonempty_env("USERPROFILE").map(|p| {
+                    PathBuf::from(p)
+                        .join(".config")
+                        .join("upgit")
+                        .join("config.toml")
+                })
+            })
+    };
+    path.ok_or_else(|| "cannot determine config directory; pass a path: upgit init PATH".into())
+}
+
+fn nonempty_env(key: &str) -> Option<String> {
+    std::env::var(key).ok().filter(|s| !s.is_empty())
 }

@@ -1170,6 +1170,7 @@ version = "0.3.0-beta.1"
 dependencies = [
  "arboard",
  "clap",
+ "clipboard-win",
  "png 0.17.16",
  "tempfile",
  "upgit-core",
@@ -1182,6 +1183,7 @@ version = "0.3.0-beta.1"
 dependencies = [
  "chrono",
  "hmac",
+ "md-5",
  "sha2",
  "thiserror",
 ]

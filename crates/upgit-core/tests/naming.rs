@@ -69,3 +69,47 @@ fn empty_template_is_rejected() {
         "error should mention the empty template, got {msg}"
     );
 }
+
+#[test]
+fn hour_minute_second_at_noon_utc() {
+    let policy = KeyPolicy::template("{hour}:{minute}:{second}");
+    let key = policy
+        .apply(&png("logo.png"), at_2022_01_31_noon())
+        .expect("key");
+    assert_eq!(key.as_str(), "12:00:00");
+}
+
+#[test]
+fn unix_tsms_is_milliseconds_since_epoch() {
+    let policy = KeyPolicy::template("{unix_tsms}_{unixtsms}_{unixts}");
+    let key = policy
+        .apply(&png("logo.png"), at_2022_01_31_noon())
+        .expect("key");
+    assert_eq!(key.as_str(), "1643630400000_1643630400000_1643630400");
+}
+
+#[test]
+fn fname_hash_is_md5_of_file_name_with_extension() {
+    // md5("logo.png") = 1bb87d41d15fe27b500a4bfcde01bb0e
+    let policy =
+        KeyPolicy::template("{fname_hash}_{fname_hash4}_{fname_hash8}_{fullname}_{filename}");
+    let key = policy
+        .apply(&png("logo.png"), at_2022_01_31_noon())
+        .expect("key");
+    assert_eq!(
+        key.as_str(),
+        "1bb87d41d15fe27b500a4bfcde01bb0e_1bb8_1bb87d41_logo.png_logo"
+    );
+}
+
+#[test]
+fn hmac_placeholder_without_key_is_error() {
+    let err = KeyPolicy::template("{year}/{hmac}{ext}")
+        .apply(&png("logo.png"), at_2022_01_31_noon())
+        .expect_err("hmac without key");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("hmac_key") && msg.contains("{hmac}"),
+        "got {msg}"
+    );
+}

@@ -3,7 +3,8 @@
 
 use std::collections::HashMap;
 
-use upgit_uploaders::recipe::{HttpRecipe, HttpRecipeUploader, RecipeContext};
+use upgit_uploaders::recipe::{HttpRecipe, HttpRecipeUploader, RecipeContext, RecipeError};
+use upgit_uploaders::RecipeCatalog;
 
 fn smms_recipe() -> HttpRecipe {
     HttpRecipe::from_toml(
@@ -102,6 +103,52 @@ url = { from = "text" }
         .extract_locator(b"https://files.catbox.moe/abc.png\n", &RecipeContext::new())
         .expect("url");
     assert_eq!(locator.as_str(), "https://files.catbox.moe/abc.png");
+}
+
+#[test]
+fn missing_config_placeholder_is_not_empty_string() {
+    let err = RecipeContext::new()
+        .interpolate("Bearer {config.token}")
+        .expect_err("missing config");
+    match err {
+        RecipeError::MissingPlaceholder(key) => assert_eq!(key, "config.token"),
+        other => panic!("expected MissingPlaceholder, got {other}"),
+    }
+}
+
+#[test]
+fn required_config_keys_are_unique_and_stable() {
+    let recipe = smms_recipe();
+    assert_eq!(recipe.required_config_keys(), vec!["token".to_string()]);
+    let gitee = HttpRecipe::from_toml(
+        r#"
+[meta]
+id = "gitee"
+[request]
+method = "POST"
+url = "https://gitee.com/api/v5/repos/{config.username}/{config.repo}/contents/{key}"
+[request.body]
+access_token = { type = "string", value = "{config.access_token}" }
+content = { type = "file_base64" }
+[response]
+url = { from = "template", template = "https://gitee.com/{config.username}/{config.repo}/raw/{key}" }
+"#,
+    )
+    .expect("parse");
+    assert_eq!(
+        gitee.required_config_keys(),
+        vec![
+            "username".to_string(),
+            "repo".to_string(),
+            "access_token".to_string()
+        ]
+    );
+}
+
+#[test]
+fn bundled_catbox_recipe_does_not_require_userhash() {
+    let recipe = RecipeCatalog::load("catbox").expect("catbox");
+    assert_eq!(recipe.required_config_keys(), Vec::<String>::new());
 }
 
 #[test]

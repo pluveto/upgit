@@ -4,7 +4,7 @@ use std::path::Path;
 
 use tempfile::NamedTempFile;
 use upgit::Cli;
-use upgit_core::Artifact;
+use upgit_core::{Artifact, ArtifactError};
 
 pub const DEFAULT_SIZE_LIMIT: u64 = 5 * 1024 * 1024;
 
@@ -15,11 +15,11 @@ pub trait Source {
 
 pub struct FileSource {
     paths: Vec<String>,
-    size_limit: u64,
+    size_limit: Option<u64>,
 }
 
 impl FileSource {
-    pub fn new(paths: Vec<String>, size_limit: u64) -> Self {
+    pub fn new(paths: Vec<String>, size_limit: Option<u64>) -> Self {
         Self { paths, size_limit }
     }
 }
@@ -28,19 +28,19 @@ impl Source for FileSource {
     fn artifacts(&mut self) -> Result<Vec<Artifact>, Box<dyn Error>> {
         let mut out = Vec::new();
         for path in &self.paths {
-            out.push(Artifact::from_path(path, Some(self.size_limit))?);
+            out.push(Artifact::from_path(path, self.size_limit).map_err(map_artifact_err)?);
         }
         Ok(out)
     }
 }
 
 pub struct ClipboardImageSource {
-    size_limit: u64,
+    size_limit: Option<u64>,
     hold: Option<NamedTempFile>,
 }
 
 impl ClipboardImageSource {
-    pub fn new(size_limit: u64) -> Self {
+    pub fn new(size_limit: Option<u64>) -> Self {
         Self {
             size_limit,
             hold: None,
@@ -70,11 +70,9 @@ impl ClipboardImageSource {
 
 impl Source for ClipboardImageSource {
     fn artifacts(&mut self) -> Result<Vec<Artifact>, Box<dyn Error>> {
-        let mut clipboard =
-            arboard::Clipboard::new().map_err(|e| format!("clipboard is unavailable: {e}"))?;
-        let image = clipboard
-            .get_image()
-            .map_err(|e| format!("no image on the clipboard: {e}"))?;
+        let mut clipboard = arboard::Clipboard::new()
+            .map_err(|e| explain_clipboard("clipboard is unavailable", e))?;
+        let image = clipboard.get_image().map_err(clipboard_image_err)?;
         let png = Self::encode_png(image.width, image.height, &image.bytes)?;
         let mut file = tempfile::Builder::new()
             .prefix("upgit-clipboard-")
@@ -84,18 +82,19 @@ impl Source for ClipboardImageSource {
         file.write_all(&png)
             .map_err(|e| format!("cannot write clipboard image: {e}"))?;
         file.flush()?;
-        let artifact = Artifact::from_path(file.path(), Some(self.size_limit))?;
+        let artifact =
+            Artifact::from_path(file.path(), self.size_limit).map_err(map_artifact_err)?;
         self.hold = Some(file);
         Ok(vec![artifact])
     }
 }
 
 pub struct ClipboardFilesSource {
-    size_limit: u64,
+    size_limit: Option<u64>,
 }
 
 impl ClipboardFilesSource {
-    pub fn new(size_limit: u64) -> Self {
+    pub fn new(size_limit: Option<u64>) -> Self {
         Self { size_limit }
     }
 
@@ -121,22 +120,17 @@ impl ClipboardFilesSource {
 
 impl Source for ClipboardFilesSource {
     fn artifacts(&mut self) -> Result<Vec<Artifact>, Box<dyn Error>> {
-        let mut clipboard =
-            arboard::Clipboard::new().map_err(|e| format!("clipboard is unavailable: {e}"))?;
-        let text = clipboard
-            .get_text()
-            .map_err(|e| format!("clipboard does not contain a file list: {e}"))?;
+        let paths = read_clipboard_file_paths()?;
         let mut artifacts = Vec::new();
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
+        for path in paths {
+            let path = path.trim();
+            if path.is_empty() || path.starts_with('#') {
                 continue;
             }
-            let path = Self::decode_path(line);
-            if !Path::new(&path).exists() {
+            if !Path::new(path).exists() {
                 return Err(format!("clipboard file does not exist: {path}").into());
             }
-            artifacts.push(Artifact::from_path(&path, Some(self.size_limit))?);
+            artifacts.push(Artifact::from_path(path, self.size_limit).map_err(map_artifact_err)?);
         }
         if artifacts.is_empty() {
             return Err("clipboard does not contain a file list".into());
@@ -154,13 +148,86 @@ fn from_hex(b: u8) -> Option<u8> {
     }
 }
 
+fn map_artifact_err(err: ArtifactError) -> Box<dyn Error> {
+    match &err {
+        ArtifactError::OverLimit { .. } => {
+            format!("{err}; pass --size-limit BYTES (0 = unlimited); default is 5MiB").into()
+        }
+        _ => err.into(),
+    }
+}
+
+pub(crate) fn explain_clipboard(action: &str, err: impl std::fmt::Display) -> String {
+    let msg = err.to_string();
+    let mut out = format!("{action}: {msg}");
+    if cfg!(target_os = "linux") && looks_like_missing_backend(&msg) {
+        out.push_str("\nLinux needs `xclip` (X11) or `wl-clipboard` (Wayland).");
+    }
+    out
+}
+
+fn clipboard_image_err(err: impl std::fmt::Display) -> String {
+    let msg = err.to_string();
+    let mut out = format!("no image on the clipboard: {msg}");
+    if cfg!(target_os = "linux") && looks_like_missing_backend(&msg) {
+        out.push_str("\nLinux needs `xclip` (X11) or `wl-clipboard` (Wayland).");
+    }
+    out
+}
+
+fn looks_like_missing_backend(msg: &str) -> bool {
+    let m = msg.to_lowercase();
+    m.contains("wayland")
+        || m.contains("x11")
+        || m.contains("unavailable")
+        || m.contains("backend")
+        || m.contains("display")
+        || m.contains("not found")
+        || m.contains("unknown")
+        || m.contains("no provider")
+        || m.contains("xclip")
+        || m.contains("wl-clipboard")
+}
+
+#[cfg(windows)]
+fn read_clipboard_file_paths() -> Result<Vec<String>, Box<dyn Error>> {
+    use clipboard_win::{formats, get_clipboard};
+    let files: Vec<String> = get_clipboard(formats::FileList)
+        .map_err(|e| format!("clipboard does not contain a file list: {e}"))?;
+    if files.is_empty() {
+        return Err("clipboard does not contain a file list".into());
+    }
+    Ok(files)
+}
+
+#[cfg(not(windows))]
+fn read_clipboard_file_paths() -> Result<Vec<String>, Box<dyn Error>> {
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| explain_clipboard("clipboard is unavailable", e))?;
+    let text = clipboard
+        .get_text()
+        .map_err(|e| format!("clipboard does not contain a file list: {e}"))?;
+    let mut paths = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        paths.push(ClipboardFilesSource::decode_path(line));
+    }
+    if paths.is_empty() {
+        return Err("clipboard does not contain a file list".into());
+    }
+    Ok(paths)
+}
+
 /// Holds source objects so clipboard temp files outlive the upload.
 pub struct Intake {
     sources: Vec<Box<dyn Source>>,
 }
 
 impl Intake {
-    pub fn from_cli(cli: &Cli) -> Result<Self, Box<dyn Error>> {
+    pub fn from_cli(cli: &Cli, size_limit: Option<u64>) -> Result<Self, Box<dyn Error>> {
         if cli.files.is_empty() && !cli.clipboard && !cli.clipboard_files {
             return Err(
                 "no files to upload; pass FILE arguments, --clipboard, or --clipboard-files".into(),
@@ -168,16 +235,13 @@ impl Intake {
         }
         let mut sources: Vec<Box<dyn Source>> = Vec::new();
         if !cli.files.is_empty() {
-            sources.push(Box::new(FileSource::new(
-                cli.files.clone(),
-                DEFAULT_SIZE_LIMIT,
-            )));
+            sources.push(Box::new(FileSource::new(cli.files.clone(), size_limit)));
         }
         if cli.clipboard {
-            sources.push(Box::new(ClipboardImageSource::new(DEFAULT_SIZE_LIMIT)));
+            sources.push(Box::new(ClipboardImageSource::new(size_limit)));
         }
         if cli.clipboard_files {
-            sources.push(Box::new(ClipboardFilesSource::new(DEFAULT_SIZE_LIMIT)));
+            sources.push(Box::new(ClipboardFilesSource::new(size_limit)));
         }
         Ok(Self { sources })
     }

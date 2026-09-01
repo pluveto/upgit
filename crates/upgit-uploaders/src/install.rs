@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use upgit_core::Registry;
+use upgit_core::{KeyPolicy, KeyPolicyError, Registry};
 
 use crate::catalog::RecipeCatalog;
 use crate::cos::{CosConfig, CosUploader};
@@ -25,9 +25,9 @@ pub enum ConfigError {
 pub enum InstallError {
     #[error("uploader `{id}` is missing required field `{field}`")]
     MissingField { id: String, field: String },
-    #[error("uploader `{id}` still has a static Qiniu upload token, which expires. Set access_key, secret_key, bucket, and public_base (alias: prefix) instead. Run `upgit init` for a sample. Do not use an extensions/*.jsonc file.")]
+    #[error("uploader `{id}` still has a static Qiniu upload token, which expires. Set access_key, secret_key, bucket, and public_base instead.")]
     ExpiredQiniuToken { id: String },
-    #[error("unknown uploader type `{kind}` for `{id}` (github is built-in: pat, username, repo; qiniu is built-in: access_key, secret_key, bucket, public_base; HTTP hosts use type = \"http\"). There is no extensions/ directory.")]
+    #[error("unknown uploader type `{kind}` for `{id}`. Built-in types: github, s3, aliyunoss, qcloudcos, upyun, qiniu.")]
     UnknownKind { id: String, kind: String },
     #[error("unknown http recipe `{recipe}` for `{id}`")]
     UnknownRecipe { id: String, recipe: String },
@@ -41,35 +41,47 @@ pub enum InstallError {
     Recipe(#[from] RecipeError),
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct AppConfig {
-    #[serde(default, alias = "default_uploader")]
+    #[serde(
+        default,
+        alias = "default_uploader",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub default: Option<String>,
-    #[serde(default, alias = "rename")]
+    #[serde(default, alias = "rename", skip_serializing_if = "Option::is_none")]
     pub naming: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hmac_key: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hmac_format: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hmac_len: Option<usize>,
-    #[serde(default, alias = "replacements")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_limit: Option<u64>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub output_formats: IndexMap<String, String>,
+    #[serde(
+        default,
+        alias = "replacements",
+        skip_serializing_if = "IndexMap::is_empty"
+    )]
     pub link: IndexMap<String, String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub uploaders: IndexMap<String, UploaderProfile>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UploaderProfile {
-    #[serde(rename = "type", default)]
+    #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recipe: Option<RecipeSpec>,
     #[serde(flatten)]
     pub fields: IndexMap<String, toml::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum RecipeSpec {
     Name(String),
@@ -85,24 +97,28 @@ impl AppConfig {
         self.default.as_deref().filter(|id| !id.is_empty())
     }
 
-    pub fn namer(&self) -> upgit_core::KeyPolicy {
-        use upgit_core::KeyPolicy;
+    pub fn namer(&self) -> Result<KeyPolicy, KeyPolicyError> {
         const DEFAULT_NAMING: &str = "{year}/{month}/{stem}_{unix}{ext}";
         let template = self
             .naming
             .as_deref()
             .filter(|s| !s.is_empty())
             .unwrap_or(DEFAULT_NAMING);
+        if template.contains("{hmac}")
+            && self.hmac_key.as_deref().filter(|s| !s.is_empty()).is_none()
+        {
+            return Err(KeyPolicyError::MissingHmacKey);
+        }
         let policy = KeyPolicy::template(template);
         match self.hmac_key.as_deref().filter(|s| !s.is_empty()) {
-            Some(key) => policy.with_hmac(
+            Some(key) => Ok(policy.with_hmac(
                 key,
                 self.hmac_format
                     .as_deref()
                     .unwrap_or("{year}_{month}_{day}_{unix}{ext}"),
                 self.hmac_len,
-            ),
-            None => policy,
+            )),
+            None => Ok(policy),
         }
     }
 
@@ -112,6 +128,47 @@ impl AppConfig {
                 .iter()
                 .map(|(from, to)| (from.clone(), to.clone())),
         )
+    }
+
+    /// Overlay every `UPGIT_*` environment variable onto this config.
+    pub fn overlay_env(&mut self) {
+        self.apply_env();
+    }
+
+    pub fn apply_env(&mut self) {
+        self.overlay_from_iter(std::env::vars());
+    }
+
+    pub fn overlay_from_iter<I, K, V>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
+        let mut value = toml::Value::try_from(&*self)
+            .unwrap_or_else(|_| toml::Value::Table(toml::map::Map::new()));
+        let mut any = false;
+        for (k, v) in iter {
+            let Some(rest) = k.as_ref().strip_prefix("UPGIT_") else {
+                continue;
+            };
+            let segments: Vec<String> = rest
+                .split("__")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_ascii_lowercase())
+                .collect();
+            if segments.is_empty() {
+                continue;
+            }
+            insert_path(&mut value, &segments, env_to_value(v.as_ref()));
+            any = true;
+        }
+        if !any {
+            return;
+        }
+        if let Ok(next) = Self::deserialize(value) {
+            *self = next;
+        }
     }
 
     /// This config object fills a registry with uploader objects.
@@ -155,6 +212,58 @@ impl AppConfig {
             }
         }
         Ok(())
+    }
+}
+
+fn insert_path(root: &mut toml::Value, segments: &[String], val: toml::Value) {
+    if segments.is_empty() {
+        return;
+    }
+    if segments.len() == 1 {
+        match root.as_table_mut() {
+            Some(table) => {
+                table.insert(segments[0].clone(), val);
+            }
+            None => {
+                let mut table = toml::map::Map::new();
+                table.insert(segments[0].clone(), val);
+                *root = toml::Value::Table(table);
+            }
+        }
+        return;
+    }
+    if !root.is_table() {
+        *root = toml::Value::Table(toml::map::Map::new());
+    }
+    let table = match root {
+        toml::Value::Table(table) => table,
+        _ => return,
+    };
+    let entry = table
+        .entry(segments[0].clone())
+        .or_insert_with(|| toml::Value::Table(toml::map::Map::new()));
+    if !entry.is_table() {
+        *entry = toml::Value::Table(toml::map::Map::new());
+    }
+    insert_path(entry, &segments[1..], val);
+}
+
+fn env_to_value(raw: &str) -> toml::Value {
+    let trimmed = raw.trim();
+    if !trimmed.is_empty()
+        && trimmed
+            .bytes()
+            .enumerate()
+            .all(|(i, b)| b.is_ascii_digit() || (i == 0 && b == b'-'))
+    {
+        if let Ok(i) = trimmed.parse::<i64>() {
+            return toml::Value::Integer(i);
+        }
+    }
+    match trimmed {
+        "true" => toml::Value::Boolean(true),
+        "false" => toml::Value::Boolean(false),
+        _ => toml::Value::String(raw.to_string()),
     }
 }
 
@@ -257,14 +366,14 @@ fn cos_from_profile(id: &str, profile: &UploaderProfile) -> Result<CosUploader, 
 fn upyun_from_profile(id: &str, profile: &UploaderProfile) -> Result<UpyunUploader, InstallError> {
     let user_name = optional_string(profile, "user_name")
         .or_else(|| optional_string(profile, "username"))
-        .filter(|s| !s.is_empty())
+        .filter(|s| !is_placeholder(s))
         .ok_or_else(|| InstallError::MissingField {
             id: id.to_string(),
             field: "user_name".to_string(),
         })?;
     let pass_word = optional_string(profile, "pass_word")
         .or_else(|| optional_string(profile, "password"))
-        .filter(|s| !s.is_empty())
+        .filter(|s| !is_placeholder(s))
         .ok_or_else(|| InstallError::MissingField {
             id: id.to_string(),
             field: "pass_word".to_string(),
@@ -285,7 +394,7 @@ fn qiniu_from_profile(id: &str, profile: &UploaderProfile) -> Result<QiniuUpload
     }
     let public_base = optional_string(profile, "public_base")
         .or_else(|| optional_string(profile, "prefix"))
-        .filter(|s| !s.is_empty())
+        .filter(|s| !is_placeholder(s))
         .ok_or_else(|| InstallError::MissingField {
             id: id.to_string(),
             field: "public_base".to_string(),
@@ -304,6 +413,9 @@ fn http_from_profile(
     profile: &UploaderProfile,
 ) -> Result<HttpRecipeUploader, InstallError> {
     let recipe = load_recipe(id, profile)?;
+    for key in recipe.required_config_keys() {
+        require_string(id, profile, &key)?;
+    }
     let mut config = HashMap::new();
     for (key, value) in &profile.fields {
         if let Some(s) = value_as_string(value) {
@@ -346,13 +458,18 @@ fn recipe_from_name(id: &str, spec: &str) -> Result<HttpRecipe, InstallError> {
     }
 }
 
+fn is_placeholder(s: &str) -> bool {
+    let t = s.trim();
+    t.is_empty() || t.contains("...") || t.contains("YOUR_") || t.contains("PASTE_")
+}
+
 fn require_string(
     id: &str,
     profile: &UploaderProfile,
     field: &str,
 ) -> Result<String, InstallError> {
     optional_string(profile, field)
-        .filter(|s| !s.is_empty())
+        .filter(|s| !is_placeholder(s))
         .ok_or_else(|| InstallError::MissingField {
             id: id.to_string(),
             field: field.to_string(),

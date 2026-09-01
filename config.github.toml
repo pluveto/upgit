@@ -1,10 +1,17 @@
-# upgit — edit this file. GitHub is the default uploader.
-# Full list of other hosts: https://github.com/pluveto/upgit/blob/next/config.sample.toml
+# upgit config. GitHub is the default uploader.
+# Fill pat, username, repo, branch below. Repo must be public.
+# PAT: https://github.com/settings/tokens (classic: repo scope; fine-grained: Contents Read and Write on this repo).
+# To use another host (SM.MS, S3, OSS, Qiniu, ...): copy a [uploaders.*] table from
+# config.sample.toml in the upgit GitHub repository, set default to that table name.
+# Example SM.MS:
+#   default = "smms"
+#   [uploaders.smms]
+#   token = "..."
 
 # Which uploader table to use.
 default = "github"
 
-# Remote object key template. Placeholders: {year} {month} {day} {unix} {stem} {ext} {hmac}.
+# Remote object key template. Placeholders: {year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8}.
 naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
 
 # Optional HMAC secret for the {hmac} placeholder in naming. Any random string works.
@@ -15,11 +22,11 @@ naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}{ext}"
 # hmac_len = 31
 
 [uploaders.github]
-# Personal access token with "repo" scope. Create: https://github.com/settings/tokens
-pat = "ghp_..."
+# Personal access token with "repo" scope (classic) or Contents Read and Write (fine-grained). Create: https://github.com/settings/tokens
+pat = "PASTE_YOUR_TOKEN"
 # GitHub username that owns the repo.
 username = "..."
 # Public repository name. Private repos make raw URLs 404.
 repo = "..."
-# Branch to commit into (often main or master).
-branch = "master"
+# Branch to commit into. Must match the repository default branch.
+branch = "main"

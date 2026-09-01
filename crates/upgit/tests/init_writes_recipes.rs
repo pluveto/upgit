@@ -40,20 +40,52 @@ fn comment_above(text: &str, field: &str) -> String {
     panic!("missing field `{field}`");
 }
 
+fn assert_init_stdout(stdout: &str) {
+    let lower = stdout.to_lowercase();
+    assert!(
+        stdout.contains("settings/tokens"),
+        "init stdout must mention settings/tokens:\n{stdout}"
+    );
+    assert!(
+        lower.contains("public"),
+        "init stdout must say the repo is public:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("bundled"),
+        "init stdout must not say bundled:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("JSONC"),
+        "init stdout must not say JSONC:\n{stdout}"
+    );
+}
+
 #[test]
 fn init_writes_github_config_and_recipes_without_hand_copying() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let status = Command::new(env!("CARGO_BIN_EXE_upgit"))
-        .current_dir(dir.path())
+    let dest = dir.path().join("config.toml");
+    let output = Command::new(env!("CARGO_BIN_EXE_upgit"))
         .arg("init")
-        .status()
+        .arg(&dest)
+        .output()
         .expect("run init");
-    assert!(status.success(), "upgit init failed");
-    let config = dir.path().join("config.toml");
+    assert!(
+        output.status.success(),
+        "upgit init failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_init_stdout(&stdout);
+    let shown = dest.canonicalize().unwrap_or_else(|_| dest.clone());
+    assert!(
+        stdout.contains(&shown.display().to_string())
+            || stdout.contains(&dest.display().to_string()),
+        "stdout should contain the dest path:\n{stdout}"
+    );
     let smms = dir.path().join("recipes").join("smms.toml");
-    assert!(config.is_file(), "missing {}", config.display());
+    assert!(dest.is_file(), "missing {}", dest.display());
     assert!(smms.is_file(), "missing {}", smms.display());
-    let text = std::fs::read_to_string(&config).expect("read config");
+    let text = std::fs::read_to_string(&dest).expect("read config");
     let template = include_str!("../../../config.github.toml");
     assert_eq!(text, template);
     assert!(text.contains("default = \"github\""));
@@ -67,7 +99,9 @@ fn init_writes_github_config_and_recipes_without_hand_copying() {
         "init config must omit other uploader tables"
     );
     assert_eq!(
-        text.matches("[uploaders.").count(),
+        text.lines()
+            .filter(|line| line.trim_start().starts_with("[uploaders."))
+            .count(),
         1,
         "init config should contain only [uploaders.github]"
     );
@@ -79,6 +113,38 @@ fn init_writes_github_config_and_recipes_without_hand_copying() {
     for field in ["pat", "username", "repo", "branch", "default", "naming"] {
         comment_above(&text, field);
     }
+}
+
+#[test]
+fn init_without_dest_writes_platform_config_dir() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let output = Command::new(env!("CARGO_BIN_EXE_upgit"))
+        .arg("init")
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("APPDATA", dir.path())
+        .output()
+        .expect("run init");
+    assert!(
+        output.status.success(),
+        "upgit init failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let config = dir.path().join("upgit").join("config.toml");
+    assert!(config.is_file(), "missing {}", config.display());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_init_stdout(&stdout);
+    let shown = config.canonicalize().unwrap_or_else(|_| config.clone());
+    assert!(
+        stdout.contains(&shown.display().to_string())
+            || stdout.contains(&config.display().to_string()),
+        "stdout should contain the config path:\n{stdout}"
+    );
+    assert!(dir
+        .path()
+        .join("upgit")
+        .join("recipes")
+        .join("smms.toml")
+        .is_file());
 }
 
 #[test]

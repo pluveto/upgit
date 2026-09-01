@@ -44,6 +44,10 @@ jobs:
             target: x86_64-pc-windows-msvc
             asset: upgit_win_amd64.zip
             bin: upgit.exe
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            asset: upgit_win_arm64.zip
+            bin: upgit.exe
           - os: macos-latest
             target: x86_64-apple-darwin
             asset: upgit_macos_amd64.zip
@@ -100,7 +104,15 @@ jobs:
               for f in pkg.rglob("*"):
                   if f.is_file():
                       rel = f.relative_to(pkg).as_posix()
-                      zf.write(f, rel)
+                      info = zipfile.ZipInfo(rel)
+                      info.compress_type = zipfile.ZIP_DEFLATED
+                      info.create_system = 3
+                      if Path(rel).name == "upgit":
+                          info.external_attr = (0o755 << 16)
+                      else:
+                          info.external_attr = (0o644 << 16)
+                      with open(f, "rb") as fh:
+                          zf.writestr(info, fh.read())
                       names.append(rel)
           names.sort()
           assert "config.toml" in names, names
@@ -114,8 +126,9 @@ jobs:
           path: dist/${{ matrix.asset }}
 
   publish:
-    name: github prerelease
+    name: github release
     needs: build
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -133,16 +146,26 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.ref_name }}
-          name: upgit ${{ github.ref_type == 'tag' && github.ref_name || github.ref_name }}
-          prerelease: true
+          tag_name: ${{ github.ref_name }}
+          name: upgit ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           body: |
-            Rust rewrite. Each zip is `upgit` + `config.toml` (GitHub) + `recipes/`.
-            Unzip, fill GitHub `pat`/`username`/`repo` (public repo; PAT: https://github.com/settings/tokens), then `upgit FILE`.
-            Other hosts: copy a table from the repo `config.sample.toml` (not packed). Do not hand-write JSONC.
+            Download the zip for your OS, unzip, and put `upgit` on your PATH (`chmod +x upgit` on Linux/macOS if needed).
 
-            Breaking vs 0.2: no `:clipboard` (use `--clipboard`), Qiniu uses AK/SK not a static token.
+            Each zip contains the `upgit` binary, a GitHub `config.toml`, and `recipes/`.
+
+            ```
+            upgit init
+            # edit the printed path: pat / username / repo / branch (usually main)
+            upgit FILE
+            ```
+
+            The GitHub repository must be public. Classic PAT: `repo` scope. Fine-grained PAT: Contents Read and write on that repo.
+
+            Prefer SM.MS, S3, OSS, COS, or Qiniu? Copy a table from this repo's `config.sample.toml` into your config and set `default`.
+
+            Coming from an older upgit? See docs/upgrade-from-0.2.md
           files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -20,13 +20,13 @@ fn locator_is_raw_githubusercontent_url() {
 }
 
 #[test]
-fn empty_branch_defaults_to_master() {
+fn empty_branch_defaults_to_main() {
     let key = ObjectKey::parse("logo.png").expect("key");
     let uploader = uploader("");
-    assert_eq!(uploader.branch(), "master");
+    assert_eq!(uploader.branch(), "main");
     assert_eq!(
         uploader.locator_for(&key).as_str(),
-        "https://raw.githubusercontent.com/alice/pics/master/logo.png"
+        "https://raw.githubusercontent.com/alice/pics/main/logo.png"
     );
 }
 

@@ -9,5 +9,6 @@ description = "Domain objects for upgit: artifacts, keys, publisher, registry."
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 hmac = "0.12"
+md-5 = "0.10"
 sha2 = "0.10"
 thiserror = "2"

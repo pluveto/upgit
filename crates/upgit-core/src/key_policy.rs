@@ -2,6 +2,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::DateTime;
 use hmac::{Hmac, Mac};
+use md5::{Digest, Md5};
 use sha2::Sha256;
 use thiserror::Error;
 
@@ -53,6 +54,8 @@ pub enum KeyPolicyError {
     InvalidTime,
     #[error("invalid HMAC key")]
     InvalidHmacKey,
+    #[error("naming template uses `{{hmac}}` but `hmac_key` is not set")]
+    MissingHmacKey,
 }
 
 impl KeyPolicy {
@@ -100,6 +103,9 @@ impl KeyPolicy {
                 if template.trim().is_empty() {
                     return Err(KeyPolicyError::EmptyTemplate);
                 }
+                if self.hmac.is_none() && template.contains("{hmac}") {
+                    return Err(KeyPolicyError::MissingHmacKey);
+                }
                 let fields = Fields::from_artifact(artifact, at)?;
                 let hmac = match &self.hmac {
                     Some(spec) => {
@@ -119,9 +125,15 @@ struct Fields<'a> {
     year: String,
     month: String,
     day: String,
+    hour: String,
+    minute: String,
+    second: String,
     unix: String,
+    unix_tsms: String,
     stem: &'a str,
     ext: &'a str,
+    fullname: &'a str,
+    fname_hash: String,
 }
 
 impl<'a> Fields<'a> {
@@ -131,23 +143,47 @@ impl<'a> Fields<'a> {
             .map_err(|_| KeyPolicyError::InvalidTime)?;
         let datetime = DateTime::from_timestamp(duration.as_secs() as i64, 0)
             .ok_or(KeyPolicyError::InvalidTime)?;
+        let fname_hash = hex_lower(&Md5::digest(artifact.file_name().as_bytes()));
         Ok(Self {
             year: datetime.format("%Y").to_string(),
             month: datetime.format("%m").to_string(),
             day: datetime.format("%d").to_string(),
+            hour: datetime.format("%H").to_string(),
+            minute: datetime.format("%M").to_string(),
+            second: datetime.format("%S").to_string(),
             unix: duration.as_secs().to_string(),
+            unix_tsms: duration.as_millis().to_string(),
             stem: artifact.stem(),
             ext: artifact.ext(),
+            fullname: artifact.file_name(),
+            fname_hash,
         })
     }
 
     fn interpolate(&self, template: &str, hmac: Option<&str>) -> String {
+        let hash4 = &self.fname_hash[..self.fname_hash.len().min(4)];
+        let hash8 = &self.fname_hash[..self.fname_hash.len().min(8)];
         let mut out = template
             .replace("{year}", &self.year)
             .replace("{month}", &self.month)
             .replace("{day}", &self.day)
-            .replace("{unix}", &self.unix)
+            .replace("{hour}", &self.hour)
+            .replace("{minute}", &self.minute)
+            .replace("{second}", &self.second)
+            .replace("{unix_tsms}", &self.unix_tsms)
+            .replace("{unixtsms}", &self.unix_tsms)
             .replace("{unix_ts}", &self.unix)
+            .replace("{unixts}", &self.unix)
+            .replace("{unix}", &self.unix)
+            .replace("{filenamehash}", &self.fname_hash)
+            .replace("{filename}", self.stem)
+            .replace("{fullname}", self.fullname)
+            .replace("{fname_hash4}", hash4)
+            .replace("{fnamehash4}", hash4)
+            .replace("{fname_hash8}", hash8)
+            .replace("{fnamehash8}", hash8)
+            .replace("{fname_hash}", &self.fname_hash)
+            .replace("{fnamehash}", &self.fname_hash)
             .replace("{stem}", self.stem)
             .replace("{fname}", self.stem)
             .replace("{ext}", self.ext);

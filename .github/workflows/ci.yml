@@ -39,3 +39,6 @@ jobs:
 
       - name: Help surface
         run: cargo run -p upgit --locked -- --help
+
+      - name: List uploaders
+        run: cargo run -p upgit --locked -- uploaders

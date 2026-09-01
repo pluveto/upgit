@@ -1,5 +1,5 @@
 use upgit_core::Registry;
-use upgit_uploaders::AppConfig;
+use upgit_uploaders::{AppConfig, HostCatalog, RecipeCatalog};
 
 #[test]
 fn install_registers_qiniu_and_http_from_config() {
@@ -134,6 +134,22 @@ fn sample_config_defaults_to_github_and_lists_uploaders() {
     let cfg = AppConfig::from_toml(text).expect("sample");
     assert_eq!(cfg.default_uploader(), Some("github"));
     every_assignment_has_a_comment(text);
+    assert!(
+        !text.contains("blob/next/"),
+        "sample must not pin blob/next links"
+    );
+    assert!(
+        !text.to_ascii_lowercase().contains("0.2 parity"),
+        "sample must not mention 0.2 parity"
+    );
+    assert!(
+        !text.to_ascii_lowercase().contains("jsonc"),
+        "sample must not mention JSONC"
+    );
+    assert!(
+        !text.to_ascii_lowercase().contains("first-class"),
+        "sample must not mention first-class"
+    );
     for table in [
         "[uploaders.github]",
         "[uploaders.s3]",
@@ -146,34 +162,30 @@ fn sample_config_defaults_to_github_and_lists_uploaders() {
     ] {
         assert!(text.contains(table), "sample missing {table}");
     }
-    let mut registry = Registry::new();
-    cfg.install_into(&mut registry)
-        .expect("sample config should install");
-    for id in [
-        "github",
-        "s3",
-        "aliyunoss",
-        "qcloudcos",
-        "upyun",
-        "qiniu",
-        "smms",
-    ] {
-        registry.get(id).unwrap_or_else(|_| panic!("{id}"));
-    }
+    assert!(cfg.uploaders.contains_key("github"));
+    assert!(cfg.uploaders.contains_key("smms"));
 }
 
 #[test]
-fn github_init_template_installs_github_only() {
+fn github_init_template_is_github_only() {
     let text = include_str!("../../../config.github.toml");
     let cfg = AppConfig::from_toml(text).expect("github template");
     assert_eq!(cfg.default_uploader(), Some("github"));
     assert!(cfg.uploaders.contains_key("github"));
     assert!(!cfg.uploaders.contains_key("qiniu"));
     every_assignment_has_a_comment(text);
+    assert!(
+        !text.contains("ghp_"),
+        "packed pat must not look like a real PAT"
+    );
+    assert!(text.contains("PASTE_YOUR_TOKEN"), "got {text}");
+    assert!(!text.contains("blob/next/"), "must not pin blob/next links");
     let mut registry = Registry::new();
-    cfg.install_into(&mut registry)
-        .expect("github template should install");
-    registry.get("github").expect("github registered");
+    let err = cfg
+        .install_into(&mut registry)
+        .expect_err("placeholder pat must not install");
+    let msg = err.to_string();
+    assert!(msg.contains("pat"), "got {msg}");
 }
 
 #[test]
@@ -356,4 +368,204 @@ public_base = "https://cdn.example.com/"
     let err = cfg.install_into(&mut registry).expect_err("missing field");
     let msg = err.to_string();
     assert!(msg.contains("access_key"), "got {msg}");
+}
+
+#[test]
+fn empty_smms_table_requires_token() {
+    let cfg = AppConfig::from_toml("[uploaders.smms]\n").expect("parse");
+    let mut registry = Registry::new();
+    let err = cfg.install_into(&mut registry).expect_err("missing token");
+    assert_eq!(
+        err.to_string(),
+        "uploader `smms` is missing required field `token`"
+    );
+}
+
+#[test]
+fn empty_catbox_table_installs_anonymously() {
+    let cfg = AppConfig::from_toml("[uploaders.catbox]\n").expect("parse");
+    let mut registry = Registry::new();
+    cfg.install_into(&mut registry)
+        .expect("anonymous catbox must install without userhash");
+    registry.get("catbox").expect("catbox registered");
+}
+
+#[test]
+fn catbox_with_userhash_installs() {
+    let cfg = AppConfig::from_toml(
+        r#"
+[uploaders.catbox]
+userhash = "abc123"
+"#,
+    )
+    .expect("parse");
+    let mut registry = Registry::new();
+    cfg.install_into(&mut registry)
+        .expect("catbox with userhash");
+    registry.get("catbox").expect("catbox registered");
+}
+
+#[test]
+fn github_placeholder_pat_is_missing_field() {
+    let cfg = AppConfig::from_toml(
+        r#"
+[uploaders.github]
+pat = "ghp_..."
+username = "alice"
+repo = "pics"
+"#,
+    )
+    .expect("parse");
+    let mut registry = Registry::new();
+    let err = cfg
+        .install_into(&mut registry)
+        .expect_err("placeholder pat");
+    let msg = err.to_string();
+    assert!(msg.contains("pat"), "got {msg}");
+    assert!(msg.contains("missing required field"), "got {msg}");
+}
+
+#[test]
+fn hmac_naming_without_hmac_key_errors() {
+    let cfg = AppConfig::from_toml(
+        r#"
+naming = "{year}/{hmac}{ext}"
+
+[uploaders.github]
+pat = "real-token"
+username = "alice"
+repo = "pics"
+"#,
+    )
+    .expect("parse");
+    let err = cfg.namer().expect_err("hmac");
+    let msg = err.to_string();
+    assert!(msg.contains("hmac_key"), "got {msg}");
+    assert!(msg.contains("{hmac}"), "got {msg}");
+}
+
+#[test]
+fn unknown_kind_and_expired_qiniu_copy_has_no_jsonc() {
+    let kind_err = AppConfig::from_toml(
+        r#"
+[uploaders.mystery]
+type = "sftp"
+host = "example"
+"#,
+    )
+    .expect("parse")
+    .install_into(&mut Registry::new())
+    .expect_err("kind");
+    let kind_msg = kind_err.to_string();
+    assert!(kind_msg.contains("sftp"), "got {kind_msg}");
+    let kind_lower = kind_msg.to_ascii_lowercase();
+    assert!(!kind_lower.contains("jsonc"), "got {kind_msg}");
+    assert!(!kind_lower.contains("extensions"), "got {kind_msg}");
+    assert!(!kind_lower.contains("first-class"), "got {kind_msg}");
+    assert!(!kind_msg.contains("upgit init"), "got {kind_msg}");
+
+    let token_err = AppConfig::from_toml(
+        r#"
+[uploaders.qiniu]
+token = "expired-web-token"
+prefix = "https://cdn.example.com/"
+"#,
+    )
+    .expect("parse")
+    .install_into(&mut Registry::new())
+    .expect_err("token");
+    let token_msg = token_err.to_string();
+    let token_lower = token_msg.to_ascii_lowercase();
+    assert!(!token_lower.contains("jsonc"), "got {token_msg}");
+    assert!(!token_lower.contains("extensions"), "got {token_msg}");
+    assert!(!token_msg.contains("upgit init"), "got {token_msg}");
+}
+
+#[test]
+fn host_catalog_contains_github_and_smms() {
+    let ids: Vec<_> = HostCatalog::ids().collect();
+    assert_eq!(ids[0], "github");
+    assert!(ids.contains(&"github"));
+    assert!(ids.contains(&"smms"));
+    assert!(ids.contains(&"s3"));
+    let builtins = &ids[..6];
+    assert_eq!(
+        builtins,
+        ["github", "s3", "aliyunoss", "qcloudcos", "upyun", "qiniu"]
+    );
+    let recipe_ids: Vec<_> = HostCatalog::ids().skip(6).collect();
+    let catalog: Vec<_> = RecipeCatalog::ids().collect();
+    assert_eq!(recipe_ids, catalog);
+    let s3 = HostCatalog::all()
+        .iter()
+        .find(|h| h.id == "s3")
+        .expect("s3");
+    assert!(s3.title.contains("MinIO"), "got {}", s3.title);
+    assert!(
+        s3.title.contains("R2") || s3.title.contains("Cloudflare"),
+        "got {}",
+        s3.title
+    );
+}
+
+#[test]
+fn overlay_from_iter_sets_default_and_nested_pat() {
+    let mut cfg = AppConfig::from_toml(
+        r#"
+[uploaders.github]
+pat = "old"
+username = "alice"
+repo = "pics"
+"#,
+    )
+    .expect("parse");
+    cfg.overlay_from_iter([
+        ("UPGIT_DEFAULT", "smms"),
+        ("UPGIT_NAMING", "{stem}{ext}"),
+        ("UPGIT_SIZE_LIMIT", "0"),
+        ("UPGIT_HMAC_KEY", "secret"),
+        ("UPGIT_UPLOADERS__GITHUB__PAT", "xxx"),
+    ]);
+    assert_eq!(cfg.default_uploader(), Some("smms"));
+    assert_eq!(cfg.naming.as_deref(), Some("{stem}{ext}"));
+    assert_eq!(cfg.size_limit, Some(0));
+    assert_eq!(cfg.hmac_key.as_deref(), Some("secret"));
+    let pat = cfg.uploaders["github"]
+        .fields
+        .get("pat")
+        .and_then(|v| v.as_str());
+    assert_eq!(pat, Some("xxx"));
+    assert_eq!(
+        cfg.uploaders["github"]
+            .fields
+            .get("username")
+            .and_then(|v| v.as_str()),
+        Some("alice")
+    );
+}
+
+#[test]
+fn sample_zh_has_http_tables_and_is_not_init_output() {
+    let text = include_str!("../../../config.sample.zh-CN.toml");
+    let cfg = AppConfig::from_toml(text).expect("zh sample");
+    assert!(!text.contains("由 `upgit init` 生成"));
+    every_assignment_has_a_comment(text);
+    for table in [
+        "[uploaders.imgtg]",
+        "[uploaders.juejin]",
+        "[uploaders.moetu]",
+        "[uploaders.netease]",
+        "[uploaders.sougou]",
+        "[uploaders.upload_cc]",
+    ] {
+        assert!(text.contains(table), "zh sample missing {table}");
+    }
+    assert_eq!(cfg.default_uploader(), Some("github"));
+    assert_eq!(
+        cfg.uploaders["github"]
+            .fields
+            .get("branch")
+            .and_then(|v| v.as_str()),
+        Some("main")
+    );
 }

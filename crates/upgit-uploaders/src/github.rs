@@ -10,6 +10,31 @@ struct PutBody<'a> {
     branch: &'a str,
     message: String,
     content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sha: Option<&'a str>,
+}
+
+fn encode_put_body(
+    branch: &str,
+    file_name: &str,
+    data: &[u8],
+    sha: Option<&str>,
+) -> Result<String, UploadError> {
+    serde_json::to_string(&PutBody {
+        branch,
+        message: format!("upload {file_name} via upgit"),
+        content: STANDARD.encode(data),
+        sha,
+    })
+    .map_err(|e| UploadError::message(e.to_string()))
+}
+
+fn existing_file_needs_sha(status: u16, body: &str) -> bool {
+    let lower = body.to_ascii_lowercase();
+    if lower.contains("wasn't supplied") || lower.contains("wasnt supplied") {
+        return true;
+    }
+    matches!(status, 409 | 422) && lower.contains("sha")
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +53,7 @@ pub struct GithubUploader {
 impl GithubUploader {
     pub fn new(mut config: GithubConfig) -> Self {
         if config.branch.trim().is_empty() {
-            config.branch = "master".to_string();
+            config.branch = "main".to_string();
         }
         Self { config }
     }
@@ -121,34 +146,88 @@ impl GithubUploader {
             Some(status),
         )
     }
-}
 
-impl Uploader for GithubUploader {
-    fn upload(&self, artifact: &Artifact, key: &ObjectKey) -> Result<Locator, UploadError> {
-        let data = read_bytes(artifact)?;
-        let body = serde_json::to_string(&PutBody {
-            branch: &self.config.branch,
-            message: format!("upload {} via upgit", artifact.file_name()),
-            content: STANDARD.encode(&data),
-        })
-        .map_err(|e| UploadError::message(e.to_string()))?;
-        let url = self.contents_url(key);
-        match ureq::put(&url)
-            .set("Authorization", &format!("token {}", self.config.pat))
+    fn authorized(&self, req: ureq::Request) -> ureq::Request {
+        req.set("Authorization", &format!("token {}", self.config.pat))
             .set("Accept", "application/vnd.github.v3+json")
-            .set("Content-Type", "application/json")
             .set("User-Agent", "upgit")
+    }
+
+    fn put_contents(
+        &self,
+        key: &ObjectKey,
+        artifact: &Artifact,
+        data: &[u8],
+        sha: Option<&str>,
+    ) -> Result<Locator, UploadError> {
+        let body = encode_put_body(&self.config.branch, artifact.file_name(), data, sha)?;
+        let url = self.contents_url(key);
+        match self
+            .authorized(ureq::put(&url))
+            .set("Content-Type", "application/json")
             .send_string(&body)
         {
             Ok(_) => Ok(self.locator_for(key)),
             Err(ureq::Error::Status(code, resp)) => {
                 let text = resp.into_string().unwrap_or_default();
-                if text.contains("sha wasn't supplied") {
-                    return Ok(self.locator_for(key));
+                if sha.is_none() && existing_file_needs_sha(code, &text) {
+                    let existing = self.fetch_sha(key)?;
+                    return self.put_contents(key, artifact, data, Some(&existing));
                 }
                 Err(self.explain(code, &text))
             }
             Err(e) => Err(could_not_reach("GitHub", "api.github.com", e)),
         }
+    }
+
+    fn fetch_sha(&self, key: &ObjectKey) -> Result<String, UploadError> {
+        let url = self.contents_url(key);
+        match self
+            .authorized(ureq::get(&url))
+            .query("ref", &self.config.branch)
+            .call()
+        {
+            Ok(resp) => {
+                let text = resp.into_string().unwrap_or_default();
+                json_string_field(&text, "sha")
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| self.explain(200, &text))
+            }
+            Err(ureq::Error::Status(code, resp)) => {
+                let text = resp.into_string().unwrap_or_default();
+                Err(self.explain(code, &text))
+            }
+            Err(e) => Err(could_not_reach("GitHub", "api.github.com", e)),
+        }
+    }
+}
+
+impl Uploader for GithubUploader {
+    fn upload(&self, artifact: &Artifact, key: &ObjectKey) -> Result<Locator, UploadError> {
+        let data = read_bytes(artifact)?;
+        self.put_contents(key, artifact, &data, None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn put_body_with_sha_serializes_sha() {
+        let json = encode_put_body("main", "logo.png", b"abc", Some("deadbeef")).expect("json");
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse");
+        assert_eq!(v["sha"], "deadbeef");
+        assert_eq!(v["branch"], "main");
+        assert_eq!(v["message"], "upload logo.png via upgit");
+        assert!(v["content"].as_str().is_some());
+    }
+
+    #[test]
+    fn put_body_without_sha_omits_field() {
+        let json = encode_put_body("main", "logo.png", b"abc", None).expect("json");
+        let v: serde_json::Value = serde_json::from_str(&json).expect("parse");
+        assert!(v.get("sha").is_none());
+        assert_eq!(v["branch"], "main");
     }
 }

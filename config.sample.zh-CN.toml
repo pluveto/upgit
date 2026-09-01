@@ -1,15 +1,21 @@
-# 由 `upgit init` 生成。只填密钥，不要手写配方。
-# 默认是 GitHub。七牛可选，适合国内 CDN。
+# 仓库里的完整示例，不会被 `upgit init` 写入。
+# 默认是 GitHub。把某一段 [uploaders.*] 拷进 config.toml，并把 `default` 改成该表名。
 # HTTP 图床：表名与 recipes/ 里的文件名相同即可，不必写 `type = "http"`。
 # 内置类型（github、s3、aliyunoss、qcloudcos、upyun、qiniu）填写各自的真实字段。
 # `default_uploader` 是 `default` 的别名。`rename` 是 `naming` 的别名。
 # 七牛的 `prefix` 等价于 `public_base`。`replacements` 等价于 `link`。
 
+# 使用哪一张上传器表（必须对应下面某个 [uploaders.*]）。
 default = "github"
+
+# 远程对象键模板。占位符：{year} {month} {day} {hour} {minute} {second} {unix} {unix_tsms} {stem} {fname} {fullname} {ext} {hmac} {fname_hash} {fname_hash4} {fname_hash8}。
 naming = "{year}/{month}/upgit_{year}{month}{day}_{unix}_{hmac}{ext}"
 
+# 用于计算 {hmac} 的密钥（HMAC-SHA256）。仅当 naming 含 {hmac} 时需要。
 hmac_key = "你的 HMAC 密钥"
+# 先按此模板插值，再做 HMAC-SHA256，结果填入 {hmac}。占位符与 naming 相同（不含 {hmac}）。
 hmac_format = "{year}_{month}_{day}_{unix}{ext}"
+# 把十六进制摘要截断到这么多字符。省略则保留完整 64 位。
 hmac_len = 31
 
 # 访问 GitHub raw 缓慢时可走 jsDelivr：
@@ -18,98 +24,178 @@ hmac_len = 31
 # "/master" = "@master"
 
 # Github。仓库必须公开，否则直链会 404。
-# 需要 repo 权限的 PAT：https://github.com/settings/tokens
 [uploaders.github]
-pat = "ghp_你的_GITHUB_PAT"
+# 经典 PAT 需要 repo 权限；细粒度 PAT 需要该仓库的 Contents 读写。申请：https://github.com/settings/tokens
+pat = "PASTE_YOUR_TOKEN"
+# 仓库所属 GitHub 用户名。
 username = "用户名"
+# 公开仓库名。私有仓库的 raw 直链会 404。
 repo = "仓库名"
-branch = "master"
+# 提交到的分支。必须与仓库默认分支一致。
+branch = "main"
 
 # SM.MS：https://sm.ms/home/apitoken
 [uploaders.smms]
+# SM.MS 控制台里的 API token。
 token = "你的 SMMS token"
 
 # Imgur：https://api.imgur.com/oauth2/addclient
 [uploaders.imgur]
+# Imgur OAuth client ID（Client-ID 头）。在上面的地址注册应用。
 client_id = "你的 Imgur client id"
 
+# 自建 Chevereto（v3 / v4 API）。后台 → 设置 → API。
 [uploaders.chevereto]
+# Chevereto 站点后台的 API key。
 key = "你的 Chevereto key"
+# Chevereto 上传 API 完整 URL（通常是 https://YOUR_SITE/api/1/upload）。
 upload_url = "https://chevereto.com/api/1/upload"
 
-# 腾讯云 COS
+# 腾讯云 COS。密钥：https://console.cloud.tencent.com/cam/capi
 [uploaders.qcloudcos]
+# COS 存储桶主机名，例如 <bucket>.cos.<region>.myqcloud.com。
 host = "xxx.cos.ap-chengdu.myqcloud.com"
+# COS 的 CAM SecretId。
 secret_id = "你的 COS SecretId"
+# COS 的 CAM SecretKey。
 secret_key = "你的 COS SecretKey"
 
 # 七牛：每次上传用 AK/SK 现场签发 token，不要填网页上的短时 token。
+# 密钥：https://portal.qiniu.com/developer/user/key
 [uploaders.qiniu]
+# 七牛 AccessKey（AK）。
 access_key = "你的 AccessKey"
+# 与 AccessKey 配对的 SecretKey（SK）。
 secret_key = "你的 SecretKey"
+# 接收对象的空间名。
 bucket = "你的空间名"
+# 上传后对象的公开 URL 前缀（CDN 域名；别名 prefix）。
 public_base = "https://cdn.example.com/"
+# 可选存储区域：z0（华东，默认）、z1、z2、na0、as0。
 # region = "z0"
 
-# 码云可能会拦截「当图床用」的公开仓库。为与 0.2 对齐仍列出。
+# 码云可能会拦截「当图床用」的公开仓库。更推荐 SM.MS、S3、OSS 或七牛。
 [uploaders.gitee]
+# 仓库所属 Gitee 用户名。
 username = "用户名"
+# Gitee 仓库名。
 repo = "仓库名"
+# Gitee 个人访问令牌。申请：https://gitee.com/profile/personal_access_tokens
 access_token = "你的 Gitee access_token"
 
+# Cloudinary 未签名上传。控制台：https://cloudinary.com/console
 [uploaders.cloudinary]
+# Cloudinary 控制台里的 cloud name。
 cloud_name = "你的 cloud_name"
+# 未签名 upload preset 名称（Settings → Upload）。
 upload_preset = "你的 upload_preset"
 
+# EasyImage（自建）。Token 在 EasyImage 后台设置。
 [uploaders.easyimage]
+# EasyImage API 地址（通常是 https://YOUR_SITE/api/index.php）。
 request_url = "https://img.example.com/api/index.php"
+# EasyImage 后台的 API token。
 token = "你的 EasyImage token"
 
+# Lsky Pro v2。Token 是 Lsky API 的 Bearer token。
 [uploaders.lskypro2]
+# Lsky Pro v2 站点 origin，不要末尾斜杠。
 host = "https://your-lsky.example"
+# Authorization 值，包含 "Bearer " 前缀。
 token = "Bearer 你的 token"
 
+# Amazon S3 或兼容实现（MinIO、R2 等）。密钥：https://console.aws.amazon.com/iam
 [uploaders.s3]
+# 存储桶所在 AWS 区域（例如 us-west-2）。
 region = "us-west-2"
+# S3 存储桶名。
 bucket_name = "my-bucket"
+# 具有 s3:PutObject 权限的 IAM Access Key ID。
 access_key = "你的 S3 AccessKey"
+# IAM Secret Access Key。
 secret_key = "你的 S3 SecretKey"
+# S3 API 端点（AWS 区域 URL 或兼容端点）。
 endpoint = "https://s3.us-west-2.amazonaws.com"
+# 公开 URL 模板。占位符：{endpoint} {bucket} {path}。
 url_format = "{endpoint}/{bucket}/{path}"
 
-# 阿里云 OSS
+# 阿里云 OSS。密钥：https://ram.console.aliyun.com/manage/ak
 [uploaders.aliyunoss]
+# 存储桶所在区域的 OSS API 端点。
 endpoint = "https://oss-cn-shanghai.aliyuncs.com"
+# RAM AccessKey ID。
 access_key_id = "你的 OSS AccessKeyId"
+# RAM AccessKey Secret。
 access_key_secret = "你的 OSS AccessKeySecret"
+# OSS 存储桶名。
 bucket_name = "你的 Bucket"
+# 上传后对象的公开 URL 前缀（常用 CDN 域名）。
 host = "https://cdn.example.com"
 
-# 又拍云
+# 又拍云。操作员凭证：https://console.upyun.com
 [uploaders.upyun]
+# 公开 CDN 主机名（不要带协议），用于打印出的 URL。
 host = "cdn.example.com"
+# 又拍云服务名（空间）。
 bucket_name = "你的又拍云空间"
+# 操作员用户名（别名 username）。
 user_name = "你的又拍云用户名"
+# 操作员密码（别名 password）。
 pass_word = "你的又拍云密码"
 
+# Catbox.moe。userhash：https://catbox.moe/user/manage.php（省略则匿名上传）。
 [uploaders.catbox]
+# Catbox 账户管理页的 userhash。把上传记到你的账号。
 userhash = "你的 Catbox userhash"
 
+# Helloimg。账号：https://www.helloimg.com
 [uploaders.hello]
+# Helloimg 登录名（邮箱或用户名）。
 username = "你的 Hello 用户名"
+# Helloimg 账户密码。
 password = "你的 Hello 密码"
 
+# Niupic。无需凭证；公开上传接口。
 [uploaders.niupic]
 
+# ImgURL.org。无需凭证；公开上传接口。
 [uploaders.imgurlorg]
 
+# ImgBB。API key：https://api.imgbb.com/
 [uploaders.imgbb]
+# ImgBB 控制台里的 API key。
 key = "你的 ImgBB key"
 
+# Lsky Pro v1。Token 来自 Lsky 用户 API 设置。
 [uploaders.lskypro]
+# Lsky Pro v1 站点 origin，不要末尾斜杠。
 host = "https://your-lsky.example"
+# Lsky Pro v1 API token。
 token = "你的 LskyPro token"
 
-# DALEXNI：https://dalexni.com/settings/api
+# DALEXNI。API key：https://dalexni.com/settings/api
 [uploaders.dalexni]
+# DALEXNI 账户设置里的 API key。
 key = "你的 DALEXNI key"
+
+# img.tg。auth_token 和 timestamp 来自已登录浏览器会话。
+[uploaders.imgtg]
+# img.tg 会话 auth_token（来自站点上传表单）。
+auth_token = "你的 IMGTG auth_token"
+# 与 auth_token 配对的 img.tg 表单 timestamp。
+timestamp = "你的 IMGTG timestamp"
+
+# 掘金 CDN。无需凭证；公开上传接口。
+[uploaders.juejin]
+
+# Moetu。无需凭证；公开上传接口。
+[uploaders.moetu]
+
+# 网易严选 You.163。无需凭证；公开上传接口。
+[uploaders.netease]
+
+# 搜狗图片。无需凭证；公开上传接口。
+[uploaders.sougou]
+
+# upload.cc。无需凭证；公开上传接口。
+[uploaders.upload_cc]

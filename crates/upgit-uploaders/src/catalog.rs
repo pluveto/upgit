@@ -2,6 +2,140 @@ use std::path::{Path, PathBuf};
 
 use crate::recipe::{HttpRecipe, RecipeError};
 
+/// One built-in or HTTP-recipe host, for help and listings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Host {
+    pub id: &'static str,
+    pub title: &'static str,
+}
+
+/// Built-in uploaders first, then HTTP recipes in [`RecipeCatalog`] order.
+pub struct HostCatalog;
+
+impl HostCatalog {
+    pub fn all() -> &'static [Host] {
+        &[
+            Host {
+                id: "github",
+                title: "GitHub",
+            },
+            Host {
+                id: "s3",
+                title:
+                    "Amazon S3 (MinIO / Cloudflare R2 / Backblaze / Wasabi / DigitalOcean Spaces)",
+            },
+            Host {
+                id: "aliyunoss",
+                title: "Aliyun OSS",
+            },
+            Host {
+                id: "qcloudcos",
+                title: "Tencent Cloud COS",
+            },
+            Host {
+                id: "upyun",
+                title: "Upyun",
+            },
+            Host {
+                id: "qiniu",
+                title: "Qiniu Kodo",
+            },
+            Host {
+                id: "smms",
+                title: "SM.MS",
+            },
+            Host {
+                id: "imgur",
+                title: "Imgur",
+            },
+            Host {
+                id: "catbox",
+                title: "Catbox",
+            },
+            Host {
+                id: "cloudinary",
+                title: "Cloudinary",
+            },
+            Host {
+                id: "easyimage",
+                title: "EasyImage",
+            },
+            Host {
+                id: "lskypro",
+                title: "Lsky Pro",
+            },
+            Host {
+                id: "lskypro2",
+                title: "Lsky Pro v2",
+            },
+            Host {
+                id: "hello",
+                title: "Helloimg",
+            },
+            Host {
+                id: "niupic",
+                title: "Niupic",
+            },
+            Host {
+                id: "imgurlorg",
+                title: "ImgURL.org",
+            },
+            Host {
+                id: "imgbb",
+                title: "ImgBB",
+            },
+            Host {
+                id: "chevereto",
+                title: "Chevereto",
+            },
+            Host {
+                id: "gitee",
+                title: "Gitee",
+            },
+            Host {
+                id: "dalexni",
+                title: "DALEXNI",
+            },
+            Host {
+                id: "imgtg",
+                title: "img.tg",
+            },
+            Host {
+                id: "juejin",
+                title: "Juejin",
+            },
+            Host {
+                id: "moetu",
+                title: "Moetu",
+            },
+            Host {
+                id: "netease",
+                title: "NetEase",
+            },
+            Host {
+                id: "sougou",
+                title: "Sogou",
+            },
+            Host {
+                id: "upload_cc",
+                title: "upload.cc",
+            },
+        ]
+    }
+
+    pub fn ids() -> impl Iterator<Item = &'static str> {
+        Self::all().iter().map(|host| host.id)
+    }
+
+    pub fn id_width() -> usize {
+        Self::all()
+            .iter()
+            .map(|host| host.id.len())
+            .max()
+            .unwrap_or(8)
+    }
+}
+
 /// Bundled HTTP recipes: on disk next to the binary, then compiled-in copies.
 pub struct RecipeCatalog;
 

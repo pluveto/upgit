@@ -1,5 +1,6 @@
 [meta]
 id = "catbox"
+optional = ["userhash"]
 
 [request]
 method = "POST"
