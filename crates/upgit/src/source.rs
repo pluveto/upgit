@@ -98,6 +98,7 @@ impl ClipboardFilesSource {
         Self { size_limit }
     }
 
+    #[cfg(not(windows))]
     fn decode_path(line: &str) -> String {
         let stripped = line.strip_prefix("file://").unwrap_or(line);
         let mut out = String::with_capacity(stripped.len());
@@ -139,6 +140,7 @@ impl Source for ClipboardFilesSource {
     }
 }
 
+#[cfg(not(windows))]
 fn from_hex(b: u8) -> Option<u8> {
     match b {
         b'0'..=b'9' => Some(b - b'0'),
