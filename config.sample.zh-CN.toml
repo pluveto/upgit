@@ -34,9 +34,9 @@ repo = "仓库名"
 # 提交到的分支。必须与仓库默认分支一致。
 branch = "main"
 
-# GitLab（自建或 gitlab.com）。私有项目的 raw 直链会 404，除非设置 public_base/host。
+# GitLab（自建或 gitlab.com）。私有项目的 raw 直链会 404，除非设置 public_base。
 [uploaders.gitlab]
-# GitLab 实例 origin（未写 url 时可用 host）。不要末尾斜杠，不要填 /api/v4。
+# GitLab 实例 origin（别名 host）。不要末尾斜杠，不要填 /api/v4。
 url = "https://gitlab.example.com"
 # 带命名空间的项目路径（group/name）。请求里会编码成 group%2Fname。
 project = "group/name"
@@ -45,7 +45,7 @@ token = "YOUR_GITLAB_TOKEN"
 # 提交到的分支。省略则默认 main。
 branch = "main"
 # 可选的公开 URL 前缀（CDN、反代，或公开项目的 raw 前缀），用于打印出的链接。
-# 私有 GitLab 的 `/-/raw/` 直链没有这项会 404。若已写 url，host 也可表示该前缀。
+# 私有 GitLab 的 `/-/raw/` 直链没有这项会 404。
 # public_base = "https://cdn.example.com/"
 
 # SM.MS：https://sm.ms/home/apitoken

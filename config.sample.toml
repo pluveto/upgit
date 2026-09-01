@@ -35,9 +35,9 @@ repo = "repo-name"
 # Branch to commit into. Must match the repository default branch.
 branch = "main"
 
-# GitLab (self-hosted or gitlab.com). Private projects make raw URLs 404 unless public_base/host is set.
+# GitLab (self-hosted or gitlab.com). Private projects make raw URLs 404 unless public_base is set.
 [uploaders.gitlab]
-# GitLab instance origin (alias: host when `url` is omitted). No trailing slash; not the /api/v4 URL.
+# GitLab instance origin (alias: host). No trailing slash; not the /api/v4 URL.
 url = "https://gitlab.example.com"
 # Project path with namespace (group/name). Encoded on the wire as group%2Fname.
 project = "group/name"
@@ -46,7 +46,7 @@ token = "YOUR_GITLAB_TOKEN"
 # Branch to commit into. Defaults to main if omitted.
 branch = "main"
 # Optional public URL prefix for printed links (CDN, reverse proxy, or a public project raw prefix).
-# Private GitLab `/-/raw/` URLs 404 without this. Alias: host when `url` is also set.
+# Private GitLab `/-/raw/` URLs 404 without this.
 # public_base = "https://cdn.example.com/"
 
 # SM.MS image host. Token: https://sm.ms/home/apitoken

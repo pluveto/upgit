@@ -323,10 +323,7 @@ fn resolved_kind(id: &str, profile: &UploaderProfile) -> Result<String, InstallE
     if id == "github" || github_keys {
         return Ok("github".to_string());
     }
-    let gitlab_keys = has_field(profile, "token")
-        && has_field(profile, "project")
-        && (has_field(profile, "url") || has_field(profile, "host"));
-    if id == "gitlab" || gitlab_keys {
+    if id == "gitlab" {
         return Ok("gitlab".to_string());
     }
     // Qiniu uses `bucket` (not bucket_name) and has no endpoint. Check before S3.
@@ -390,32 +387,18 @@ fn gitlab_from_profile(
     id: &str,
     profile: &UploaderProfile,
 ) -> Result<GitlabUploader, InstallError> {
-    let url = optional_string(profile, "url")
-        .filter(|s| !is_placeholder(s))
-        .or_else(|| optional_string(profile, "host").filter(|s| !is_placeholder(s)))
-        .ok_or_else(|| InstallError::MissingField {
-            id: id.to_string(),
-            field: "url".to_string(),
-        })?;
-    let public_base = optional_string(profile, "public_base")
-        .filter(|s| !is_placeholder(s))
-        .or_else(|| {
-            // `host` is the printed URL only when `url` already names the instance.
-            if optional_string(profile, "url")
-                .filter(|s| !is_placeholder(s))
-                .is_some()
-            {
-                optional_string(profile, "host").filter(|s| !is_placeholder(s))
-            } else {
-                None
-            }
-        });
     Ok(GitlabUploader::new(GitlabConfig {
-        url,
+        url: optional_string(profile, "url")
+            .or_else(|| optional_string(profile, "host"))
+            .filter(|s| !is_placeholder(s))
+            .ok_or_else(|| InstallError::MissingField {
+                id: id.to_string(),
+                field: "url".to_string(),
+            })?,
         project: require_string(id, profile, "project")?,
         token: require_string(id, profile, "token")?,
         branch: optional_string(profile, "branch").unwrap_or_default(),
-        public_base,
+        public_base: optional_string(profile, "public_base").filter(|s| !is_placeholder(s)),
     }))
 }
 
