@@ -292,6 +292,9 @@ upgit logo.png --output clipboard -f markdown
 | -- `{fname_hash}` | -- `{fname}`（不含扩展名）的 MD5 散列值               |
 | -- `{fname_hash4}` | -- `{fname}` 的 MD5 散列值，取前 4 位               |
 | -- `{fname_hash8}` | -- `{fname}` 的 MD5 散列值，取前 8 位               |
+| -- `{content_hash}` | -- 文件内容的 MD5 散列值               |
+| -- `{content_hash4}` | -- 文件内容的 MD5 散列值，取前 4 位               |
+| -- `{content_hash8}` | -- 文件内容的 MD5 散列值，取前 8 位               |
 | -- `{hmac}`        | -- 对 `hmac_format` 做 HMAC-SHA256，截断到 `hmac_len`            |
 | hmac_key           | 计算 `{hmac}` 所用的密钥                                          |
 | hmac_format        | `{hmac}` 的格式字符串。支持上面全部占位符。   |
