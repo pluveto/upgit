@@ -5,7 +5,7 @@ use thiserror::Error;
 use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::form::{self, Part};
-use crate::util::{could_not_reach, host_of, json_string_field, looks_like_signature_error};
+use crate::util::{could_not_reach, host_of, json_string_field, remote_http_error};
 
 #[derive(Debug, Error)]
 pub enum RecipeError {
@@ -220,52 +220,13 @@ impl HttpRecipeUploader {
         }
     }
 
-    /// Map an HTTP recipe status + body to a user-facing error. Never dumps JSON.
+    /// Status and the remote's message/error/msg if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
         let id = self.recipe.id();
-        let hint = self.config_hint();
-        match status {
-            401 => UploadError::new(
-                id,
-                format!("{id} rejected credentials (HTTP 401)."),
-                hint,
-                Some(status),
-            ),
-            403 if looks_like_signature_error(body) => UploadError::new(
-                id,
-                format!("{id} rejected the request signature (HTTP 403)."),
-                hint,
-                Some(status),
-            ),
-            403 => UploadError::new(
-                id,
-                format!("{id} denied the upload (HTTP 403)."),
-                hint,
-                Some(status),
-            ),
-            404 => UploadError::new(
-                id,
-                format!("{id} endpoint was not found (HTTP 404)."),
-                format!("{hint} Confirm the recipe URL."),
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                id,
-                format!("{id} is failing (HTTP {status})."),
-                "Retry later; this is a remote server error, not a config problem.",
-                Some(status),
-            ),
-            _ => {
-                let extra = json_string_field(body, "message")
-                    .or_else(|| json_string_field(body, "error"))
-                    .or_else(|| json_string_field(body, "msg"));
-                let what = match extra {
-                    Some(msg) => format!("{id} upload failed (HTTP {status}): {msg}"),
-                    None => format!("{id} upload failed (HTTP {status})."),
-                };
-                UploadError::new(id, what, hint, Some(status))
-            }
-        }
+        let said = json_string_field(body, "message")
+            .or_else(|| json_string_field(body, "error"))
+            .or_else(|| json_string_field(body, "msg"));
+        remote_http_error(id, status, "upload", said.as_deref(), self.config_hint())
     }
 
     fn context(&self, key: &ObjectKey) -> RecipeContext {

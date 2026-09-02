@@ -9,7 +9,7 @@ use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
     content_type_for, could_not_reach, hex_lower, host_of, hostname, http_date_gmt, join_host_path,
-    looks_like_missing_bucket, looks_like_signature_error, read_bytes, xml_error_summary,
+    read_bytes, remote_http_error, xml_code_and_message,
 };
 
 type HmacSha1 = Hmac<Sha1>;
@@ -76,59 +76,15 @@ impl CosUploader {
         )
     }
 
-    /// Map a COS HTTP status + body to a user-facing error. Never dumps XML.
+    /// Status, host, and COS XML Code/Message if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
-        let host = host_of(&self.config.host);
-        match status {
-            401 => UploadError::new(
-                "COS",
-                "COS rejected credentials (HTTP 401).",
-                "Check [uploaders.qcloudcos] secret_id and secret_key.",
-                Some(status),
-            ),
-            403 if looks_like_signature_error(body) => UploadError::new(
-                "COS",
-                "COS signature did not match (HTTP 403).",
-                "Check [uploaders.qcloudcos] secret_id, secret_key, and host.",
-                Some(status),
-            ),
-            403 => UploadError::new(
-                "COS",
-                format!("COS denied access to `{host}` (HTTP 403)."),
-                "Check [uploaders.qcloudcos] secret_id, secret_key, and host.",
-                Some(status),
-            ),
-            404 => UploadError::new(
-                "COS",
-                format!("COS bucket `{host}` was not found (HTTP 404)."),
-                "Check [uploaders.qcloudcos] host. The bucket must exist.",
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                "COS",
-                format!("COS is failing (HTTP {status})."),
-                "Retry later; this is a COS server error, not a config problem.",
-                Some(status),
-            ),
-            _ if looks_like_signature_error(body) => UploadError::new(
-                "COS",
-                format!("COS signature did not match (HTTP {status})."),
-                "Check [uploaders.qcloudcos] secret_id, secret_key, and host.",
-                Some(status),
-            ),
-            _ if looks_like_missing_bucket(body) => UploadError::new(
-                "COS",
-                format!("COS bucket `{host}` was not found (HTTP {status})."),
-                "Check [uploaders.qcloudcos] host. The bucket must exist.",
-                Some(status),
-            ),
-            _ => UploadError::new(
-                "COS",
-                xml_error_summary("COS", status, body),
-                "Verify [uploaders.qcloudcos] host, secret_id, and secret_key.",
-                Some(status),
-            ),
-        }
+        remote_http_error(
+            "COS",
+            status,
+            &format!("`{}`", host_of(&self.config.host)),
+            xml_code_and_message(body).as_deref(),
+            "Check [uploaders.qcloudcos] host, secret_id, and secret_key.",
+        )
     }
 }
 

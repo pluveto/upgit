@@ -4,8 +4,8 @@ use serde::Serialize;
 use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
-    could_not_reach, host_of, http_origin, join_host_path, json_string_field,
-    looks_like_rate_limit, percent_encode, read_bytes,
+    could_not_reach, host_of, http_origin, join_host_path, json_string_field, percent_encode,
+    read_bytes, remote_http_error,
 };
 
 #[derive(Serialize)]
@@ -58,61 +58,21 @@ impl GitlabUploader {
         }
     }
 
-    /// Map a GitLab Repository Files API status + body to a user-facing error.
-    /// Never dumps JSON.
+    /// Status, project/branch, and GitLab's `message` if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
-        let project = self.config.project.as_str();
-        match status {
-            401 => UploadError::new(
-                "GitLab",
-                "GitLab personal access token is invalid or expired (HTTP 401).",
-                format!(
-                    "Create a token with the \"api\" or \"write_repository\" scope at {}/-/user_settings/personal_access_tokens and put it in [uploaders.gitlab] `token`.",
-                    self.config.url
-                ),
-                Some(status),
-            ),
-            429 => Self::rate_limit_error(status),
-            403 if looks_like_rate_limit(body) => Self::rate_limit_error(status),
-            403 => UploadError::new(
-                "GitLab",
-                format!("GitLab denied access to `{project}` (HTTP 403)."),
-                format!(
-                    "The token in [uploaders.gitlab] `token` lacks access to `{project}`. Grant the \"api\" or \"write_repository\" scope and a Developer role on this project."
-                ),
-                Some(status),
-            ),
-            404 => UploadError::new(
-                "GitLab",
-                format!("GitLab project `{project}` was not found (HTTP 404)."),
-                "Check [uploaders.gitlab] url, project, and token. A missing project, or a token without access, also returns 404. Private projects make GitLab raw URLs 404; set public_base to a CDN, reverse proxy, or public raw prefix.",
-                Some(status),
-            ),
-            400 | 409 | 422 => UploadError::new(
-                "GitLab",
-                format!("GitLab cannot create or update that path (HTTP {status})."),
-                "Check [uploaders.gitlab] branch and the file path.",
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                "GitLab",
-                format!("GitLab is failing (HTTP {status})."),
-                "Retry later; this is a GitLab server error, not a config problem.",
-                Some(status),
-            ),
-            _ => {
-                let what = match json_string_field(body, "message") {
-                    Some(msg) => format!("GitLab upload failed (HTTP {status}): {msg}"),
-                    None => format!("GitLab upload failed (HTTP {status})."),
-                };
-                UploadError::new(
-                    "GitLab",
-                    what,
-                    "Verify [uploaders.gitlab] url, project, token, and branch. Private projects make GitLab raw URLs 404; set public_base.",
-                    Some(status),
-                )
-            }
+        let mut target = format!("`{}`", self.config.project);
+        if !self.config.branch.is_empty() {
+            target.push_str(" branch `");
+            target.push_str(&self.config.branch);
+            target.push('`');
         }
+        remote_http_error(
+            "GitLab",
+            status,
+            &target,
+            json_string_field(body, "message").as_deref(),
+            "Check [uploaders.gitlab] url, project, token, and branch.",
+        )
     }
 
     fn files_url(&self, key: &ObjectKey) -> String {
@@ -136,15 +96,6 @@ impl GitlabUploader {
 
     fn file_already_exists(status: u16, body: &str) -> bool {
         status == 400 && body.to_ascii_lowercase().contains("already exists")
-    }
-
-    fn rate_limit_error(status: u16) -> UploadError {
-        UploadError::new(
-            "GitLab",
-            format!("GitLab rate limit exceeded (HTTP {status})."),
-            "Wait and retry, or use a token with a higher rate limit in [uploaders.gitlab] `token`.",
-            Some(status),
-        )
     }
 
     fn authorized(&self, req: ureq::Request) -> ureq::Request {

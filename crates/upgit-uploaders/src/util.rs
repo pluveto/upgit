@@ -210,20 +210,35 @@ pub(crate) fn json_string_field(body: &str, field: &str) -> Option<String> {
     value.get(field)?.as_str().map(|s| one_line(s, 120))
 }
 
-pub(crate) fn xml_error_summary(uploader: &str, status: u16, body: &str) -> String {
-    if let Some(code) = xml_text(body, "Code").filter(|s| !s.is_empty()) {
-        return format!(
-            "{uploader} upload failed (HTTP {status}): {}",
-            one_line(code, 80)
-        );
+/// Quote the remote's XML `Code` and `Message`. Does not interpret them.
+pub(crate) fn xml_code_and_message(body: &str) -> Option<String> {
+    let code = xml_text(body, "Code").filter(|s| !s.is_empty());
+    let msg = xml_text(body, "Message").filter(|s| !s.is_empty());
+    match (code, msg) {
+        (Some(c), Some(m)) => Some(format!("{}: {}", one_line(c, 80), one_line(m, 120))),
+        (Some(c), None) => Some(one_line(c, 80)),
+        (None, Some(m)) => Some(one_line(m, 120)),
+        (None, None) => None,
     }
-    if let Some(msg) = xml_text(body, "Message").filter(|s| !s.is_empty()) {
-        return format!(
-            "{uploader} upload failed (HTTP {status}): {}",
-            one_line(msg, 120)
-        );
-    }
-    format!("{uploader} upload failed (HTTP {status}).")
+}
+
+/// HTTP status + request target + quoted remote text. Does not guess a cause.
+pub(crate) fn remote_http_error(
+    uploader: &str,
+    status: u16,
+    target: &str,
+    said: Option<&str>,
+    hint: impl Into<String>,
+) -> UploadError {
+    let said = said
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| one_line(s, 160));
+    let what = match said {
+        Some(said) => format!("{uploader} returned HTTP {status} for {target}: {said}"),
+        None => format!("{uploader} returned HTTP {status} for {target}."),
+    };
+    UploadError::new(uploader, what, hint, Some(status))
 }
 
 pub(crate) fn xml_text<'a>(body: &'a str, tag: &str) -> Option<&'a str> {
@@ -233,28 +248,6 @@ pub(crate) fn xml_text<'a>(body: &'a str, tag: &str) -> Option<&'a str> {
     let start = lower.find(&open.to_ascii_lowercase())? + open.len();
     let end_rel = lower.get(start..)?.find(&close.to_ascii_lowercase())?;
     Some(body.get(start..start + end_rel)?.trim())
-}
-
-pub(crate) fn looks_like_rate_limit(body: &str) -> bool {
-    let b = body.to_ascii_lowercase();
-    b.contains("rate limit") || b.contains("ratelimit") || b.contains("too many requests")
-}
-
-pub(crate) fn looks_like_signature_error(body: &str) -> bool {
-    let b = body.to_ascii_lowercase();
-    b.contains("signaturedoesnotmatch")
-        || b.contains("invalidaccesskey")
-        || b.contains("signature does not match")
-        || b.contains("invalid signature")
-        || b.contains("incorrect signature")
-        || b.contains("authorizationheader")
-}
-
-pub(crate) fn looks_like_missing_bucket(body: &str) -> bool {
-    let b = body.to_ascii_lowercase();
-    b.contains("nosuchbucket")
-        || b.contains("no such bucket")
-        || b.contains("the specified bucket does not exist")
 }
 
 fn transport_io(err: &ureq::Error) -> String {

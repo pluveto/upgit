@@ -4,8 +4,7 @@ use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
     amz_date, collapse_slash_runs, content_type_for, could_not_reach, hex_lower, host_of, hostname,
-    join_host_path, looks_like_missing_bucket, looks_like_signature_error, read_bytes,
-    xml_error_summary,
+    join_host_path, read_bytes, remote_http_error, xml_code_and_message,
 };
 
 type HmacSha256 = Hmac<Sha256>;
@@ -98,59 +97,16 @@ impl S3Uploader {
         })
     }
 
-    /// Map an S3 HTTP status + body to a user-facing error. Never dumps XML.
+    /// Status, bucket, and S3's XML Code/Message if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
         let bucket = self.config.bucket_name.trim_matches('/');
-        match status {
-            401 => UploadError::new(
-                "S3",
-                "S3 rejected credentials (HTTP 401).",
-                "Check [uploaders.s3] access_key and secret_key.",
-                Some(status),
-            ),
-            403 if looks_like_signature_error(body) => UploadError::new(
-                "S3",
-                "S3 signature did not match (HTTP 403).",
-                "Check [uploaders.s3] access_key, secret_key, region, and endpoint.",
-                Some(status),
-            ),
-            403 => UploadError::new(
-                "S3",
-                format!("S3 denied access to bucket `{bucket}` (HTTP 403)."),
-                "Check [uploaders.s3] access_key, secret_key, and bucket_name. The key needs PutObject on this bucket.",
-                Some(status),
-            ),
-            404 => UploadError::new(
-                "S3",
-                format!("S3 bucket `{bucket}` was not found (HTTP 404)."),
-                "Check [uploaders.s3] bucket_name, region, and endpoint. The bucket must exist.",
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                "S3",
-                format!("S3 is failing (HTTP {status})."),
-                "Retry later; this is an S3 server error, not a config problem.",
-                Some(status),
-            ),
-            _ if looks_like_signature_error(body) => UploadError::new(
-                "S3",
-                format!("S3 signature did not match (HTTP {status})."),
-                "Check [uploaders.s3] access_key, secret_key, region, and endpoint.",
-                Some(status),
-            ),
-            _ if looks_like_missing_bucket(body) => UploadError::new(
-                "S3",
-                format!("S3 bucket `{bucket}` was not found (HTTP {status})."),
-                "Check [uploaders.s3] bucket_name, region, and endpoint. The bucket must exist.",
-                Some(status),
-            ),
-            _ => UploadError::new(
-                "S3",
-                xml_error_summary("S3", status, body),
-                "Verify [uploaders.s3] region, bucket_name, access_key, secret_key, and endpoint.",
-                Some(status),
-            ),
-        }
+        remote_http_error(
+            "S3",
+            status,
+            &format!("bucket `{bucket}`"),
+            xml_code_and_message(body).as_deref(),
+            "Check [uploaders.s3] region, bucket_name, access_key, secret_key, and endpoint.",
+        )
     }
 }
 

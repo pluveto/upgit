@@ -2,8 +2,8 @@ use md5::{Digest, Md5};
 use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
-    could_not_reach, hex_lower, hostname, http_date_gmt, join_host_path,
-    looks_like_signature_error, read_bytes,
+    could_not_reach, hex_lower, hostname, http_date_gmt, join_host_path, json_string_field,
+    read_bytes, remote_http_error,
 };
 
 #[derive(Debug, Clone)]
@@ -40,47 +40,18 @@ impl UpyunUploader {
         format!("UpYun {}:{}", self.config.user_name, sig)
     }
 
-    /// Map an Upyun HTTP status + body to a user-facing error. Never dumps the body.
+    /// Status, bucket, and Upyun's message if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
-        let bucket = self.config.bucket_name.as_str();
-        match status {
-            401 => UploadError::new(
-                "Upyun",
-                "Upyun rejected credentials (HTTP 401).",
-                "Check [uploaders.upyun] user_name and pass_word.",
-                Some(status),
-            ),
-            403 if looks_like_signature_error(body) => UploadError::new(
-                "Upyun",
-                "Upyun signature did not match (HTTP 403).",
-                "Check [uploaders.upyun] user_name, pass_word, and bucket_name.",
-                Some(status),
-            ),
-            403 => UploadError::new(
-                "Upyun",
-                format!("Upyun denied access to bucket `{bucket}` (HTTP 403)."),
-                "Check [uploaders.upyun] user_name, pass_word, and bucket_name.",
-                Some(status),
-            ),
-            404 => UploadError::new(
-                "Upyun",
-                format!("Upyun bucket `{bucket}` was not found (HTTP 404)."),
-                "Check [uploaders.upyun] bucket_name. The bucket must exist.",
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                "Upyun",
-                format!("Upyun is failing (HTTP {status})."),
-                "Retry later; this is an Upyun server error, not a config problem.",
-                Some(status),
-            ),
-            _ => UploadError::new(
-                "Upyun",
-                format!("Upyun upload failed (HTTP {status})."),
-                "Verify [uploaders.upyun] host, bucket_name, user_name, and pass_word.",
-                Some(status),
-            ),
-        }
+        let said = json_string_field(body, "msg")
+            .or_else(|| json_string_field(body, "message"))
+            .or_else(|| json_string_field(body, "error"));
+        remote_http_error(
+            "Upyun",
+            status,
+            &format!("bucket `{}`", self.config.bucket_name),
+            said.as_deref(),
+            "Check [uploaders.upyun] host, bucket_name, user_name, and pass_word.",
+        )
     }
 }
 

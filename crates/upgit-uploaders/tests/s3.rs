@@ -40,3 +40,28 @@ fn sigv4_matches_independent_get_object_vector() {
         "got {auth}"
     );
 }
+
+#[test]
+fn explain_quotes_xml_code_and_does_not_guess_bucket_missing() {
+    let uploader = S3Uploader::new(S3Config {
+        region: "us-east-1".into(),
+        bucket_name: "examplebucket".into(),
+        access_key: "AKIAIOSFODNN7EXAMPLE".into(),
+        secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY".into(),
+        endpoint: "https://s3.amazonaws.com".into(),
+        url_format: String::new(),
+        host: String::new(),
+    });
+    let err = uploader.explain(
+        404,
+        "<Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message></Error>",
+    );
+    let text = err.to_string();
+    assert!(text.contains("HTTP 404"), "{text}");
+    assert!(text.contains("bucket `examplebucket`"), "{text}");
+    assert!(text.contains("NoSuchKey"), "{text}");
+    assert!(
+        !text.contains("bucket `examplebucket` was not found"),
+        "{text}"
+    );
+}

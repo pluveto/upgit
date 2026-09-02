@@ -6,7 +6,7 @@ use upgit_core::{Artifact, Locator, ObjectKey, UploadError, Uploader};
 
 use crate::util::{
     content_type_for, could_not_reach, host_of, hostname, http_date_gmt, join_host_path,
-    looks_like_missing_bucket, looks_like_signature_error, read_bytes, xml_error_summary,
+    read_bytes, remote_http_error, xml_code_and_message,
 };
 
 type HmacSha1 = Hmac<Sha1>;
@@ -62,59 +62,15 @@ impl OssUploader {
         format!("OSS {}:{}", self.config.access_key_id, sig)
     }
 
-    /// Map an OSS HTTP status + body to a user-facing error. Never dumps XML.
+    /// Status, bucket, and OSS XML Code/Message if present. Does not guess a cause.
     pub fn explain(&self, status: u16, body: &str) -> UploadError {
-        let bucket = self.config.bucket_name.as_str();
-        match status {
-            401 => UploadError::new(
-                "OSS",
-                "OSS rejected credentials (HTTP 401).",
-                "Check [uploaders.aliyunoss] access_key_id and access_key_secret.",
-                Some(status),
-            ),
-            403 if looks_like_signature_error(body) => UploadError::new(
-                "OSS",
-                "OSS signature did not match (HTTP 403).",
-                "Check [uploaders.aliyunoss] access_key_id, access_key_secret, and endpoint.",
-                Some(status),
-            ),
-            403 => UploadError::new(
-                "OSS",
-                format!("OSS denied access to bucket `{bucket}` (HTTP 403)."),
-                "Check [uploaders.aliyunoss] access_key_id, access_key_secret, and bucket_name.",
-                Some(status),
-            ),
-            404 => UploadError::new(
-                "OSS",
-                format!("OSS bucket `{bucket}` was not found (HTTP 404)."),
-                "Check [uploaders.aliyunoss] bucket_name and endpoint. The bucket must exist.",
-                Some(status),
-            ),
-            500..=599 => UploadError::new(
-                "OSS",
-                format!("OSS is failing (HTTP {status})."),
-                "Retry later; this is an OSS server error, not a config problem.",
-                Some(status),
-            ),
-            _ if looks_like_signature_error(body) => UploadError::new(
-                "OSS",
-                format!("OSS signature did not match (HTTP {status})."),
-                "Check [uploaders.aliyunoss] access_key_id, access_key_secret, and endpoint.",
-                Some(status),
-            ),
-            _ if looks_like_missing_bucket(body) => UploadError::new(
-                "OSS",
-                format!("OSS bucket `{bucket}` was not found (HTTP {status})."),
-                "Check [uploaders.aliyunoss] bucket_name and endpoint. The bucket must exist.",
-                Some(status),
-            ),
-            _ => UploadError::new(
-                "OSS",
-                xml_error_summary("OSS", status, body),
-                "Verify [uploaders.aliyunoss] endpoint, access_key_id, access_key_secret, bucket_name, and host.",
-                Some(status),
-            ),
-        }
+        remote_http_error(
+            "OSS",
+            status,
+            &format!("bucket `{}`", self.config.bucket_name),
+            xml_code_and_message(body).as_deref(),
+            "Check [uploaders.aliyunoss] endpoint, access_key_id, access_key_secret, bucket_name, and host.",
+        )
     }
 }
 
