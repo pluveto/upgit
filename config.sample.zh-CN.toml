@@ -31,8 +31,8 @@ pat = "PASTE_YOUR_TOKEN"
 username = "用户名"
 # 公开仓库名。私有仓库的 raw 直链会 404。
 repo = "仓库名"
-# 提交到的分支。必须与仓库默认分支一致。
-branch = "main"
+# 提交到的分支。省略或留空则使用仓库默认分支（main 或 master）。
+# branch = "main"
 
 # GitLab（自建或 gitlab.com）。私有项目的 raw 直链会 404，除非设置 public_base。
 [uploaders.gitlab]

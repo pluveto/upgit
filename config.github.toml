@@ -28,5 +28,5 @@ pat = "PASTE_YOUR_TOKEN"
 username = "..."
 # Public repository name. Private repos make raw URLs 404.
 repo = "..."
-# Branch to commit into. Must match the repository default branch.
-branch = "main"
+# Branch to commit into. Omit or leave empty to use the repository default (main or master).
+# branch = "main"

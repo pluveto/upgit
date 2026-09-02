@@ -32,8 +32,8 @@ pat = "PASTE_YOUR_TOKEN"
 username = "username"
 # Public repository name. Private repos make raw URLs 404.
 repo = "repo-name"
-# Branch to commit into. Must match the repository default branch.
-branch = "main"
+# Branch to commit into. Omit or leave empty to use the repository default (main or master).
+# branch = "main"
 
 # GitLab (self-hosted or gitlab.com). Private projects make raw URLs 404 unless public_base is set.
 [uploaders.gitlab]
